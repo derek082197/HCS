@@ -20,10 +20,11 @@ if not st.session_state.logged_in:
     if st.button("Log in"):
         if user == "derek082197" and pwd == "Xd5gihbw!":
             st.session_state.logged_in = True
-            st.experimental_rerun()
+            # no rerun() call needed—Streamlit automatically reruns on button click
         else:
             st.error("❌ Invalid username or password")
-    st.stop()
+    st.stop()  # stop here until they log in
+
 
 # ---------------------------------------
 # CONFIG — this must be the very first Streamlit call!
