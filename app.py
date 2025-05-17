@@ -22,13 +22,19 @@ if "logged_in" not in st.session_state:
 
 # 4) LOGIN / LOGOUT CALLBACKS
 def do_login():
-    if st.session_state.user == APP_USER and st.session_state.pwd == APP_PASSWORD:
+    if (st.session_state.get("user") == APP_USER
+        and st.session_state.get("pwd") == APP_PASSWORD):
         st.session_state.logged_in = True
+        st.success("✅ Logged in!")
+        # rerun so sidebar appears
+        st.experimental_rerun()
     else:
         st.error("❌ Incorrect credentials")
 
 def do_logout():
     st.session_state.logged_in = False
+    st.success("🔒 Logged out")
+    st.experimental_rerun()
 
 # 5) SHOW LOGIN FORM if not yet logged in
 if not st.session_state.logged_in:
@@ -38,11 +44,11 @@ if not st.session_state.logged_in:
     st.button("Log in", on_click=do_login)
     st.stop()  # nothing below this will run until you log in
 
-# 6) Once logged in, show a logout button in sidebar
+# 6) Once logged in, show a logout button in the sidebar
 st.sidebar.button("Log out", on_click=do_logout)
 
-# ──────────────────────────────────────────────────
-# 7) EVERYTHING BELOW HERE IS YOUR EXISTING APP
+# ──────────────────────────────────────────────────────────────────
+# EVERYTHING BELOW THIS LINE ONLY RUNS WHEN LOGGED IN
 # ---------------------------------------
 LIVE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/e/"
