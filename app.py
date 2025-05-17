@@ -9,19 +9,19 @@ from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
 
-# 1) Page config must be first
+# 1) Page config must be the very first Streamlit call
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
 # 2) Your secret credentials
 APP_USER     = "derek082197"
 APP_PASSWORD = "Xd5gihbw!"
 
-# 3) Login form
+# 3) Login prompt
 st.title("🔒 HCS Commission CRM Login")
 user = st.text_input("Username")
 pwd  = st.text_input("Password", type="password")
 
-# 4) Only check once they’ve actually started typing
+# 4) Only check credentials once they've started typing
 if user or pwd:
     if user == APP_USER and pwd == APP_PASSWORD:
         st.success("✅ Logged in!")
@@ -32,8 +32,8 @@ else:
     # neither field has been touched yet – just wait
     st.stop()
 
-# ──────────────────────────────────────────────────
-# Everything below this line only runs when logged in
+# ─────────────────────────────────────────────────────────────
+# Everything below this line only runs when you're logged in
 # ---------------------------------------
 LIVE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/e/"
