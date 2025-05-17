@@ -8,29 +8,30 @@ import re
 from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
-# —–––––––––––––––––––––––––––––––––––––––––––––––––
-# 2) YOUR CREDENTIAL CONSTANTS
-APP_USER     = "derek082197"
-APP_PASSWORD = "Xd5gihbw!"    # ← **make sure** this is a quoted string
 
-# —–––––––––––––––––––––––––––––––––––––––––––––––––
+# ──────────────────────────────────────────────────────────────────────────────
+# 1) PAGE CONFIG — MUST be the VERY FIRST Streamlit call
+# ──────────────────────────────────────────────────────────────────────────────
+st.set_page_config(page_title="HCS Commission CRM", layout="wide")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2) CREDENTIAL CONSTANTS
+# ──────────────────────────────────────────────────────────────────────────────
+APP_USER     = "derek082197"
+APP_PASSWORD = "Xd5gihbw!"    # ← must be a quoted string
+
+# ──────────────────────────────────────────────────────────────────────────────
 # 3) LOGIN PROMPT + GATE
+# ──────────────────────────────────────────────────────────────────────────────
 user = st.text_input("Username")
 pwd  = st.text_input("Password", type="password")
 
 if not (user == APP_USER and pwd == APP_PASSWORD):
     st.warning("❌ Incorrect credentials")
-    st.stop()    # stops execution here until they log in
+    st.stop()   # everything below here is locked down until correct login
 
-# —–––––––––––––––––––––––––––––––––––––––––––––––––
-# 4) EVERYTHING BEYOND THIS LINE ONLY RUNS WHEN LOGGED IN
-
-
-
-# ---------------------------------------
-# CONFIG — this must be the very first Streamlit call!
-# ---------------------------------------
-st.set_page_config(page_title="HCS Commission CRM", layout="wide")
+# ──────────────────────────────────────────────────────────────────────────────
+# 4) REST OF YOUR APP (runs only after successful login)
 
 # ---------------------------------------
 # LIVE SHEET URL — your published Google sheet CSV
