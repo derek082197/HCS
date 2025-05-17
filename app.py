@@ -378,17 +378,50 @@ with tabs[3]:
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
 
-    # initialize manual‐import stash
+    # Pull today’s leads from API
+    if st.button("🔄 Refresh API Leads"):
+        load_crm_leads.clear()
+    df_api = load_crm_leads()
+
+    # Clean / filter API leads
+    if df_api.empty:
+        st.info("No API leads returned.")
+        api_display = pd.DataFrame()
+    else:
+        df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
+        today = date.today()
+        api_today = df_api[df_api["date_sold"].dt.date == today]
+
+        # Only keep the columns that exist
+        api_cols = [
+            "policy_id","lead_first_name","lead_last_name","lead_state",
+            "date_sold","carrier","product","duration","premium",
+            "policy_number","lead_vendor_name"
+        ]
+        api_cols = [c for c in api_cols if c in api_today.columns]
+
+        api_display = api_today[api_cols].rename(columns={
+            "policy_id":       "Policy ID",
+            "lead_first_name": "First Name",
+            "lead_last_name":  "Last Name",
+            "lead_state":      "State",
+            "date_sold":       "Date Sold",
+            "lead_vendor_name":"Vendor",
+        })
+
+        # tack on Lead ID if it exists
+        if "lead_id" in api_today.columns:
+            api_display["Lead ID"] = api_today["lead_id"].astype(str)
+
+    # Initialize manual-upload stash
     if "manual_leads" not in st.session_state:
         st.session_state.manual_leads = pd.DataFrame()
 
-    # 1) Upload & preview historical leads
+    # Upload & clean historical leads
     st.subheader("📥 Upload Historical Leads")
-    uploaded = st.file_uploader(
-        "Upload CSV or Excel with a 'lead_id' column",
-        type=["csv", "xlsx"]
-    )
+    uploaded = st.file_uploader("Upload CSV or Excel with a 'lead_id' column", type=["csv", "xlsx"])
     if uploaded:
+        # read file
         if uploaded.name.lower().endswith(".csv"):
             df_imp = pd.read_csv(uploaded, dtype=str)
         else:
@@ -398,63 +431,41 @@ with tabs[5]:
             st.error("⚠️ Your file needs a `lead_id` column")
         else:
             df_imp["lead_id"] = df_imp["lead_id"].astype(str)
-            st.markdown("**Preview imported leads:**")
+            st.markdown("**Preview imported:**")
             st.dataframe(df_imp, use_container_width=True)
 
             # delete mistakes
-            to_remove = st.multiselect(
-                "Select lead_id(s) to drop",
-                df_imp["lead_id"].tolist()
-            )
+            to_remove = st.multiselect("Select lead_id(s) to drop", df_imp["lead_id"].tolist())
             if st.button("🗑️ Drop selected rows"):
                 df_imp = df_imp[~df_imp["lead_id"].isin(to_remove)]
                 st.success(f"Dropped {len(to_remove)} rows")
                 st.dataframe(df_imp, use_container_width=True)
 
-            # import into CRM
+            # import into CRM (session-state)
             if st.button("✅ Import cleaned leads into CRM"):
-                st.session_state.manual_leads = df_imp.copy()
+                # rename to match API display if you want to show it as "Lead ID"
+                st.session_state.manual_leads = df_imp.rename(columns={"lead_id":"Lead ID"})
                 st.success(f"Imported {len(df_imp)} leads")
+
         st.markdown("---")
 
-    # 2) Refresh & load API leads
-    if st.button("🔄 Refresh API Leads"):
-        load_crm_leads.clear()
-    df_api = load_crm_leads()
-    if df_api.empty:
-        st.info("No leads returned from API.")
-        combined = pd.DataFrame()
+    # Combine API + manual uploads
+    if st.session_state.manual_leads.empty:
+        combined = api_display
     else:
-        df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
-        today = date.today()
-        api_today = df_api[df_api["date_sold"].dt.date == today]
-        combined = api_today[[
-            "policy_id","lead_first_name","lead_last_name","lead_state",
-            "date_sold","carrier","product","duration","premium",
-            "policy_number","lead_vendor_name","lead_id"
-        ]].rename(columns={
-            "policy_id":"Policy ID",
-            "lead_first_name":"First Name",
-            "lead_last_name":"Last Name",
-            "lead_state":"State",
-            "date_sold":"Date Sold",
-            "lead_vendor_name":"Vendor",
-        })
-
-    # 3) Append any manually‐imported leads
-    if not st.session_state.manual_leads.empty:
         combined = pd.concat(
-            [combined, st.session_state.manual_leads],
+            [api_display, st.session_state.manual_leads],
             ignore_index=True,
             sort=False
         )
 
-    # 4) Show final table
+    # Final render
     if combined.empty:
         st.warning("No leads to display for today.")
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
+
 
 
 
