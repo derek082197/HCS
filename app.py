@@ -26,18 +26,16 @@ if "logged_in" not in st.session_state:
     st.session_state.pwd       = ""
 
 # ──────────────────────────────────────────────────
-# 4) LOGIN / LOGOUT CALLBACKS
+# 4) LOGIN / LOGOUT CALLBACKS (NO more experimental_rerun)
 def do_login():
     if (st.session_state.user == APP_USER
         and st.session_state.pwd  == APP_PASSWORD):
         st.session_state.logged_in = True
-        st.experimental_rerun()      # <— force a full rerun so UI resets
     else:
         st.error("❌ Incorrect credentials")
 
 def do_logout():
     st.session_state.logged_in = False
-    st.experimental_rerun()
 
 # ──────────────────────────────────────────────────
 # 5) SHOW LOGIN FORM (in the sidebar) if NOT logged in
@@ -47,7 +45,8 @@ if not st.session_state.logged_in:
         st.text_input("Username", key="user")
         st.text_input("Password", type="password", key="pwd")
         st.button("Log in", on_click=do_login)
-    st.stop()  # nothing below this line runs until you're logged in
+    # this ensures nothing below runs until you log in
+    st.stop()
 
 # ──────────────────────────────────────────────────
 # 6) ONCE LOGGED IN, SHOW LOGOUT BUTTON
