@@ -17,6 +17,7 @@ APP_USER     = "derek082197"
 APP_PASSWORD = "Xd5gihbw!"
 
 # 3) Login form
+st.title("🔒 HCS Commission CRM Login")
 user = st.text_input("Username")
 pwd  = st.text_input("Password", type="password")
 
@@ -24,8 +25,6 @@ pwd  = st.text_input("Password", type="password")
 if user or pwd:
     if user == APP_USER and pwd == APP_PASSWORD:
         st.success("✅ Logged in!")
-        # from here on, your entire app can live—
-        # e.g. tabs, metrics, import logic, etc.
     else:
         st.warning("❌ Incorrect credentials")
         st.stop()
@@ -35,9 +34,6 @@ else:
 
 # ──────────────────────────────────────────────────
 # Everything below this line only runs when logged in
-
-# ---------------------------------------
-# LIVE SHEET URL — your published Google sheet CSV
 # ---------------------------------------
 LIVE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/e/"
