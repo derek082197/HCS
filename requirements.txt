@@ -4,3 +4,4 @@ altair
 requests
 fpdf
 openpyxl
+streamlit-authenticator
