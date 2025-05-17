@@ -21,7 +21,7 @@ if not st.session_state.logged_in:
     pwd  = st.text_input("Password", type="password")
     if st.button("Log in"):
         # you can also store your creds in st.secrets.toml for safety
-        if user == "derek082197" and pwd == Xd5gihbw!["app_password"]:
+        if user == "derek082197" and pwd == Xd5gihbw["app_password"]:
             st.session_state.logged_in = True
             st.experimental_rerun()   # optional — Streamlit will rerun on widget events anyway
         else:
