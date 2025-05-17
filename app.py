@@ -8,31 +8,22 @@ import re
 from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
+# —–––––––––––––––––––––––––––––––––––––––––––––––––
+# 2) YOUR CREDENTIAL CONSTANTS
+APP_USER     = "derek082197"
+APP_PASSWORD = "Xd5gihbw!"    # ← **make sure** this is a quoted string
 
-# -----------------------------------------------------------------------------
-#                  LOGIN GATE (place this at the top!)
-# -----------------------------------------------------------------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+# —–––––––––––––––––––––––––––––––––––––––––––––––––
+# 3) LOGIN PROMPT + GATE
+user = st.text_input("Username")
+pwd  = st.text_input("Password", type="password")
 
-if not st.session_state.logged_in:
-    st.title("🔐 HCS Commission CRM Login")
-    user = st.text_input("Username")
-    pwd  = st.text_input("Password", type="password")
-    if st.button("Log in"):
-        # you can also store your creds in st.secrets.toml for safety
-        if user == "derek082197" and pwd == Xd5gihbw ["app_password"]:
-            st.session_state.logged_in = True
-            st.experimental_rerun()   # optional — Streamlit will rerun on widget events anyway
-        else:
-            st.error("❌ Invalid username or password")
-    st.stop()  # nothing below runs until logged_in == True
+if not (user == APP_USER and pwd == APP_PASSWORD):
+    st.warning("❌ Incorrect credentials")
+    st.stop()    # stops execution here until they log in
 
-# -----------------------------------------------------------------------------
-#          EVERYTHING BELOW RUNS ONLY IF logged_in == True
-# -----------------------------------------------------------------------------
-
-# your st.tabs([...]) and all the rest of your code go here
+# —–––––––––––––––––––––––––––––––––––––––––––––––––
+# 4) EVERYTHING BEYOND THIS LINE ONLY RUNS WHEN LOGGED IN
 
 
 
