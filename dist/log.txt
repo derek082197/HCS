@@ -1,0 +1,2213 @@
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://10.2.0.2:8501
+
+2025-05-16 16:42:06.521 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 118, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 16:45:00.065 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 118, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 17:17:22.023 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 118, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 17:30:42.334 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 124, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 17:33:36.745 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 123, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 17:36:19.854 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 118, in <module>
+    pdf_bytes = generate_agent_pdf(agent_df, agent)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 81, in generate_agent_pdf
+    status = row.get("Paid Status", "N/A")
+UnboundLocalError: local variable 'row' referenced before assignment
+2025-05-16 17:48:52.495 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 117, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 17:51:39.804 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 110, in <module>
+    zipf.writestr(f"{agent.replace(' ', '_')}_Paystub.pdf", pdf_bytes)
+AttributeError: 'float' object has no attribute 'replace'
+2025-05-16 17:59:31.705 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 116, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 18:05:57.931 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 116, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 18:07:37.448 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 116, in <module>
+    for agent in agents:
+NameError: name 'agents' is not defined
+2025-05-16 18:50:56.233 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in <module>
+    insert_report(report_date, totals)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 46, in insert_report
+    c.execute(
+sqlite3.OperationalError: table reports has no column named report_date
+2025-05-16 18:53:36.175 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 129, in <module>
+    insert_report(report_date, totals)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 44, in insert_report
+    c.execute(
+sqlite3.OperationalError: table reports has no column named report_date
+2025-05-16 19:01:33.688 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 195, in <module>
+    st.experimental_rerun()
+AttributeError: module 'streamlit' has no attribute 'experimental_rerun'
+2025-05-16 19:04:36.123 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 199, in <module>
+    st.experimental_rerun()
+AttributeError: module 'streamlit' has no attribute 'experimental_rerun'
+2025-05-16 19:14:50.411 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 231, in <module>
+    st.download_button("Download ZIP \U0001f4e6", data=buf.getvalue(),
+NameError: name 'buf' is not defined
+2025-05-16 19:17:07.600 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 355, in <module>
+    st.experimental_rerun()
+AttributeError: module 'streamlit' has no attribute 'experimental_rerun'
+2025-05-16 19:17:12.368 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 355, in <module>
+    st.experimental_rerun()
+AttributeError: module 'streamlit' has no attribute 'experimental_rerun'
+2025-05-16 19:21:36.615 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 282, in <module>
+    rec = history_df[history_df['upload_date'] == selected].iloc[0]
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexing.py", line 1103, in __getitem__
+    return self._getitem_axis(maybe_callable, axis=axis)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexing.py", line 1656, in _getitem_axis
+    self._validate_integer(key, axis)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexing.py", line 1589, in _validate_integer
+    raise IndexError("single positional indexer is out-of-bounds")
+IndexError: single positional indexer is out-of-bounds
+2025-05-16 19:25:47.595 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 305, in <module>
+    pdf_bytes = generate_agent_pdf(df[df['Agent'] == rec['Agent']], rec['Agent'])
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 222, in generate_agent_pdf
+    return pdf.output(dest='S').encode('latin1')(dest='S').encode('latin1')
+TypeError: 'bytes' object is not callable
+2025-05-16 19:28:34.537 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3653, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas\_libs\index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'Client'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 324, in <module>
+    pdf_bytes = generate_agent_pdf(df[df['Agent'] == rec['Agent']], rec['Agent'])
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 222, in generate_agent_pdf
+    for client in paid_df["Client"].dropna().unique():
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 3761, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3655, in get_loc
+    raise KeyError(key) from err
+KeyError: 'Client'
+2025-05-16 19:40:36.409 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 242, in <module>
+    pdfb = generate_agent_pdf(df[df['Agent']==rec['Agent']], rec['Agent'])
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 194, in generate_agent_pdf
+    return pdf.output(dest='S').encode('latin1')(dest='S').encode('latin1')
+TypeError: 'bytes' object is not callable
+2025-05-16 19:43:29.815 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 223, in <module>
+    w = csv.writer(csv_buf)
+NameError: name 'csv' is not defined
+2025-05-16 19:46:14.427 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 227, in <module>
+    w = csv.writer(csv_buf)
+NameError: name 'csv' is not defined
+2025-05-16 19:50:22.808 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 226, in <module>
+    pdfb = generate_agent_pdf(sub, agent)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 160, in generate_agent_pdf
+    pdf.cell(0,6,f"- {client} | Eff: {row['Effective Date'].strftime('%Y-%m-%d') if not pd.isna(row['Effective Date']) else 'N/A'}",ln=True)
+UnboundLocalError: local variable 'row' referenced before assignment
+2025-05-16 19:51:26.474 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 228, in <module>
+    pdfb = generate_agent_pdf(sub, agent)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 186, in generate_agent_pdf
+    return pdf.output(dest="S").encode("latin1")(dest="S").encode("latin1")
+TypeError: 'bytes' object is not callable
+2025-05-16 20:05:04.175 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3653, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas\_libs\index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'Period'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 338, in <module>
+    daily   = live_df.loc[live_df["Period"]=="Daily",   "Count"].sum()
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 3761, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3655, in get_loc
+    raise KeyError(key) from err
+KeyError: 'Period'
+2025-05-16 20:06:18.960 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 355, in <module>
+    c2.metric("This Week’s Deals",  f"{int(weekly):,}")
+ValueError: invalid literal for int() with base 10: 'Total calls'
+2025-05-16 20:07:49.243 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 351, in <module>
+    daily   = live_df.loc[live_df[period_col].str.contains('Daily', case=False, na=False), count_col].sum()
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 5989, in __getattr__
+    return object.__getattribute__(self, name)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\accessor.py", line 224, in __get__
+    accessor_obj = self._accessor(obj)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\strings\accessor.py", line 181, in __init__
+    self._inferred_dtype = self._validate(data)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\strings\accessor.py", line 235, in _validate
+    raise AttributeError("Can only use .str accessor with string values!")
+AttributeError: Can only use .str accessor with string values!
+2025-05-16 20:08:32.935 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 351, in <module>
+    daily   = live_df.loc[live_df[period_col].str.contains('Daily', case=False, na=False), count_col].sum()
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 5989, in __getattr__
+    return object.__getattribute__(self, name)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\accessor.py", line 224, in __get__
+    accessor_obj = self._accessor(obj)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\strings\accessor.py", line 181, in __init__
+    self._inferred_dtype = self._validate(data)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\strings\accessor.py", line 235, in _validate
+    raise AttributeError("Can only use .str accessor with string values!")
+AttributeError: Can only use .str accessor with string values!
+2025-05-16 20:08:34.674 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 351, in <module>
+    daily   = live_df.loc[live_df[period_col].str.contains('Daily', case=False, na=False), count_col].sum()
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 5989, in __getattr__
+    return object.__getattribute__(self, name)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\accessor.py", line 224, in __get__
+    accessor_obj = self._accessor(obj)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\strings\accessor.py", line 181, in __init__
+    self._inferred_dtype = self._validate(data)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\strings\accessor.py", line 235, in _validate
+    raise AttributeError("Can only use .str accessor with string values!")
+AttributeError: Can only use .str accessor with string values!
+2025-05-16 20:17:07.826 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 341, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 25, in load_live_counts
+    df_live = pd.read_csv(
+TypeError: read_csv() got an unexpected keyword argument 'mangle_dupe_cols'
+2025-05-16 20:39:05.961 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 304, in <module>
+    threshold = st.slider("Highlight agents below this paid-deals threshold for coaching:", 0, int(df['Paid Deals'].max()), int(df['Paid Deals'].quantile(0.25)))
+NameError: name 'df' is not defined
+2025-05-16 20:46:36.782 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 304, in <module>
+    threshold = st.slider("Highlight agents below this paid-deals threshold for coaching:", 0, int(df['Paid Deals'].max()), int(df['Paid Deals'].quantile(0.25)))
+NameError: name 'df' is not defined
+2025-05-16 20:47:38.928 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 143, in <module>
+    daily_series = df_led.groupby('Agent')['Paid Deals'].sum().sort_values(ascending=False)
+NameError: name 'df_led' is not defined
+2025-05-16 20:51:53.907 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 143, in <module>
+    daily_series = df_led.groupby('Agent')['Paid Deals'].sum().sort_values(ascending=False)
+NameError: name 'df_led' is not defined
+2025-05-16 20:53:32.343 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3653, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas\_libs\index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'Weekly'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 342, in <module>
+    wcol = st.selectbox("Weekly count column", live_df.columns, index=live_df.columns.get_loc("Weekly"))
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3655, in get_loc
+    raise KeyError(key) from err
+KeyError: 'Weekly'
+2025-05-16 20:55:29.343 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3653, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas\_libs\index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'Agent'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 336, in <module>
+    tot = live_df[live_df["Agent"]=="TOTAL"].iloc[0]
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 3761, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3655, in get_loc
+    raise KeyError(key) from err
+KeyError: 'Agent'
+2025-05-16 20:57:19.744 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 355, in <module>
+    d = int(tot[dcol]); w = int(tot[wcol]); m = int(tot[mcol])
+ValueError: invalid literal for int() with base 10: 'TOTAL'
+2025-05-16 20:57:41.948 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 355, in <module>
+    d = int(tot[dcol]); w = int(tot[wcol]); m = int(tot[mcol])
+ValueError: invalid literal for int() with base 10: 'TOTAL'
+2025-05-16 20:59:01.898 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 356, in <module>
+    d = int(tot[dcol]); w = int(tot[wcol]); m = int(tot[mcol])
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\series.py", line 230, in wrapper
+    raise TypeError(f"cannot convert the series to {converter}")
+TypeError: cannot convert the series to <class 'int'>
+2025-05-16 21:11:16.217 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 346, in <module>
+    d_tot = int(re.sub(r"[^\d]", "", str(live_df['Sales'].iat[58])))
+ValueError: invalid literal for int() with base 10: ''
+2025-05-16 21:14:24.556 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 413, in <module>
+    b1.bar_chart(d_counts.values, x=daily_block["Agent"], y=d_counts.values)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 1229, in bar_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 154, in generate_chart
+    x_column = _parse_x_column(df, x_from_user)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 623, in _parse_x_column
+    raise StreamlitAPIException(
+streamlit.errors.StreamlitAPIException: x parameter should be a column name (str) or None to use the  dataframe's index. Value given: 1            Alfonsi
+2                Ali
+3            Anthony
+4               Bart
+5            Bernard
+6            Brandon
+7              Brian
+8            Candice
+9     Chris Kovachev
+10      Chris Lowery
+11            Daniel
+12            Darryl
+13           Derrick
+14              Eddy
+15             Eliza
+16              Eric
+17             Frank
+18             Helen
+19             Isaac
+20           Jahmani
+21     Jason Edwards
+22      Jason Elysee
+23              Jhan
+24               Joe
+25              John
+26          Jordan A
+27          Jordan M
+28          Joseph L
+29            Joshua
+30            Justin
+31             Kayla
+32           Kennett
+33           Lashawn
+34              Luis
+35              Matt
+36             Myles
+37            Nathan
+38             Pedro
+39            Reggie
+40           Richard
+41          Robert M
+42          Robertho
+43           Shanice
+44          Sharalyn
+45            Sharon
+46           Shawn R
+47            Simeon
+48           Stephen
+49             Steve
+50            Thomas
+51               Tim
+52              Vera
+53            Victor
+54           Vincent
+55             Wayne
+56         Zachary W
+Name: Agent, dtype: object (type <class 'pandas.core.series.Series'>)
+2025-05-16 21:23:26.382 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3653, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas\_libs\index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'Daily'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 364, in <module>
+    dcol = st.selectbox("Daily count column",   live_df.columns, index=live_df.columns.get_loc("Daily"))
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3655, in get_loc
+    raise KeyError(key) from err
+KeyError: 'Daily'
+2025-05-16 21:24:31.435 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3653, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas\_libs\index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'Daily'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 364, in <module>
+    dcol = st.selectbox("Daily count column",   live_df.columns, index=live_df.columns.get_loc("Daily"))
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3655, in get_loc
+    raise KeyError(key) from err
+KeyError: 'Daily'
+2025-05-16 21:24:38.402 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3653, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas\_libs\index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'Daily'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 364, in <module>
+    dcol = st.selectbox("Daily count column",   live_df.columns, index=live_df.columns.get_loc("Daily"))
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 3655, in get_loc
+    raise KeyError(key) from err
+KeyError: 'Daily'
+2025-05-16 21:30:17.232 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 358, in <module>
+    yearly_cnt  = to_int(live_df[col].iat[238])  # C239
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexing.py", line 2371, in __getitem__
+    return self.obj._get_value(*key, takeable=self._takeable)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\series.py", line 1113, in _get_value
+    return self._values[label]
+IndexError: index 238 is out of bounds for axis 0 with size 238
+2025-05-16 21:32:23.527 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 388, in <module>
+    b1.subheader("Daily Sales by Agent");   b1.bar_chart(dseries)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 1229, in bar_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 180, in generate_chart
+    df, x_column, y_column, color_column, size_column = _prep_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 373, in _prep_data
+    x_column = _maybe_reset_index_in_place(df, x_column, y_column_list)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 532, in _maybe_reset_index_in_place
+    df.reset_index(inplace=True)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 6209, in reset_index
+    new_obj.insert(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 4772, in insert
+    raise ValueError(f"cannot insert {column}, already exists")
+ValueError: cannot insert Agent, already exists
+2025-05-16 21:32:27.388 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 388, in <module>
+    b1.subheader("Daily Sales by Agent");   b1.bar_chart(dseries)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 1229, in bar_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 180, in generate_chart
+    df, x_column, y_column, color_column, size_column = _prep_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 373, in _prep_data
+    x_column = _maybe_reset_index_in_place(df, x_column, y_column_list)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 532, in _maybe_reset_index_in_place
+    df.reset_index(inplace=True)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 6209, in reset_index
+    new_obj.insert(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 4772, in insert
+    raise ValueError(f"cannot insert {column}, already exists")
+ValueError: cannot insert Agent, already exists
+2025-05-17 09:43:05.332 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 243, in <module>
+    col.metric(lbl, f"{val:,}" if isinstance(val,int) else val)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\metric.py", line 156, in metric
+    metric_proto.body = _parse_value(value)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\metric.py", line 202, in _parse_value
+    raise TypeError(
+TypeError: 'b'\xc1\x02\x00\x00\x00\x00\x00\x00'' is of type <class 'bytes'>, which is not an accepted type. value only accepts: int, float, str, or None. Please convert the value to an accepted type.
+2025-05-17 09:50:21.855 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 318, in <module>
+    st.line_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 724, in line_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 180, in generate_chart
+    df, x_column, y_column, color_column, size_column = _prep_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 394, in _prep_data
+    melted_data, y_column, color_column = _maybe_melt(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 735, in _maybe_melt
+    df = _melt_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 508, in _melt_data
+    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\dataframe_util.py", line 1120, in fix_arrow_incompatible_column_types
+    df_copy[col] = df[col].astype("string")
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 6324, in astype
+    new_data = self._mgr.astype(dtype=dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 451, in astype
+    return self.apply(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 352, in apply
+    applied = getattr(b, f)(**kwargs)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\blocks.py", line 511, in astype
+    new_values = astype_array_safe(values, dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 242, in astype_array_safe
+    new_values = astype_array(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 187, in astype_array
+    values = _astype_nansafe(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 84, in _astype_nansafe
+    return dtype.construct_array_type()._from_sequence(arr, dtype=dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\arrays\string_.py", line 358, in _from_sequence
+    result = lib.ensure_string_array(scalars, na_value=libmissing.NA, copy=copy)
+  File "pandas\_libs\lib.pyx", line 712, in pandas._libs.lib.ensure_string_array
+  File "pandas\_libs\lib.pyx", line 781, in pandas._libs.lib.ensure_string_array
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfe in position 0: invalid start byte
+2025-05-17 09:55:32.588 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+    if summary:
+NameError: name 'summary' is not defined
+2025-05-17 10:00:16.480 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 239, in <module>
+    col.metric(lbl, f"{val:,}" if isinstance(val,int) else val)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\metric.py", line 156, in metric
+    metric_proto.body = _parse_value(value)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\metric.py", line 202, in _parse_value
+    raise TypeError(
+TypeError: 'b'\xc1\x02\x00\x00\x00\x00\x00\x00'' is of type <class 'bytes'>, which is not an accepted type. value only accepts: int, float, str, or None. Please convert the value to an accepted type.
+2025-05-17 10:03:39.278 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 299, in <module>
+    st.line_chart(history_df.set_index("upload_date")[
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 724, in line_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 180, in generate_chart
+    df, x_column, y_column, color_column, size_column = _prep_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 394, in _prep_data
+    melted_data, y_column, color_column = _maybe_melt(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 735, in _maybe_melt
+    df = _melt_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 508, in _melt_data
+    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\dataframe_util.py", line 1120, in fix_arrow_incompatible_column_types
+    df_copy[col] = df[col].astype("string")
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 6324, in astype
+    new_data = self._mgr.astype(dtype=dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 451, in astype
+    return self.apply(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 352, in apply
+    applied = getattr(b, f)(**kwargs)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\blocks.py", line 511, in astype
+    new_values = astype_array_safe(values, dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 242, in astype_array_safe
+    new_values = astype_array(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 187, in astype_array
+    values = _astype_nansafe(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 84, in _astype_nansafe
+    return dtype.construct_array_type()._from_sequence(arr, dtype=dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\arrays\string_.py", line 358, in _from_sequence
+    result = lib.ensure_string_array(scalars, na_value=libmissing.NA, copy=copy)
+  File "pandas\_libs\lib.pyx", line 712, in pandas._libs.lib.ensure_string_array
+  File "pandas\_libs\lib.pyx", line 781, in pandas._libs.lib.ensure_string_array
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfe in position 0: invalid start byte
+2025-05-17 10:06:47.092 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 343, in <module>
+    live_df["Sales"]
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 6324, in astype
+    new_data = self._mgr.astype(dtype=dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 451, in astype
+    return self.apply(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 352, in apply
+    applied = getattr(b, f)(**kwargs)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\blocks.py", line 511, in astype
+    new_values = astype_array_safe(values, dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 242, in astype_array_safe
+    new_values = astype_array(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 187, in astype_array
+    values = _astype_nansafe(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 138, in _astype_nansafe
+    return arr.astype(dtype, copy=True)
+ValueError: invalid literal for int() with base 10: ''
+2025-05-17 10:17:44.669 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 212, in <module>
+    display_deals = int(latest.total_deals or 0)
+ValueError: invalid literal for int() with base 10: b'\xc1\x02\x00\x00\x00\x00\x00\x00'
+2025-05-17 10:28:03.558 Serialization of dataframe to Arrow table was unsuccessful due to: ('cannot mix list and non-list, non-null values', 'Conversion failed for column response with type object'). Applying automatic fixes for column types to make the dataframe Arrow-compatible.
+2025-05-17 10:37:36.098 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 202, in <module>
+    pdfb = generate_agent_pdf(sub, agent)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 148, in generate_agent_pdf
+    return pdf.output(dest="S").encode("latin1")
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1065, in output
+    self.close()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 246, in close
+    self._enddoc()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1636, in _enddoc
+    self._putpages()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1170, in _putpages
+    p = self.pages[n].encode("latin1") if PY3K else self.pages[n]
+UnicodeEncodeError: 'latin-1' codec can't encode character '\u2013' in position 143: ordinal not in range(256)
+2025-05-17 10:58:58.302 Serialization of dataframe to Arrow table was unsuccessful due to: ('cannot mix list and non-list, non-null values', 'Conversion failed for column response with type object'). Applying automatic fixes for column types to make the dataframe Arrow-compatible.
+2025-05-17 10:59:09.975 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 202, in <module>
+    pdfb = generate_agent_pdf(sub, agent)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 148, in generate_agent_pdf
+    return pdf.output(dest="S").encode("latin1")
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1065, in output
+    self.close()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 246, in close
+    self._enddoc()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1636, in _enddoc
+    self._putpages()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1170, in _putpages
+    p = self.pages[n].encode("latin1") if PY3K else self.pages[n]
+UnicodeEncodeError: 'latin-1' codec can't encode character '\u2013' in position 143: ordinal not in range(256)
+2025-05-17 10:59:45.044 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 146, in <module>
+    int(latest.total_deals or 0),
+ValueError: invalid literal for int() with base 10: b'\xc1\x02\x00\x00\x00\x00\x00\x00'
+2025-05-17 11:00:40.405 Serialization of dataframe to Arrow table was unsuccessful due to: ('cannot mix list and non-list, non-null values', 'Conversion failed for column response with type object'). Applying automatic fixes for column types to make the dataframe Arrow-compatible.
+2025-05-17 11:00:44.954 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 202, in <module>
+    pdfb = generate_agent_pdf(sub, agent)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 148, in generate_agent_pdf
+    return pdf.output(dest="S").encode("latin1")
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1065, in output
+    self.close()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 246, in close
+    self._enddoc()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1636, in _enddoc
+    self._putpages()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1170, in _putpages
+    p = self.pages[n].encode("latin1") if PY3K else self.pages[n]
+UnicodeEncodeError: 'latin-1' codec can't encode character '\u2013' in position 143: ordinal not in range(256)
+2025-05-17 11:02:49.265 Serialization of dataframe to Arrow table was unsuccessful due to: ('cannot mix list and non-list, non-null values', 'Conversion failed for column response with type object'). Applying automatic fixes for column types to make the dataframe Arrow-compatible.
+2025-05-17 11:02:53.521 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 202, in <module>
+    if len(tot_rows) < 3:
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 148, in generate_agent_pdf
+    rev = latest.owner_revenue
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1065, in output
+    self.close()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 246, in close
+    self._enddoc()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1636, in _enddoc
+    self._putpages()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1170, in _putpages
+    p = self.pages[n].encode("latin1") if PY3K else self.pages[n]
+UnicodeEncodeError: 'latin-1' codec can't encode character '\u2013' in position 143: ordinal not in range(256)
+2025-05-17 11:04:12.365 Serialization of dataframe to Arrow table was unsuccessful due to: ('cannot mix list and non-list, non-null values', 'Conversion failed for column response with type object'). Applying automatic fixes for column types to make the dataframe Arrow-compatible.
+2025-05-17 11:04:32.309 Serialization of dataframe to Arrow table was unsuccessful due to: ('cannot mix list and non-list, non-null values', 'Conversion failed for column response with type object'). Applying automatic fixes for column types to make the dataframe Arrow-compatible.
+2025-05-17 11:04:47.532 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 202, in <module>
+    "Agent": agent,
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 148, in generate_agent_pdf
+    pdf.multi_cell(0,6, f"- {row['Client']} | Eff: {eff_str} | {reason}")
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1065, in output
+    self.close()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 246, in close
+    self._enddoc()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1636, in _enddoc
+    self._putpages()
+  File "C:\DPY_ENV\lib\site-packages\fpdf\fpdf.py", line 1170, in _putpages
+    p = self.pages[n].encode("latin1") if PY3K else self.pages[n]
+UnicodeEncodeError: 'latin-1' codec can't encode character '\u2013' in position 143: ordinal not in range(256)
+2025-05-17 11:05:20.251 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+    if summary:
+NameError: name 'summary' is not defined
+2025-05-17 11:05:53.399 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+    st.header("Agent Leaderboard & Drill-Down")
+NameError: name 'summary' is not defined
+2025-05-17 11:06:18.581 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+    if summary:
+NameError: name 'summary' is not defined
+2025-05-17 11:06:41.757 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+    df_led.style.format({
+NameError: name 'summary' is not defined
+2025-05-17 11:07:01.706 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+NameError: name 'summary' is not defined
+2025-05-17 11:07:25.376 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+NameError: name 'summary' is not defined
+2025-05-17 11:08:50.612 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+    view = st.selectbox("View report:", dates)
+NameError: name 'summary' is not defined
+2025-05-17 11:09:31.285 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+    sub = df[df["Agent"]==agent]
+NameError: name 'summary' is not defined
+2025-05-17 11:13:28.988 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 254, in <module>
+    rev = latest.owner_revenue
+NameError: name 'summary' is not defined
+2025-05-17 11:18:34.593 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 166, in <module>
+    display_deals = int(latest.total_deals or 0)
+ValueError: invalid literal for int() with base 10: b'\xc1\x02\x00\x00\x00\x00\x00\x00'
+2025-05-17 11:21:10.712 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 214, in <module>
+    st.line_chart(history_df.set_index("upload_date")[[
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 724, in line_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 180, in generate_chart
+    df, x_column, y_column, color_column, size_column = _prep_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 394, in _prep_data
+    melted_data, y_column, color_column = _maybe_melt(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 735, in _maybe_melt
+    df = _melt_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 508, in _melt_data
+    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\dataframe_util.py", line 1120, in fix_arrow_incompatible_column_types
+    df_copy[col] = df[col].astype("string")
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 6324, in astype
+    new_data = self._mgr.astype(dtype=dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 451, in astype
+    return self.apply(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 352, in apply
+    applied = getattr(b, f)(**kwargs)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\blocks.py", line 511, in astype
+    new_values = astype_array_safe(values, dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 242, in astype_array_safe
+    new_values = astype_array(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 187, in astype_array
+    values = _astype_nansafe(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 84, in _astype_nansafe
+    return dtype.construct_array_type()._from_sequence(arr, dtype=dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\arrays\string_.py", line 358, in _from_sequence
+    result = lib.ensure_string_array(scalars, na_value=libmissing.NA, copy=copy)
+  File "pandas\_libs\lib.pyx", line 712, in pandas._libs.lib.ensure_string_array
+  File "pandas\_libs\lib.pyx", line 781, in pandas._libs.lib.ensure_string_array
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfe in position 0: invalid start byte
+2025-05-17 11:34:58.918 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 324, in <module>
+    st.line_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 724, in line_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 180, in generate_chart
+    df, x_column, y_column, color_column, size_column = _prep_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 394, in _prep_data
+    melted_data, y_column, color_column = _maybe_melt(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 735, in _maybe_melt
+    df = _melt_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 508, in _melt_data
+    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\dataframe_util.py", line 1120, in fix_arrow_incompatible_column_types
+    df_copy[col] = df[col].astype("string")
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 6324, in astype
+    new_data = self._mgr.astype(dtype=dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 451, in astype
+    return self.apply(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 352, in apply
+    applied = getattr(b, f)(**kwargs)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\blocks.py", line 511, in astype
+    new_values = astype_array_safe(values, dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 242, in astype_array_safe
+    new_values = astype_array(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 187, in astype_array
+    values = _astype_nansafe(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 84, in _astype_nansafe
+    return dtype.construct_array_type()._from_sequence(arr, dtype=dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\arrays\string_.py", line 358, in _from_sequence
+    result = lib.ensure_string_array(scalars, na_value=libmissing.NA, copy=copy)
+  File "pandas\_libs\lib.pyx", line 712, in pandas._libs.lib.ensure_string_array
+  File "pandas\_libs\lib.pyx", line 781, in pandas._libs.lib.ensure_string_array
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfe in position 0: invalid start byte
+2025-05-17 11:35:50.649 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 339, in <module>
+    st.line_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 724, in line_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 180, in generate_chart
+    df, x_column, y_column, color_column, size_column = _prep_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 394, in _prep_data
+    melted_data, y_column, color_column = _maybe_melt(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 735, in _maybe_melt
+    df = _melt_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 508, in _melt_data
+    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\dataframe_util.py", line 1120, in fix_arrow_incompatible_column_types
+    df_copy[col] = df[col].astype("string")
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 6324, in astype
+    new_data = self._mgr.astype(dtype=dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 451, in astype
+    return self.apply(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 352, in apply
+    applied = getattr(b, f)(**kwargs)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\blocks.py", line 511, in astype
+    new_values = astype_array_safe(values, dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 242, in astype_array_safe
+    new_values = astype_array(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 187, in astype_array
+    values = _astype_nansafe(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 84, in _astype_nansafe
+    return dtype.construct_array_type()._from_sequence(arr, dtype=dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\arrays\string_.py", line 358, in _from_sequence
+    result = lib.ensure_string_array(scalars, na_value=libmissing.NA, copy=copy)
+  File "pandas\_libs\lib.pyx", line 712, in pandas._libs.lib.ensure_string_array
+  File "pandas\_libs\lib.pyx", line 781, in pandas._libs.lib.ensure_string_array
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfe in position 0: invalid start byte
+2025-05-17 11:36:23.217 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 334, in <module>
+    st.line_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\vega_charts.py", line 724, in line_chart
+    chart, add_rows_metadata = generate_chart(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 180, in generate_chart
+    df, x_column, y_column, color_column, size_column = _prep_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 394, in _prep_data
+    melted_data, y_column, color_column = _maybe_melt(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 735, in _maybe_melt
+    df = _melt_data(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\elements\lib\built_in_chart_utils.py", line 508, in _melt_data
+    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\dataframe_util.py", line 1120, in fix_arrow_incompatible_column_types
+    df_copy[col] = df[col].astype("string")
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\generic.py", line 6324, in astype
+    new_data = self._mgr.astype(dtype=dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 451, in astype
+    return self.apply(
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\managers.py", line 352, in apply
+    applied = getattr(b, f)(**kwargs)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\internals\blocks.py", line 511, in astype
+    new_values = astype_array_safe(values, dtype, copy=copy, errors=errors)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 242, in astype_array_safe
+    new_values = astype_array(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 187, in astype_array
+    values = _astype_nansafe(values, dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\dtypes\astype.py", line 84, in _astype_nansafe
+    return dtype.construct_array_type()._from_sequence(arr, dtype=dtype, copy=copy)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\arrays\string_.py", line 358, in _from_sequence
+    result = lib.ensure_string_array(scalars, na_value=libmissing.NA, copy=copy)
+  File "pandas\_libs\lib.pyx", line 712, in pandas._libs.lib.ensure_string_array
+  File "pandas\_libs\lib.pyx", line 781, in pandas._libs.lib.ensure_string_array
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfe in position 0: invalid start byte
+2025-05-17 11:46:27.034 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 185, in <module>
+    pdf_bytes = generate_agent_pdf(sub, agent)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 87, in generate_agent_pdf
+    pdf.cell(0, 8, f"Unpaid Deals: {unpaid_count}",    ln=True)
+NameError: name 'unpaid_count' is not defined
+2025-05-17 12:28:47.916 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 14, in <module>
+    from streamlit_autorefresh import st_autorefresh
+ModuleNotFoundError: No module named 'streamlit_autorefresh'
+2025-05-17 12:30:30.684 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 20, in <module>
+    st.set_page_config(page_title="HCS Commission CRM", layout="wide")
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\commands\page_config.py", line 265, in set_page_config
+    ctx.enqueue(msg)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner_utils\script_run_context.py", line 174, in enqueue
+    raise StreamlitSetPageConfigMustBeFirstCommandError()
+streamlit.errors.StreamlitSetPageConfigMustBeFirstCommandError: `set_page_config()` can only be called once per app page, and must be called as the first Streamlit command in your script.
+
+For more information refer to the [docs](https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config).
+2025-05-17 12:31:01.662 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 20, in <module>
+    st.set_page_config(page_title="HCS Commission CRM", layout="wide")
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\commands\page_config.py", line 265, in set_page_config
+    ctx.enqueue(msg)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner_utils\script_run_context.py", line 174, in enqueue
+    raise StreamlitSetPageConfigMustBeFirstCommandError()
+streamlit.errors.StreamlitSetPageConfigMustBeFirstCommandError: `set_page_config()` can only be called once per app page, and must be called as the first Streamlit command in your script.
+
+For more information refer to the [docs](https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config).
+2025-05-17 12:31:31.654 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 20, in <module>
+    st.set_page_config(page_title="HCS Commission CRM", layout="wide")
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\commands\page_config.py", line 265, in set_page_config
+    ctx.enqueue(msg)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner_utils\script_run_context.py", line 174, in enqueue
+    raise StreamlitSetPageConfigMustBeFirstCommandError()
+streamlit.errors.StreamlitSetPageConfigMustBeFirstCommandError: `set_page_config()` can only be called once per app page, and must be called as the first Streamlit command in your script.
+
+For more information refer to the [docs](https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config).
+2025-05-17 12:32:01.655 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 20, in <module>
+    st.set_page_config(page_title="HCS Commission CRM", layout="wide")
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\commands\page_config.py", line 265, in set_page_config
+    ctx.enqueue(msg)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner_utils\script_run_context.py", line 174, in enqueue
+    raise StreamlitSetPageConfigMustBeFirstCommandError()
+streamlit.errors.StreamlitSetPageConfigMustBeFirstCommandError: `set_page_config()` can only be called once per app page, and must be called as the first Streamlit command in your script.
+
+For more information refer to the [docs](https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config).
+2025-05-17 12:32:31.799 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:32:35.965 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:33:06.703 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:33:19.702 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:33:33.297 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:33:36.523 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:34:06.689 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:34:36.686 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:35:19.702 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:35:47.136 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:36:06.700 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 12:36:36.691 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 312, in <module>
+    live_df = load_live_counts()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 217, in __call__
+    return self._get_or_create_cached_value(args, kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 242, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 299, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 136, in load_live_counts
+    df = pd.read_csv(LIVE_SHEET_URL)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\parsers\readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 716, in get_handle
+    ioargs = _get_filepath_or_buffer(
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 368, in _get_filepath_or_buffer
+    with urlopen(req_info) as req:
+  File "C:\DPY_ENV\lib\site-packages\pandas\io\common.py", line 270, in urlopen
+    return urllib.request.urlopen(*args, **kwargs)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 542, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "C:\DPY_ENV\lib\urllib\request.py", line 502, in _call_chain
+    result = func(*args)
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1362, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "C:\DPY_ENV\lib\urllib\request.py", line 1319, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "C:\DPY_ENV\lib\http\client.py", line 1230, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "C:\DPY_ENV\lib\http\client.py", line 1241, in _send_request
+    self.putrequest(method, url, **skips)
+  File "C:\DPY_ENV\lib\http\client.py", line 1092, in putrequest
+    self._validate_path(url)
+  File "C:\DPY_ENV\lib\http\client.py", line 1183, in _validate_path
+    raise InvalidURL(f"URL can't contain control characters. {url!r} "
+http.client.InvalidURL: URL can't contain control characters. '/spreadsheets/d/e/ … your long URL … &output=csv' (found at least ' ')
+2025-05-17 13:00:52.423 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 407, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:01:21.580 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 407, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:01:26.468 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 407, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:01:57.551 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 407, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:02:21.420 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 407, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:02:26.279 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 407, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:02:57.156 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 407, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:03:21.397 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 409, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:03:26.572 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 409, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:03:58.388 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 409, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:04:21.455 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 409, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:04:23.452 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 409, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:04:27.756 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 409, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:04:58.183 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 409, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:05:19.680 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 73, in <module>
+    def load_history():
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_data_api.py", line 369, in __call__
+    return self._decorator(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\metrics_util.py", line 410, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_data_api.py", line 575, in _decorator
+    return make_cached_func_wrapper(
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 158, in make_cached_func_wrapper
+    cached_func = CachedFunc(info)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 190, in __init__
+    self._function_key = _make_function_key(info.cache_type, info.func)
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 469, in _make_function_key
+    source_code = inspect.getsource(func)
+  File "C:\DPY_ENV\lib\inspect.py", line 985, in getsource
+    lines, lnum = getsourcelines(object)
+  File "C:\DPY_ENV\lib\inspect.py", line 967, in getsourcelines
+    lines, lnum = findsource(object)
+  File "C:\DPY_ENV\lib\inspect.py", line 783, in findsource
+    linecache.checkcache(file)
+  File "C:\DPY_ENV\lib\linecache.py", line 79, in checkcache
+    del cache[filename]
+KeyError: 'C:\\Users\\derek\\Desktop\\HCS AUTOMATED\\app.py'
+2025-05-17 13:05:21.774 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:05:27.144 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:05:27.644 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:05:57.881 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:06:27.608 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:06:57.807 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:07:27.660 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:08:14.808 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:08:45.638 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:09:15.935 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 13:09:46.870 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 410, in <module>
+    tabs.append("\U0001f4c2 Clients")
+AttributeError: 'tuple' object has no attribute 'append'
+2025-05-17 14:28:16.141 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 347, in <module>
+    pd.to_numeric(
+NameError: name 'pd' is not defined
+2025-05-17 16:35:20.951 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 431, in <module>
+    combined = api_today[[
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 3767, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 5877, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 5941, in _raise_if_missing
+    raise KeyError(f"{not_found} not in index")
+KeyError: "['lead_id'] not in index"
+2025-05-17 16:42:41.689 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 279, in <module>
+    c1.metric("Total Paid Deals", f"{latest.total_deals:,}")
+TypeError: unsupported format string passed to bytes.__format__
+2025-05-17 16:54:02.641 Uncaught app exception
+Traceback (most recent call last):
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+  File "C:\DPY_ENV\lib\site-packages\streamlit\runtime\scriptrunner\script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+  File "C:\Users\derek\Desktop\HCS AUTOMATED\app.py", line 431, in <module>
+    combined = api_today[[
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\frame.py", line 3767, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 5877, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+  File "C:\DPY_ENV\lib\site-packages\pandas\core\indexes\base.py", line 5941, in _raise_if_missing
+    raise KeyError(f"{not_found} not in index")
+KeyError: "['lead_id'] not in index"
