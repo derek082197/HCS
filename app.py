@@ -9,51 +9,45 @@ from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
 
-# ──────────────────────────────────────────────────
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# ──────────────────────────────────────────────────
-# 2) YOUR CREDENTIAL CONSTANTS
-APP_USER     = "derek082197"
-APP_PASSWORD = "Xd5gihbw!"
+# ────────────────────────────────────────────────────────────────────────
+# STEP 2) LOAD YOUR USERS FROM CSV
+#    create a users.csv in your repo root with columns: username,password
+#    (30+ rows all you like)
+# ────────────────────────────────────────────────────────────────────────
+df_users = pd.read_csv("users.csv", dtype=str).dropna()
+USERS    = dict(zip(df_users.username.str.strip(), df_users.password))
 
-# ──────────────────────────────────────────────────
-# 3) SESSION-STATE INIT
+# STEP 3) SESSION-STATE INIT
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-    st.session_state.user      = ""
-    st.session_state.pwd       = ""
 
-# ──────────────────────────────────────────────────
-# 4) LOGIN / LOGOUT CALLBACKS (NO more experimental_rerun)
+# STEP 4) LOGIN/LOGOUT CALLBACKS
 def do_login():
-    if (st.session_state.user == APP_USER
-        and st.session_state.pwd  == APP_PASSWORD):
+    u = st.session_state.user.strip()
+    p = st.session_state.pwd
+    if u in USERS and p == USERS[u]:
         st.session_state.logged_in = True
+        st.success(f"✅ Welcome, {u}!")
     else:
         st.error("❌ Incorrect credentials")
 
 def do_logout():
     st.session_state.logged_in = False
+    st.experimental_rerun()
 
-# ──────────────────────────────────────────────────
-# 5) SHOW LOGIN FORM (in the sidebar) if NOT logged in
+# STEP 5) SHOW LOGIN FORM (blocks everything else until success)
 if not st.session_state.logged_in:
-    with st.sidebar:
-        st.title("🔒 HCS Commission CRM")
-        st.text_input("Username", key="user")
-        st.text_input("Password", type="password", key="pwd")
-        st.button("Log in", on_click=do_login)
-    # this ensures nothing below runs until you log in
+    st.title("🔒 HCS Commission CRM Login")
+    st.text_input("Username", key="user")
+    st.text_input("Password", type="password", key="pwd")
+    st.button("Log in", on_click=do_login)
     st.stop()
 
-# ──────────────────────────────────────────────────
-# 6) ONCE LOGGED IN, SHOW LOGOUT BUTTON
+# STEP 6) ONCE LOGGED IN, SHOW LOGOUT
 st.sidebar.button("Log out", on_click=do_logout)
-
-# ──────────────────────────────────────────────────
-# EVERYTHING BELOW HERE IS YOUR EXISTING APP
 # ---------------------------------------
 LIVE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/e/"
