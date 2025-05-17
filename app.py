@@ -9,6 +9,22 @@ from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
 
+# --- LOGIN GATE ---
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.title("🔐 HCS Commission CRM Login")
+    user = st.text_input("Username")
+    pwd  = st.text_input("Password", type="password")
+    if st.button("Log in"):
+        if user == "derek082197" and pwd == "Xd5gihbw!":
+            st.session_state.logged_in = True
+            st.experimental_rerun()
+        else:
+            st.error("❌ Invalid username or password")
+    st.stop()
+
 # ---------------------------------------
 # CONFIG — this must be the very first Streamlit call!
 # ---------------------------------------
