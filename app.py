@@ -9,35 +9,40 @@ from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
 
-# 1) PAGE CONFIG — must be the very first Streamlit call
+# 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
 # 2) YOUR CREDENTIAL CONSTANTS
 APP_USER     = "derek082197"
 APP_PASSWORD = "Xd5gihbw!"
 
-# 3) INIT SESSION STATE
+# 3) SESSION STATE INIT
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-# 4) LOGIN / LOGOUT UI
+# 4) LOGIN / LOGOUT CALLBACKS
+def do_login():
+    if st.session_state.user == APP_USER and st.session_state.pwd == APP_PASSWORD:
+        st.session_state.logged_in = True
+    else:
+        st.error("❌ Incorrect credentials")
+
+def do_logout():
+    st.session_state.logged_in = False
+
+# 5) SHOW LOGIN FORM if not yet logged in
 if not st.session_state.logged_in:
     st.title("🔒 HCS Commission CRM Login")
-    user = st.text_input("Username")
-    pwd  = st.text_input("Password", type="password")
-    if st.button("Log in"):
-        if user == APP_USER and pwd == APP_PASSWORD:
-            st.session_state.logged_in = True
-            st.experimental_rerun()           # refresh to show dashboard
-        else:
-            st.error("❌ Incorrect credentials")
-    st.stop()  # nothing below runs until you log in
+    st.text_input("Username", key="user")
+    st.text_input("Password", type="password", key="pwd")
+    st.button("Log in", on_click=do_login)
+    st.stop()  # nothing below this will run until you log in
 
-# If we reach here, user is logged in
-st.sidebar.button("Log out", on_click=lambda: st.session_state.update(logged_in=False) or st.experimental_rerun())
+# 6) Once logged in, show a logout button in sidebar
+st.sidebar.button("Log out", on_click=do_logout)
 
-# ───────────────────────────────────────────────────────────────
-# 5) EVERYTHING BELOW THIS LINE IS YOUR EXISTING APP CODE
+# ──────────────────────────────────────────────────
+# 7) EVERYTHING BELOW HERE IS YOUR EXISTING APP
 # ---------------------------------------
 LIVE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/e/"
