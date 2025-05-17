@@ -9,11 +9,10 @@ from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
 
-# ────────────────────────────────────────────────────────────────────────────
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# 2) YOUR CREDENTIALS
+# 2) YOUR CREDENTIAL CONSTANTS
 APP_USER     = "derek082197"
 APP_PASSWORD = "Xd5gihbw!"
 
@@ -26,13 +25,11 @@ def do_login():
     if (st.session_state.get("user") == APP_USER
         and st.session_state.get("pwd") == APP_PASSWORD):
         st.session_state.logged_in = True
-        st.success("✅ Logged in!")
     else:
         st.error("❌ Incorrect credentials")
 
 def do_logout():
     st.session_state.logged_in = False
-    st.success("🔒 Logged out")
 
 # 5) SHOW LOGIN FORM
 if not st.session_state.logged_in:
@@ -40,12 +37,12 @@ if not st.session_state.logged_in:
     st.text_input("Username", key="user")
     st.text_input("Password", type="password", key="pwd")
     st.button("Log in", on_click=do_login)
-    st.stop()  # nothing below runs until logged in
+    st.stop()  # ← this ensures nothing below ever runs
 
 # 6) SHOW LOGOUT BUTTON
 st.sidebar.button("Log out", on_click=do_logout)
 
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 # EVERYTHING BELOW THIS LINE ONLY RUNS WHEN LOGGED IN
 # ---------------------------------------
 LIVE_SHEET_URL = (
