@@ -38,15 +38,15 @@ def do_logout():
     st.session_state.logged_in = False
     st.experimental_rerun()
 
-# STEP 5) SHOW LOGIN FORM (blocks everything else until success)
+# 5) SHOW LOGIN FORM IN THE SIDEBAR (blocks main until logged in)
 if not st.session_state.logged_in:
-    st.title("🔒 HCS Commission CRM Login")
-    st.text_input("Username", key="user")
-    st.text_input("Password", type="password", key="pwd")
-    st.button("Log in", on_click=do_login)
+    st.sidebar.title("🔒 HCS CRM Login")
+    st.sidebar.text_input("Username", key="user")
+    st.sidebar.text_input("Password", type="password", key="pwd")
+    st.sidebar.button("Log in", on_click=do_login)
     st.stop()
 
-# STEP 6) ONCE LOGGED IN, SHOW LOGOUT
+# 6) Once logged in, show Log out in the sidebar
 st.sidebar.button("Log out", on_click=do_logout)
 # ---------------------------------------
 LIVE_SHEET_URL = (
