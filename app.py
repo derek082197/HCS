@@ -9,31 +9,35 @@ from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
 
-# 1) Page config must be the very first Streamlit call
+# 1) PAGE CONFIG — must be the very first Streamlit call
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# 2) Your secret credentials
+# 2) YOUR CREDENTIAL CONSTANTS
 APP_USER     = "derek082197"
 APP_PASSWORD = "Xd5gihbw!"
 
-# 3) Login prompt
-st.title("🔒 HCS Commission CRM Login")
-user = st.text_input("Username")
-pwd  = st.text_input("Password", type="password")
+# 3) INIT SESSION STATE
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-# 4) Only check credentials once they've started typing
-if user or pwd:
-    if user == APP_USER and pwd == APP_PASSWORD:
-        st.success("✅ Logged in!")
-    else:
-        st.warning("❌ Incorrect credentials")
-        st.stop()
-else:
-    # neither field has been touched yet – just wait
-    st.stop()
+# 4) LOGIN / LOGOUT UI
+if not st.session_state.logged_in:
+    st.title("🔒 HCS Commission CRM Login")
+    user = st.text_input("Username")
+    pwd  = st.text_input("Password", type="password")
+    if st.button("Log in"):
+        if user == APP_USER and pwd == APP_PASSWORD:
+            st.session_state.logged_in = True
+            st.experimental_rerun()           # refresh to show dashboard
+        else:
+            st.error("❌ Incorrect credentials")
+    st.stop()  # nothing below runs until you log in
 
-# ─────────────────────────────────────────────────────────────
-# Everything below this line only runs when you're logged in
+# If we reach here, user is logged in
+st.sidebar.button("Log out", on_click=lambda: st.session_state.update(logged_in=False) or st.experimental_rerun())
+
+# ───────────────────────────────────────────────────────────────
+# 5) EVERYTHING BELOW THIS LINE IS YOUR EXISTING APP CODE
 # ---------------------------------------
 LIVE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/e/"
