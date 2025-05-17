@@ -9,14 +9,15 @@ from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
 
+# ────────────────────────────────────────────────────────────────────────────
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# 2) YOUR CREDENTIAL CONSTANTS
+# 2) YOUR CREDENTIALS
 APP_USER     = "derek082197"
 APP_PASSWORD = "Xd5gihbw!"
 
-# 3) SESSION STATE INIT
+# 3) INIT SESSION STATE
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -26,28 +27,25 @@ def do_login():
         and st.session_state.get("pwd") == APP_PASSWORD):
         st.session_state.logged_in = True
         st.success("✅ Logged in!")
-        # rerun so sidebar appears
-        st.experimental_rerun()
     else:
         st.error("❌ Incorrect credentials")
 
 def do_logout():
     st.session_state.logged_in = False
     st.success("🔒 Logged out")
-    st.experimental_rerun()
 
-# 5) SHOW LOGIN FORM if not yet logged in
+# 5) SHOW LOGIN FORM
 if not st.session_state.logged_in:
     st.title("🔒 HCS Commission CRM Login")
     st.text_input("Username", key="user")
     st.text_input("Password", type="password", key="pwd")
     st.button("Log in", on_click=do_login)
-    st.stop()  # nothing below this will run until you log in
+    st.stop()  # nothing below runs until logged in
 
-# 6) Once logged in, show a logout button in the sidebar
+# 6) SHOW LOGOUT BUTTON
 st.sidebar.button("Log out", on_click=do_logout)
 
-# ──────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 # EVERYTHING BELOW THIS LINE ONLY RUNS WHEN LOGGED IN
 # ---------------------------------------
 LIVE_SHEET_URL = (
