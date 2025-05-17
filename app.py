@@ -9,7 +9,9 @@ from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
 
-# --- LOGIN GATE ---
+# -----------------------------------------------------------------------------
+#                  LOGIN GATE (place this at the top!)
+# -----------------------------------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -18,12 +20,20 @@ if not st.session_state.logged_in:
     user = st.text_input("Username")
     pwd  = st.text_input("Password", type="password")
     if st.button("Log in"):
-        if user == "derek082197" and pwd == "Xd5gihbw!":
+        # you can also store your creds in st.secrets.toml for safety
+        if user == "derek082197" and pwd == Xd5gihbw!["app_password"]:
             st.session_state.logged_in = True
-            # no rerun() call needed—Streamlit automatically reruns on button click
+            st.experimental_rerun()   # optional — Streamlit will rerun on widget events anyway
         else:
             st.error("❌ Invalid username or password")
-    st.stop()  # stop here until they log in
+    st.stop()  # nothing below runs until logged_in == True
+
+# -----------------------------------------------------------------------------
+#          EVERYTHING BELOW RUNS ONLY IF logged_in == True
+# -----------------------------------------------------------------------------
+
+# your st.tabs([...]) and all the rest of your code go here
+
 
 
 # ---------------------------------------
