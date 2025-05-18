@@ -8,6 +8,7 @@ import re
 from datetime import date, datetime
 from fpdf import FPDF
 import requests  # for CRM API
+from datetime import date, timedelta
 
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
@@ -371,38 +372,67 @@ with tabs[2]:
 # ---------------------------------------
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
-    live_df = load_live_counts()
-    tot_rows = live_df[live_df["Agent"].str.upper()=="TOTAL"]
-    if len(tot_rows) < 3:
-        st.error("Need at least 3 TOTAL rows in your live CSV.")
+
+    # Pull in _all_ leads from the CRM API
+    df_api = load_crm_leads()
+    if df_api.empty:
+        st.error("No leads returned from API.")
     else:
-        sales = (
-            pd.to_numeric(
-                tot_rows["Sales"].astype(str).str.replace(r"[^0-9]", "", regex=True),
-                errors="coerce"
-            ).fillna(0).astype(int)
-        )
-        d_tot, w_tot, m_tot = sales.iloc[0], sales.iloc[1], sales.iloc[2]
+        # Parse the sale date
+        df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
+        today = date.today()
+
+        # Boolean masks for today / last 7 days / this month
+        daily_mask   = df_api["date_sold"].dt.date == today
+        weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=7))
+        monthly_mask = df_api["date_sold"].dt.month == today.month
+
+        # Totals reset automatically at midnight
+        d_tot = int(daily_mask.sum())
+        w_tot = int(weekly_mask.sum())
+        m_tot = int(monthly_mask.sum())
+
+        # Show the top‐line metrics
         c1, c2, c3 = st.columns(3, gap="large")
         c1.metric("Today's Deals",      f"{d_tot:,}")
+        c1.metric("Today's Profit",     f"${d_tot*PROFIT_PER_SALE:,.2f}")
         c2.metric("This Week's Deals",  f"{w_tot:,}")
+        c2.metric("This Week's Profit", f"${w_tot*PROFIT_PER_SALE:,.2f}")
         c3.metric("This Month's Deals", f"{m_tot:,}")
-        c1.metric("Today's Profit",      f"${d_tot*PROFIT_PER_SALE:,.2f}")
-        c2.metric("This Week's Profit",  f"${w_tot*PROFIT_PER_SALE:,.2f}")
-        c3.metric("This Month's Profit", f"${m_tot*PROFIT_PER_SALE:,.2f}")
+        c3.metric("This Month's Profit",f"${m_tot*PROFIT_PER_SALE:,.2f}")
+
         st.markdown("---")
-        agents    = live_df["Agent"]
-        sales_all = pd.to_numeric(
-            live_df["Sales"].astype(str).str.replace(r"[^0-9]", "", regex=True),
-            errors="coerce"
-        ).fillna(0).astype(int)
-        daily_block   = pd.DataFrame({"Agent":agents.iloc[0:58],   "Sales":sales_all.iloc[0:58]}).set_index("Agent").sort_values("Sales", ascending=False)
-        weekly_block  = pd.DataFrame({"Agent":agents.iloc[60:118], "Sales":sales_all.iloc[60:118]}).set_index("Agent").sort_values("Sales", ascending=False)
-        monthly_block = pd.DataFrame({"Agent":agents.iloc[120:178],"Sales":sales_all.iloc[120:178]}).set_index("Agent").sort_values("Sales", ascending=False)
+
+        # Now break it down by Agent
+        # (you can swap in your vendor or agent column here)
+        agent_col = "lead_vendor_name"
+
+        daily_by_agent = (
+            df_api[daily_mask]
+            .groupby(agent_col)
+            .size()
+            .rename("Sales")
+            .sort_values(ascending=False)
+        )
+        weekly_by_agent = (
+            df_api[weekly_mask]
+            .groupby(agent_col)
+            .size()
+            .rename("Sales")
+            .sort_values(ascending=False)
+        )
+        monthly_by_agent = (
+            df_api[monthly_mask]
+            .groupby(agent_col)
+            .size()
+            .rename("Sales")
+            .sort_values(ascending=False)
+        )
+
         b1, b2, b3 = st.columns(3, gap="large")
-        b1.subheader("Daily Sales by Agent");   b1.bar_chart(daily_block)
-        b2.subheader("Weekly Sales by Agent");  b2.bar_chart(weekly_block)
-        b3.subheader("Monthly Sales by Agent"); b3.bar_chart(monthly_block)
+        b1.subheader("Daily Sales by Agent");   b1.bar_chart(daily_by_agent)
+        b2.subheader("Weekly Sales by Agent");  b2.bar_chart(weekly_by_agent)
+        b3.subheader("Monthly Sales by Agent"); b3.bar_chart(monthly_by_agent)
 
 # ---------------------------------------
 # CLIENTS TAB
