@@ -373,35 +373,38 @@ with tabs[2]:
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
 
-    # spinner so we never show “ghost” UI
-    with st.spinner("Updating counts…"):
+    # show a spinner while we do our date filtering
+    with st.spinner("Refreshing counts…"):
         if df_api.empty:
             st.error("No leads returned from API.")
             st.stop()
 
-        # parse & mask by date
+        # parse the sale date
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         today = date.today()
+
+        # masks for daily, weekly, monthly
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=6))
         monthly_mask = df_api["date_sold"].dt.month == today.month
 
+        # totals
         d_tot = int(daily_mask.sum())
         w_tot = int(weekly_mask.sum())
         m_tot = int(monthly_mask.sum())
 
-    # show metrics
+    # display the three metrics
     c1, c2, c3 = st.columns(3, gap="large")
     c1.metric("Today's Deals",      f"{d_tot:,}")
-    c1.metric("Today's Profit",     f"${d_tot*PROFIT_PER_SALE:,.2f}")
+    c1.metric("Today's Profit",     f"${d_tot * PROFIT_PER_SALE:,.2f}")
     c2.metric("This Week's Deals",  f"{w_tot:,}")
-    c2.metric("This Week's Profit", f"${w_tot*PROFIT_PER_SALE:,.2f}")
+    c2.metric("This Week's Profit", f"${w_tot * PROFIT_PER_SALE:,.2f}")
     c3.metric("This Month's Deals", f"{m_tot:,}")
-    c3.metric("This Month's Profit",f"${m_tot*PROFIT_PER_SALE:,.2f}")
+    c3.metric("This Month's Profit",f"${m_tot * PROFIT_PER_SALE:,.2f}")
 
     st.markdown("---")
 
-    # breakdown by agent (assuming lead_vendor_name is your agent column)
+    # helper to group by agent (adjust column as needed)
     def by_agent(mask):
         return (
             df_api[mask]
@@ -415,6 +418,7 @@ with tabs[3]:
     b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
     b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
     b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(monthly_mask))
+
 
 
 # ---------------------------------------
