@@ -339,55 +339,49 @@ with tabs[2]:
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
 
-    # 1) a button to trigger the fetch (does not run on page load)
-    if st.button("🔄 Refresh live counts"):
-        refresh_live_counts()
+    # only now do we fetch the API
+    with st.spinner("⏳ Fetching live counts…"):
+        df_api = load_crm_leads()
 
-    # 2) grab whatever we have in session_state (empty or last result)
-    df_api = st.session_state.df_api
-
+    # if the call failed or returned nothing, show a message and bail
     if df_api.empty:
-        st.info("No live counts loaded yet. Click “Refresh live counts” to fetch.")
+        st.error("❌ No leads returned from API.")
     else:
-        # parse the sale date
+        # your existing date‐masking logic:
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         today = date.today()
 
-        # masks for daily, weekly, monthly
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=6))
         monthly_mask = df_api["date_sold"].dt.month == today.month
 
-        # totals
-        d_tot = int(daily_mask.sum())
-        w_tot = int(weekly_mask.sum())
-        m_tot = int(monthly_mask.sum())
+        d_tot = daily_mask.sum()
+        w_tot = weekly_mask.sum()
+        m_tot = monthly_mask.sum()
 
-        # display the three metrics
+        # render metrics immediately
         c1, c2, c3 = st.columns(3, gap="large")
-        c1.metric("Today's Deals",      f"{d_tot:,}")
-        c1.metric("Today's Profit",     f"${d_tot * PROFIT_PER_SALE:,.2f}")
-        c2.metric("This Week's Deals",  f"{w_tot:,}")
-        c2.metric("This Week's Profit", f"${w_tot * PROFIT_PER_SALE:,.2f}")
-        c3.metric("This Month's Deals", f"{m_tot:,}")
-        c3.metric("This Month's Profit",f"${m_tot * PROFIT_PER_SALE:,.2f}")
+        c1.metric("Today's Deals",     f"{d_tot:,}", delta=None)
+        c1.metric("Today's Profit",    f"${d_tot * PROFIT_PER_SALE:,.2f}", delta=None)
+        c2.metric("This Week's Deals", f"{w_tot:,}", delta=None)
+        c2.metric("This Week's Profit",f"${w_tot * PROFIT_PER_SALE:,.2f}", delta=None)
+        c3.metric("This Month's Deals",f"{m_tot:,}", delta=None)
+        c3.metric("This Month's Profit",f"${m_tot * PROFIT_PER_SALE:,.2f}", delta=None)
 
         st.markdown("---")
 
-        # helper to group by agent
-        def by_agent(mask):
+        def by_vendor(mask):
             return (
                 df_api[mask]
                 .groupby("lead_vendor_name")
                 .size()
-                .rename("Sales")
                 .sort_values(ascending=False)
             )
 
         b1, b2, b3 = st.columns(3, gap="large")
-        b1.subheader("Daily Sales by Agent");   b1.bar_chart( by_agent(daily_mask) )
-        b2.subheader("Weekly Sales by Agent");  b2.bar_chart( by_agent(weekly_mask) )
-        b3.subheader("Monthly Sales by Agent"); b3.bar_chart( by_agent(monthly_mask) )
+        b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_vendor(daily_mask))
+        b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_vendor(weekly_mask))
+        b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_vendor(monthly_mask))
 
 
 
