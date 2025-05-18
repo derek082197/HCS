@@ -336,67 +336,72 @@ with tabs[2]:
 
 # ──────────────────────────────────────────────────────────────────────
 # LIVE COUNTS TAB
+# … all your imports, page_config, login, tabs, etc. above …
+
+# ---------------------------------------
+# LIVE COUNTS TAB (only runs API here)
+# ---------------------------------------
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
 
-    # only now do we fetch the API
-    with st.spinner("⏳ Fetching live counts…"):
+    # fetch exactly once per 5 minutes (cache_data ttl=300)
+    with st.spinner("⏳ Fetching latest leads…"):
         df_api = load_crm_leads()
 
-    # if the call failed or returned nothing, show a message and bail
     if df_api.empty:
-        st.error("❌ No leads returned from API.")
+        st.error("No leads returned from API.")
     else:
-        # your existing date‐masking logic:
+        # parse the sale date
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         today = date.today()
 
+        # masks for daily, weekly, monthly
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=6))
         monthly_mask = df_api["date_sold"].dt.month == today.month
 
-        d_tot = daily_mask.sum()
-        w_tot = weekly_mask.sum()
-        m_tot = monthly_mask.sum()
+        # totals
+        d_tot = int(daily_mask.sum())
+        w_tot = int(weekly_mask.sum())
+        m_tot = int(monthly_mask.sum())
 
-        # render metrics immediately
+        # display metrics
         c1, c2, c3 = st.columns(3, gap="large")
-        c1.metric("Today's Deals",     f"{d_tot:,}", delta=None)
-        c1.metric("Today's Profit",    f"${d_tot * PROFIT_PER_SALE:,.2f}", delta=None)
-        c2.metric("This Week's Deals", f"{w_tot:,}", delta=None)
-        c2.metric("This Week's Profit",f"${w_tot * PROFIT_PER_SALE:,.2f}", delta=None)
-        c3.metric("This Month's Deals",f"{m_tot:,}", delta=None)
-        c3.metric("This Month's Profit",f"${m_tot * PROFIT_PER_SALE:,.2f}", delta=None)
+        c1.metric("Today's Deals",      f"{d_tot:,}", delta=None)
+        c1.metric("Today's Profit",     f"${d_tot*PROFIT_PER_SALE:,.2f}", delta=None)
+        c2.metric("This Week's Deals",  f"{w_tot:,}", delta=None)
+        c2.metric("This Week's Profit", f"${w_tot*PROFIT_PER_SALE:,.2f}", delta=None)
+        c3.metric("This Month's Deals", f"{m_tot:,}", delta=None)
+        c3.metric("This Month's Profit",f"${m_tot*PROFIT_PER_SALE:,.2f}", delta=None)
 
         st.markdown("---")
 
-        def by_vendor(mask):
+        # helper to group by agent
+        def by_agent(mask):
             return (
                 df_api[mask]
                 .groupby("lead_vendor_name")
                 .size()
+                .rename("Sales")
                 .sort_values(ascending=False)
             )
 
         b1, b2, b3 = st.columns(3, gap="large")
-        b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_vendor(daily_mask))
-        b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_vendor(weekly_mask))
-        b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_vendor(monthly_mask))
-
+        b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
+        b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
+        b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(monthly_mask))
 
 
 # ---------------------------------------
-# CLIENTS TAB
+# CLIENTS TAB (same pattern)
 # ---------------------------------------
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
-
-    # Pull today’s leads from API
     if st.button("🔄 Refresh API Leads"):
         load_crm_leads.clear()
+
     df_api = load_crm_leads()
 
-    # Clean / filter API leads
     if df_api.empty:
         st.info("No API leads returned.")
         api_display = pd.DataFrame()
@@ -404,6 +409,9 @@ with tabs[5]:
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         today = date.today()
         api_today = df_api[df_api["date_sold"].dt.date == today]
+
+        # … your existing column‐filtering + manual uploads combo …
+
 
         # Only keep the columns that exist
         api_cols = [
