@@ -258,25 +258,26 @@ with tabs[0]:
 
     if uploaded_file:
         c1, c2, c3, c4 = st.columns(4, gap="large")
-        c1.metric("Total Paid Deals", f"{int(totals['deals']):,}")
-        c2.metric("Agent Payout",      f"${totals['agent']:,.2f}")
-        c3.metric("Owner Revenue",     f"${totals['owner_rev']:,.2f}")
-        c4.metric("Owner Profit",      f"${totals['owner_prof']:,.2f}")
+        # when you have a freshly uploaded statement
+        c1.metric("Total Paid Deals",  f"{int(totals['deals']):,}")       # <-- : not ;
+        c2.metric("Agent Payout",       f"${totals['agent']:,.2f}")
+        c3.metric("Owner Revenue",      f"${totals['owner_rev']:,.2f}")
+        c4.metric("Owner Profit",       f"${totals['owner_prof']:,.2f}")
     else:
         if history_df.empty:
             st.info("Upload a statement to see metrics.")
         else:
             latest = history_df.iloc[-1]
             c1, c2, c3, c4 = st.columns(4, gap="large")
-            c1.metric("Total Paid Deals", f"{int(latest.total_deals):,}")
-            c2.metric("Agent Payout",      f"${latest.agent_payout:,.2f}")
-            c3.metric("Owner Revenue",     f"${latest.owner_revenue:,.2f}")
-            c4.metric("Owner Profit",      f"${latest.owner_profit:,.2f}")
+            # this is the line that was tripping up — make sure it's a colon here:
+            c1.metric("Total Paid Deals",  f"{int(latest.total_deals):,}")  # <-- : not ;
+            c2.metric("Agent Payout",       f"${latest.agent_payout:,.2f}")
+            c3.metric("Owner Revenue",      f"${latest.owner_revenue:,.2f}")
+            c4.metric("Owner Profit",       f"${latest.owner_profit:,.2f}")
 
     st.markdown("---")
     rev = (totals["owner_rev"] if uploaded_file
-           else (history_df.iloc[-1].owner_revenue
-                 if not history_df.empty else 0))
+           else (history_df.iloc[-1].owner_revenue if not history_df.empty else 0))
     s1, s2, s3 = st.columns(3, gap="large")
     s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
     s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
