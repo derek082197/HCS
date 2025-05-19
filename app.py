@@ -155,8 +155,7 @@ def fetch_today_leads():
     all_results, url, seen = [], CRM_API_URL, set()
     while url and url not in seen:
         seen.add(url)
-        resp = requests.get(url, headers=headers,
-                            params=params, timeout=10)
+        resp = requests.get(url, headers=headers, params=params, timeout=10)
         resp.raise_for_status()
         js = resp.json().get("response", {})
         chunk = js.get("results", [])
@@ -408,7 +407,7 @@ with tabs[5]:
     if "manual_leads" not in st.session_state:
         st.session_state.manual_leads = pd.DataFrame()
 
-    # … your manual-upload/historical-leads logic here …
+    # … insert your manual-upload/historical-leads logic here …
 
     # Combine & render
     combined = (
@@ -424,6 +423,7 @@ with tabs[5]:
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
+
 
 
 
