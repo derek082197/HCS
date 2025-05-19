@@ -159,7 +159,6 @@ def generate_agent_pdf(df_agent, agent_name):
 
 # ──────────────────────────────────────────────────────────────────────
 # LIVE COUNTS LOADER
-@st.cache_data(ttl=300)
 def load_live_counts():
     df = pd.read_csv(LIVE_SHEET_URL)
     return df.loc[:,~df.columns.str.contains("^Unnamed")]
