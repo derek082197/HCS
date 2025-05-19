@@ -149,7 +149,18 @@ def generate_agent_pdf(df_agent, agent_name):
     return pdf.output(dest="S").encode("latin1")
 
 # ──────────────────────────────────────────────────────────────────────
-# CRM “Clients” loader w/ real-time pagination and 60 s cache
+# HELPER — fetch only today's leads in one call, cached for 60s
+@st.cache_data(ttl=60)
+def fetch_today_leads():
+    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
+    params  = {"date_from": date.today().strftime("%Y-%m-%d")}
+    resp    = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
+    resp.raise_for_status()
+    js      = resp.json().get("response", {})
+    return pd.DataFrame(js.get("results", []))
+
+# ──────────────────────────────────────────────────────────────────────
+# (keep your paginated loader around for history if you like)
 @st.cache_data(ttl=60)
 def load_crm_leads(date_from: date = None):
     headers = {"tld-api-id":CRM_API_ID,"tld-api-key":CRM_API_KEY}
@@ -172,7 +183,7 @@ def load_crm_leads(date_from: date = None):
         if not nxt or nxt in seen:
             break
         url = nxt
-        params = {}  # clear after first page
+        params = {}
     return pd.DataFrame(all_results)
 
 # ──────────────────────────────────────────────────────────────────────
@@ -209,20 +220,20 @@ with tabs[4]:
         totals = {"deals":0,"agent":0.0,"owner_rev":0.0,"owner_prof":0.0}
         summary.clear()
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf,"w") as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             for agent in df["Agent"].unique():
                 sub = df[df["Agent"]==agent]
-                paid_ct = (sub["Paid Status"]=="Paid").sum()
-                rate    = 25 if paid_ct>=200 else 22.5 if paid_ct>=150 else 17.5 if paid_ct>=120 else 15
-                bonus   = 1200 if paid_ct>=70 else 0
-                payout  = paid_ct*rate + bonus
-                owner_rev  = paid_ct*150
-                owner_prof = paid_ct*43
+                paid_ct     = (sub["Paid Status"]=="Paid").sum()
+                rate        = 25 if paid_ct>=200 else 22.5 if paid_ct>=150 else 17.5 if paid_ct>=120 else 15
+                bonus       = 1200 if paid_ct>=70 else 0
+                payout      = paid_ct * rate + bonus
+                owner_rev   = paid_ct * 150
+                owner_prof  = paid_ct * 43
 
-                totals["deals"]     += paid_ct
-                totals["agent"]     += payout
-                totals["owner_rev"] += owner_rev
-                totals["owner_prof"]+= owner_prof
+                totals["deals"]      += paid_ct
+                totals["agent"]      += payout
+                totals["owner_rev"]  += owner_rev
+                totals["owner_prof"] += owner_prof
 
                 summary.append({
                     "Agent":agent,
@@ -291,7 +302,7 @@ with tabs[1]:
             "Agent Payout":"${:,.2f}",
             "Owner Profit":"${:,.2f}"
         }), use_container_width=True)
-        low = st.slider("Highlight agents below deals:", 0, int(df_led["Paid Deals"].max()), threshold)
+        low     = st.slider("Highlight agents below deals:", 0, int(df_led["Paid Deals"].max()), threshold)
         flagged = df_led[df_led["Paid Deals"]<low]
         st.write(f"Agents below {low}: {len(flagged)}")
         if not flagged.empty:
@@ -330,7 +341,7 @@ with tabs[2]:
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
     with st.spinner("⏳ Fetching latest leads…"):
-        df_api = load_crm_leads(date_from=date.today())
+        df_api = fetch_today_leads()
 
     if df_api.empty:
         st.error("No leads returned from API.")
@@ -369,7 +380,7 @@ with tabs[3]:
 # CLIENTS TAB
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
-    df_api = load_crm_leads(date_from=date.today())
+    df_api = fetch_today_leads()
 
     if df_api.empty:
         st.info("No API leads returned.")
