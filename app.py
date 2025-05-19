@@ -16,13 +16,12 @@ except ImportError:
 import streamlit_authenticator as stauth
 
 # ---- SECURE LOGIN SETUP ----
-# 1. users.csv should have: username,name,password (hashed only!)
+# users.csv: username,name,password (hashed!)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
 usernames = df_users['username'].tolist()
 names     = df_users['name'].tolist() if "name" in df_users.columns else usernames
-passwords = df_users['password'].tolist()  # These must be hashed already!
+passwords = df_users['password'].tolist()
 
-# 2. Build the credentials object (no new hashing here)
 credentials = {
     "usernames": {
         u: {"name": n, "password": p}
@@ -33,24 +32,15 @@ cookie = {"expiry_days": 7, "key": "hcs_login", "name": "hcs_cookie"}
 authenticator = stauth.Authenticate(
     credentials, cookie["name"], cookie["key"], cookie["expiry_days"], preauthorized=[]
 )
-
-
 name, authentication_status, username = authenticator.login("Login", "sidebar")
-
 if authentication_status is False:
     st.error("Username/password is incorrect")
 if authentication_status is None:
     st.warning("Please enter your username and password")
 if not authentication_status:
     st.stop()
-
 authenticator.logout("Logout", "sidebar")
 st.sidebar.success(f"Welcome, {name}!")
-
-# ---- ALL YOUR CRM CODE STARTS BELOW ----
-# ... rest of your CRM/Streamlit logic ...
-
-
 
 # CONSTANTS
 PROFIT_PER_SALE = 43.3
@@ -396,6 +386,7 @@ with tabs[5]:
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
+
 
 
 
