@@ -469,7 +469,6 @@ with tabs[6]:
         tld['VendorRaw'] = tld.iloc[:, 8].astype(str)
         tld['First Name'] = tld.iloc[:, 3].astype(str)
         tld['Last Name'] = tld.iloc[:, 4].astype(str)
-
         tld['vendor_key'] = tld['VendorRaw'].apply(normalize_key)
 
         fmo = pd.read_excel(fmo_file, dtype=str)
@@ -502,25 +501,36 @@ with tabs[6]:
                 "Paid Deals": paid_ct,
                 "Unpaid Deals": unpaid_ct,
                 "Paid %": f"{pct_paid:.1f}%",
+                "PaidPctNum": pct_paid,
                 "Total Paid Amount": f"${paid_amt:,.2f}"
             })
+
         if vendor_summaries:
             df_sum = pd.DataFrame(vendor_summaries)
             st.subheader("Vendor Pay Summary Table")
-            st.dataframe(df_sum, use_container_width=True)
+            st.dataframe(df_sum.drop("PaidPctNum", axis=1), use_container_width=True)
 
-            # --- Grand Total Paid (bottom) ---
+            # ---- Grand Total Paid (bottom) ----
             total_paid = sum(
                 float(str(row["Total Paid Amount"]).replace("$", "").replace(",", ""))
                 for row in vendor_summaries
             )
+            avg_paid_pct = (
+                sum(row["PaidPctNum"] for row in vendor_summaries) / len(vendor_summaries)
+                if vendor_summaries else 0
+            )
+
             st.markdown(
                 f"<div style='font-size:1.15em; margin-top:12px; color:#1a4301;'><b>Total Paid to All Vendors:</b> ${total_paid:,.2f}</div>",
                 unsafe_allow_html=True,
             )
+            st.markdown(
+                f"<div style='font-size:1.08em; margin-top:2px; color:#2a3647;'><b>Average Paid % Across Vendors:</b> {avg_paid_pct:.1f}%</div>",
+                unsafe_allow_html=True,
+            )
 
         # --- PDF GENERATOR with summary block at top ---
-        def vendor_pdf(paid, unpaid, pretty, rate):
+        def vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt):
             def fix(s): return str(s).encode('latin1', errors='replace').decode('latin1')
             pdf = FPDF()
             pdf.add_page()
@@ -531,14 +541,12 @@ with tabs[6]:
             # --- Summary stats at top ---
             paid_ct = len(paid)
             unpaid_ct = len(unpaid)
-            pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
-            total_paid_amt = paid_ct * rate
             pdf.cell(0, 8, fix(f"Summary:"), ln=True)
             pdf.set_font("Arial", "", 11)
             pdf.cell(0, 8, fix(f"Paid Deals: {paid_ct}"), ln=True)
             pdf.cell(0, 8, fix(f"Unpaid Deals: {unpaid_ct}"), ln=True)
             pdf.cell(0, 8, fix(f"Paid Percentage: {pct_paid:.1f}%"), ln=True)
-            pdf.cell(0, 8, fix(f"Total Paid Amount: ${total_paid_amt:,.2f}"), ln=True)
+            pdf.cell(0, 8, fix(f"Total Paid Amount: ${paid_amt:,.2f}"), ln=True)
             pdf.ln(6)
 
             pdf.set_font("Arial", "B", 12)
@@ -566,7 +574,11 @@ with tabs[6]:
                 sub = merged[merged['vendor_key'] == vkey]
                 paid = sub[sub['Advance'] > 0][['First Name', 'Last Name']]
                 unpaid = sub[sub['Advance'] == 0][['First Name', 'Last Name', 'Reason']]
-                pdf_bytes = vendor_pdf(paid, unpaid, pretty, rate)
+                paid_ct = len(paid)
+                unpaid_ct = len(unpaid)
+                pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
+                paid_amt = paid_ct * rate
+                pdf_bytes = vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt)
                 zipf.writestr(f"{pretty.replace(' ', '_')}_Vendor_Pay.pdf", pdf_bytes)
 
         st.download_button(
