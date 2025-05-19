@@ -421,6 +421,7 @@ with tabs[6]:
         "Aetna": 80,
         "ACA King": 75,
     }
+
     def normalize_name(x):
         return str(x).strip().lower().replace(' ', '')
 
@@ -430,24 +431,28 @@ with tabs[6]:
     if tld_file and fmo_file:
         st.success("Both files uploaded. Generating vendor ZIP...")
 
+        # --- Load and process files ---
         tld = pd.read_csv(tld_file, dtype=str)
         tld['Vendor'] = tld.iloc[:, 8].astype(str)
         tld['First Name'] = tld.iloc[:, 3].astype(str)
         tld['Last Name'] = tld.iloc[:, 4].astype(str)
+
         fmo = pd.read_excel(fmo_file, dtype=str)
         fmo['First Name'] = fmo.iloc[:, 7].astype(str)
         fmo['Last Name'] = fmo.iloc[:, 8].astype(str)
         fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
         fmo['Reason'] = fmo.get('Advance Excluded Reason', "")
+
         tld['full_name'] = (tld['First Name'] + tld['Last Name']).apply(normalize_name)
         fmo['full_name'] = (fmo['First Name'] + fmo['Last Name']).apply(normalize_name)
+
         merged = pd.merge(
             tld,
             fmo[['full_name', 'Advance', 'Reason']],
             on='full_name', how='left'
         )
 
-        # Build summary table
+        # --- Display Vendor Summary Table ---
         vendor_summaries = []
         for vendor in sorted(merged['Vendor'].unique()):
             if vendor not in VENDOR_RATES:
@@ -465,51 +470,50 @@ with tabs[6]:
                 "Paid %": f"{pct_paid:.1f}%",
                 "Total Paid Amount": f"${paid_amt:,.2f}"
             })
-
         if vendor_summaries:
             df_sum = pd.DataFrame(vendor_summaries)
             st.subheader("Vendor Pay Summary Table")
             st.dataframe(df_sum, use_container_width=True)
 
-        # Build PDFs for each vendor as before
+        # --- PDF GENERATOR with summary block at top ---
         def vendor_pdf(paid, unpaid, vendor, rate):
-    def fix(s):
-        return str(s).encode('latin1', errors='replace').decode('latin1')
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
-    pdf.ln(3)
-    pdf.set_font("Arial", "B", 12)
-    # --- Summary stats at top ---
-    paid_ct = len(paid)
-    unpaid_ct = len(unpaid)
-    pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
-    total_paid_amt = paid_ct * rate
-    pdf.cell(0, 8, fix(f"Summary:"), ln=True)
-    pdf.set_font("Arial", "", 11)
-    pdf.cell(0, 8, fix(f"Paid Deals: {paid_ct}"), ln=True)
-    pdf.cell(0, 8, fix(f"Unpaid Deals: {unpaid_ct}"), ln=True)
-    pdf.cell(0, 8, fix(f"Paid Percentage: {pct_paid:.1f}%"), ln=True)
-    pdf.cell(0, 8, fix(f"Total Paid Amount: ${total_paid_amt:,.2f}"), ln=True)
-    pdf.ln(6)
+            def fix(s):
+                return str(s).encode('latin1', errors='replace').decode('latin1')
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
+            pdf.ln(3)
+            pdf.set_font("Arial", "B", 12)
+            # --- Summary stats at top ---
+            paid_ct = len(paid)
+            unpaid_ct = len(unpaid)
+            pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
+            total_paid_amt = paid_ct * rate
+            pdf.cell(0, 8, fix(f"Summary:"), ln=True)
+            pdf.set_font("Arial", "", 11)
+            pdf.cell(0, 8, fix(f"Paid Deals: {paid_ct}"), ln=True)
+            pdf.cell(0, 8, fix(f"Unpaid Deals: {unpaid_ct}"), ln=True)
+            pdf.cell(0, 8, fix(f"Paid Percentage: {pct_paid:.1f}%"), ln=True)
+            pdf.cell(0, 8, fix(f"Total Paid Amount: ${total_paid_amt:,.2f}"), ln=True)
+            pdf.ln(6)
 
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
-    pdf.set_font("Arial", "", 10)
-    for _, row in paid.iterrows():
-        pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
-    pdf.ln(3)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
-    pdf.set_font("Arial", "", 10)
-    for _, row in unpaid.iterrows():
-        reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
-        pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
-    pdf.ln(5)
-    return pdf.output(dest="S").encode("latin1")
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
+            pdf.set_font("Arial", "", 10)
+            for _, row in paid.iterrows():
+                pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
+            pdf.ln(3)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
+            pdf.set_font("Arial", "", 10)
+            for _, row in unpaid.iterrows():
+                reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
+                pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
+            pdf.ln(5)
+            return pdf.output(dest="S").encode("latin1")
 
-
+        # --- Zip all PDFs ---
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zipf:
             for vendor in merged['Vendor'].unique():
@@ -521,6 +525,7 @@ with tabs[6]:
                 unpaid = sub[sub['Advance'] == 0][['First Name', 'Last Name', 'Reason']]
                 pdf_bytes = vendor_pdf(paid, unpaid, vendor, rate)
                 zipf.writestr(f"{vendor.replace(' ', '_')}_Vendor_Pay.pdf", pdf_bytes)
+
         st.download_button(
             "Download ZIP of Vendor Pay Reports",
             buf.getvalue(),
@@ -528,9 +533,9 @@ with tabs[6]:
             mime="application/zip"
         )
         st.info("Each PDF lists only converted deals (matched to FMO). Unpaid reasons included. Vendor rate auto-applied.")
-
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
