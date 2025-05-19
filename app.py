@@ -405,26 +405,31 @@ with tabs[6]:
         return str(x).strip().lower().replace(' ', '')
 
     def vendor_pdf(paid, unpaid, vendor, rate):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", "B", 14)
-        pdf.cell(0, 10, f"Vendor Pay Summary – {vendor}", ln=True, align="C")
-        pdf.ln(5)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"Paid Clients", ln=True)
-        pdf.set_font("Arial", "", 10)
-        for _, row in paid.iterrows():
-            pdf.cell(0, 8, f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}", ln=True)
-        pdf.ln(3)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"Unpaid Clients & Reasons", ln=True)
-        pdf.set_font("Arial", "", 10)
-        for _, row in unpaid.iterrows():
-            pdf.multi_cell(0, 8, f"- {row['First Name']} {row['Last Name']} | Reason: {row['Reason'] or 'No reason provided'}")
-        pdf.ln(5)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid", ln=True)
-        return pdf.output(dest="S").encode("latin1")
+    def fix(s):
+        # Ensures string is ascii-compatible for FPDF
+        return str(s).encode('latin1', errors='replace').decode('latin1')
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
+    pdf.set_font("Arial", "", 10)
+    for _, row in paid.iterrows():
+        pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
+    pdf.ln(3)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
+    pdf.set_font("Arial", "", 10)
+    for _, row in unpaid.iterrows():
+        reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
+        pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
+    return pdf.output(dest="S").encode("latin1")
+
 
     tld_file = st.file_uploader("Upload TLD CSV (new/PHI export)", type=["csv"], key="vendor_tld")
     fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo")
