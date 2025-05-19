@@ -39,8 +39,7 @@ if authentication_status is None:
     st.warning("Please enter your username and password")
 if not authentication_status:
     st.stop()
-authenticator.logout("Logout", "sidebar")
-st.sidebar.success(f"Welcome, {name}!")
+
 
 # CONSTANTS
 PROFIT_PER_SALE = 43.3
