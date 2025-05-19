@@ -326,10 +326,27 @@ with tabs[2]:
         sel = st.selectbox("View report:", dates)
         rec = history_df.loc[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
         cols = st.columns(4)
-        cols[0].metric("Deals",         f"{int(rec.total_deals):,}")
-        cols[1].metric("Agent Payout",  f"${rec.agent_payout:,.2f}")
-        cols[2].metric("Owner Revenue", f"${rec.owner_revenue:,.2f}")
-        cols[3].metric("Owner Profit",  f"${rec.owner_profit:,.2f}")
+        try:
+    hist_deals = int(getattr(rec, 'total_deals', 0))
+except (TypeError, ValueError):
+    hist_deals = 0
+try:
+    hist_agent_payout = float(getattr(rec, 'agent_payout', 0))
+except (TypeError, ValueError):
+    hist_agent_payout = 0.0
+try:
+    hist_owner_revenue = float(getattr(rec, 'owner_revenue', 0))
+except (TypeError, ValueError):
+    hist_owner_revenue = 0.0
+try:
+    hist_owner_profit = float(getattr(rec, 'owner_profit', 0))
+except (TypeError, ValueError):
+    hist_owner_profit = 0.0
+
+cols[0].metric("Deals",         f"{hist_deals:,}")
+cols[1].metric("Agent Payout",  f"${hist_agent_payout:,.2f}")
+cols[2].metric("Owner Revenue", f"${hist_owner_revenue:,.2f}")
+cols[3].metric("Owner Profit",  f"${hist_owner_profit:,.2f}")
 
         st.line_chart(history_df.set_index("upload_date")[
             ["total_deals","agent_payout","owner_revenue","owner_profit"]
