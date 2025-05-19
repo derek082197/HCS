@@ -8,6 +8,7 @@ import re
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests  # for CRM API
+from urllib.parse import urlencode
 
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
@@ -45,15 +46,6 @@ if not st.session_state.logged_in:
 
 # 6) Once logged in, show Log out in the sidebar
 st.sidebar.button("Log out", on_click=do_logout)
-# initialize an empty placeholder for our live‐counts DataFrame
-if "df_api" not in st.session_state:
-    st.session_state.df_api = pd.DataFrame()
-
-# helper to manually trigger a reload
-def refresh_live_counts():
-    with st.spinner("⏳ Fetching live counts from TLD…"):
-        st.session_state.df_api = load_crm_leads()
-
 
 # ──────────────────────────────────────────────────────────────────────
 # YOUR CONFIG CONSTANTS
@@ -113,18 +105,15 @@ def generate_agent_pdf(df_agent, agent_name):
     pdf.set_font("Arial","B",12)
     pdf.cell(0,10,f"Commission Statement - {agent_name}",ln=True)
     pdf.ln(5)
-
     total_deals = len(df_agent)
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
     unpaid_count= total_deals - paid_count
-
     if paid_count>=200:    rate=25
     elif paid_count>=150:  rate=22.5
     elif paid_count>=120:  rate=17.5
     else:                  rate=15
     bonus = 1200 if paid_count>=70 else 0
     payout= paid_count*rate+bonus
-
     pdf.set_font("Arial","",12)
     pdf.cell(0,8,f"Total Deals Submitted: {total_deals}",ln=True)
     pdf.cell(0,8,f"Paid Deals: {paid_count}",ln=True)
@@ -135,7 +124,6 @@ def generate_agent_pdf(df_agent, agent_name):
     pdf.cell(0,10,f"Payout: ${payout:,.2f}",ln=True)
     pdf.set_text_color(0,0,0)
     pdf.ln(5)
-
     pdf.set_font("Arial","B",12)
     pdf.cell(0,8,"Paid Clients:",ln=True)
     pdf.set_font("Arial","",10)
@@ -143,7 +131,6 @@ def generate_agent_pdf(df_agent, agent_name):
         eff = row.get("Effective Date")
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
         pdf.multi_cell(0,6,f"- {row['Client']} | Eff: {eff_str}")
-
     pdf.ln(3)
     pdf.set_font("Arial","B",12)
     pdf.cell(0,8,"Unpaid Clients & Reasons:",ln=True)
@@ -154,55 +141,36 @@ def generate_agent_pdf(df_agent, agent_name):
         reason = str(row.get("Reason",""))
         pdf.multi_cell(0,6,f"- {row['Client']} | Eff: {eff_str} | {reason}")
         pdf.ln(1)
-
     return pdf.output(dest="S").encode("latin1")
 
 # ──────────────────────────────────────────────────────────────────────
-# LIVE COUNTS LOADER
-def load_live_counts():
-    df = pd.read_csv(LIVE_SHEET_URL)
-    return df.loc[:,~df.columns.str.contains("^Unnamed")]
-
-from urllib.parse import urlencode
-from datetime import date
-
+# CRM “Clients” loader w/ real-time pagination
 def load_crm_leads(date_from: date = None):
     headers = {
         "tld-api-id": CRM_API_ID,
         "tld-api-key": CRM_API_KEY
     }
-    # on the first request we send date_from as a query-param
     params = {}
     if date_from:
         params["date_from"] = date_from.strftime("%Y-%m-%d")
-
     all_results = []
     url = CRM_API_URL
     seen = set()
-
-    # paginate until there's no “next” link
     while url and url not in seen:
         seen.add(url)
         resp = requests.get(url, headers=headers, params=params if params else {}, timeout=10)
         resp.raise_for_status()
         js = resp.json().get("response", {})
-        results = js.get("results", [])
-        if not results:
+        chunk = js.get("results", [])
+        if not chunk:
             break
-        all_results.extend(results)
-
-        # grab the next-page URL
+        all_results.extend(chunk)
         nxt = js.get("navigate", {}).get("next")
         if not nxt or nxt in seen:
             break
         url = nxt
-        # clear params so they’re not re-sent on subsequent pages
-        params = {}
-
+        params = {}  # clear after first page
     return pd.DataFrame(all_results)
-
-
-
 
 # ──────────────────────────────────────────────────────────────────────
 # INITIALIZATION
@@ -211,9 +179,6 @@ history_df    = load_history()
 summary       = []
 uploaded_file = None
 threshold     = 10
-
-# Pre-load API leads once (for Live Counts & Clients tabs)
-
 
 # ──────────────────────────────────────────────────────────────────────
 # TABS SETUP
@@ -365,49 +330,29 @@ with tabs[2]:
 # ---------------------------------------
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
-
-    # fetch exactly once per 5 minutes (cache_data ttl=300)
     with st.spinner("⏳ Fetching latest leads…"):
-        df_api = load_crm_leads()
+        # ← pass date.today() here
+        df_api = load_crm_leads(date_from=date.today())
 
     if df_api.empty:
         st.error("No leads returned from API.")
     else:
-        # parse the sale date
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         today = date.today()
-
-        # masks for daily, weekly, monthly
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=6))
         monthly_mask = df_api["date_sold"].dt.month == today.month
-
-        # totals
-        d_tot = int(daily_mask.sum())
-        w_tot = int(weekly_mask.sum())
-        m_tot = int(monthly_mask.sum())
-
-        # display metrics
+        d_tot, w_tot, m_tot = int(daily_mask.sum()), int(weekly_mask.sum()), int(monthly_mask.sum())
         c1, c2, c3 = st.columns(3, gap="large")
-        c1.metric("Today's Deals",      f"{d_tot:,}", delta=None)
-        c1.metric("Today's Profit",     f"${d_tot*PROFIT_PER_SALE:,.2f}", delta=None)
-        c2.metric("This Week's Deals",  f"{w_tot:,}", delta=None)
-        c2.metric("This Week's Profit", f"${w_tot*PROFIT_PER_SALE:,.2f}", delta=None)
-        c3.metric("This Month's Deals", f"{m_tot:,}", delta=None)
-        c3.metric("This Month's Profit",f"${m_tot*PROFIT_PER_SALE:,.2f}", delta=None)
-
+        c1.metric("Today's Deals",  f"{d_tot:,}")
+        c1.metric("Today's Profit", f"${d_tot*PROFIT_PER_SALE:,.2f}")
+        c2.metric("This Week's Deals",  f"{w_tot:,}")
+        c2.metric("This Week's Profit", f"${w_tot*PROFIT_PER_SALE:,.2f}")
+        c3.metric("This Month's Deals", f"{m_tot:,}")
+        c3.metric("This Month's Profit",f"${m_tot*PROFIT_PER_SALE:,.2f}")
         st.markdown("---")
-
-        # helper to group by agent
         def by_agent(mask):
-            return (
-                df_api[mask]
-                .groupby("lead_vendor_name")
-                .size()
-                .rename("Sales")
-                .sort_values(ascending=False)
-            )
-
+            return df_api[mask].groupby("lead_vendor_name").size().rename("Sales").sort_values(ascending=False)
         b1, b2, b3 = st.columns(3, gap="large")
         b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
         b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
@@ -419,11 +364,8 @@ with tabs[3]:
 # ---------------------------------------
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
-    if st.button("🔄 Refresh API Leads"):
-        load_crm_leads.clear()
-
-    df_api = load_crm_leads()
-
+    # no refresh button needed any more
+    df_api = load_crm_leads(date_from=date.today())  # ← pass date.today() here
     if df_api.empty:
         st.info("No API leads returned.")
         api_display = pd.DataFrame()
@@ -431,18 +373,12 @@ with tabs[5]:
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         today = date.today()
         api_today = df_api[df_api["date_sold"].dt.date == today]
-
-        # … your existing column‐filtering + manual uploads combo …
-
-
-        # Only keep the columns that exist
         api_cols = [
             "policy_id","lead_first_name","lead_last_name","lead_state",
             "date_sold","carrier","product","duration","premium",
             "policy_number","lead_vendor_name"
         ]
         api_cols = [c for c in api_cols if c in api_today.columns]
-
         api_display = api_today[api_cols].rename(columns={
             "policy_id":       "Policy ID",
             "lead_first_name": "First Name",
@@ -451,58 +387,14 @@ with tabs[5]:
             "date_sold":       "Date Sold",
             "lead_vendor_name":"Vendor",
         })
-
-        # tack on Lead ID if it exists
         if "lead_id" in api_today.columns:
             api_display["Lead ID"] = api_today["lead_id"].astype(str)
 
-    # Initialize manual-upload stash
-    if "manual_leads" not in st.session_state:
-        st.session_state.manual_leads = pd.DataFrame()
-
-    # Upload & clean historical leads
-    st.subheader("📥 Upload Historical Leads")
-    uploaded = st.file_uploader("Upload CSV or Excel with a 'lead_id' column", type=["csv", "xlsx"])
-    if uploaded:
-        # read file
-        if uploaded.name.lower().endswith(".csv"):
-            df_imp = pd.read_csv(uploaded, dtype=str)
-        else:
-            df_imp = pd.read_excel(uploaded, dtype=str)
-
-        if "lead_id" not in df_imp.columns:
-            st.error("⚠️ Your file needs a `lead_id` column")
-        else:
-            df_imp["lead_id"] = df_imp["lead_id"].astype(str)
-            st.markdown("**Preview imported:**")
-            st.dataframe(df_imp, use_container_width=True)
-
-            # delete mistakes
-            to_remove = st.multiselect("Select lead_id(s) to drop", df_imp["lead_id"].tolist())
-            if st.button("🗑️ Drop selected rows"):
-                df_imp = df_imp[~df_imp["lead_id"].isin(to_remove)]
-                st.success(f"Dropped {len(to_remove)} rows")
-                st.dataframe(df_imp, use_container_width=True)
-
-            # import into CRM (session-state)
-            if st.button("✅ Import cleaned leads into CRM"):
-                # rename to match API display if you want to show it as "Lead ID"
-                st.session_state.manual_leads = df_imp.rename(columns={"lead_id":"Lead ID"})
-                st.success(f"Imported {len(df_imp)} leads")
-
-        st.markdown("---")
-
-    # Combine API + manual uploads
-    if st.session_state.manual_leads.empty:
-        combined = api_display
-    else:
-        combined = pd.concat(
-            [api_display, st.session_state.manual_leads],
-            ignore_index=True,
-            sort=False
-        )
-
-    # Final render
+    # …plus your manual-upload/historical-leads combo…
+    # then final render:
+    combined = api_display if st.session_state.manual_leads.empty else pd.concat(
+        [api_display, st.session_state.manual_leads], ignore_index=True, sort=False
+    )
     if combined.empty:
         st.warning("No leads to display for today.")
     else:
