@@ -415,14 +415,20 @@ with tabs[5]:
 # VENDOR PAY TAB
 with tabs[6]:
     st.header("💼 Vendor Pay Summary")
+    # All vendor keys lowercase, no spaces (for matching)
     VENDOR_RATES = {
-        "Fran Calls": 65,
-        "HCS Media": 55,
-        "Aetna": 80,
-        "ACA King": 75,
+        "francalls": 65,
+        "hcsmedia": 55,
+        "aetna": 80,
+        "acaking": 75,
     }
-
-    def normalize_name(x):
+    PRETTY_VENDOR = {  # for display on table and PDFs
+        "francalls": "Fran Calls",
+        "hcsmedia": "HCS Media",
+        "aetna": "Aetna",
+        "acaking": "ACA KING",
+    }
+    def normalize_key(x):
         return str(x).strip().lower().replace(' ', '')
 
     tld_file = st.file_uploader("Upload TLD CSV (new/PHI export)", type=["csv"], key="vendor_tld")
@@ -431,7 +437,6 @@ with tabs[6]:
     if tld_file and fmo_file:
         st.success("Both files uploaded. Generating vendor ZIP...")
 
-        # --- Load and process files ---
         tld = pd.read_csv(tld_file, dtype=str)
         tld['Vendor'] = tld.iloc[:, 8].astype(str)
         tld['First Name'] = tld.iloc[:, 3].astype(str)
@@ -443,8 +448,9 @@ with tabs[6]:
         fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
         fmo['Reason'] = fmo.get('Advance Excluded Reason', "")
 
-        tld['full_name'] = (tld['First Name'] + tld['Last Name']).apply(normalize_name)
-        fmo['full_name'] = (fmo['First Name'] + fmo['Last Name']).apply(normalize_name)
+        tld['full_name'] = (tld['First Name'] + tld['Last Name']).apply(normalize_key)
+        fmo['full_name'] = (fmo['First Name'] + fmo['Last Name']).apply(normalize_key)
+        tld['vendor_key'] = tld['Vendor'].apply(normalize_key)
 
         merged = pd.merge(
             tld,
@@ -454,17 +460,15 @@ with tabs[6]:
 
         # --- Display Vendor Summary Table ---
         vendor_summaries = []
-        for vendor in sorted(merged['Vendor'].unique()):
-            if vendor not in VENDOR_RATES:
-                continue
-            rate = VENDOR_RATES[vendor]
-            sub = merged[merged['Vendor'] == vendor]
+        for vkey in sorted(VENDOR_RATES):
+            vname = PRETTY_VENDOR[vkey]
+            sub = merged[merged['vendor_key'] == vkey]
             paid_ct = (sub['Advance'] > 0).sum()
             unpaid_ct = (sub['Advance'] == 0).sum()
             pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
-            paid_amt = paid_ct * rate
+            paid_amt = paid_ct * VENDOR_RATES[vkey]
             vendor_summaries.append({
-                "Vendor": vendor,
+                "Vendor": vname,
                 "Paid Deals": paid_ct,
                 "Unpaid Deals": unpaid_ct,
                 "Paid %": f"{pct_paid:.1f}%",
@@ -516,15 +520,13 @@ with tabs[6]:
         # --- Zip all PDFs ---
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zipf:
-            for vendor in merged['Vendor'].unique():
-                if vendor not in VENDOR_RATES:
-                    continue
-                rate = VENDOR_RATES[vendor]
-                sub = merged[merged['Vendor'] == vendor]
+            for vkey in VENDOR_RATES:
+                vname = PRETTY_VENDOR[vkey]
+                sub = merged[merged['vendor_key'] == vkey]
                 paid = sub[sub['Advance'] > 0][['First Name', 'Last Name']]
                 unpaid = sub[sub['Advance'] == 0][['First Name', 'Last Name', 'Reason']]
-                pdf_bytes = vendor_pdf(paid, unpaid, vendor, rate)
-                zipf.writestr(f"{vendor.replace(' ', '_')}_Vendor_Pay.pdf", pdf_bytes)
+                pdf_bytes = vendor_pdf(paid, unpaid, vname, VENDOR_RATES[vkey])
+                zipf.writestr(f"{vname.replace(' ', '_')}_Vendor_Pay.pdf", pdf_bytes)
 
         st.download_button(
             "Download ZIP of Vendor Pay Reports",
@@ -533,8 +535,10 @@ with tabs[6]:
             mime="application/zip"
         )
         st.info("Each PDF lists only converted deals (matched to FMO). Unpaid reasons included. Vendor rate auto-applied.")
+
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
