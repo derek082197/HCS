@@ -7,11 +7,11 @@ import csv
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
+from streamlit_extras.st_autorefresh import st_autorefresh
 
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# ────────────────────────────────
 # USERS CSV LOGIN
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
 USERS = dict(zip(df_users.username.str.strip(), df_users.password))
@@ -39,7 +39,6 @@ if not st.session_state.logged_in:
     st.stop()
 st.sidebar.button("Log out", on_click=do_logout)
 
-# ────────────────────────────────
 # CONSTANTS
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
@@ -47,7 +46,6 @@ CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
 DB              = "crm_history.db"
 
-# ────────────────────────────────
 # DATABASE HELPERS
 def init_db():
     conn = sqlite3.connect(DB)
@@ -82,7 +80,6 @@ def load_history():
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
-# ────────────────────────────────
 # PDF GENERATOR
 def generate_agent_pdf(df_agent, agent_name):
     pdf = FPDF()
@@ -132,7 +129,6 @@ def generate_agent_pdf(df_agent, agent_name):
         pdf.multi_cell(0,6, f"- {row['Client']} | Eff: {eff_str} | {reason}")
     return pdf.output(dest="S").encode("latin1")
 
-# ────────────────────────────────
 # FAST PAGINATED LEADS LOADER FOR "ALL TODAY"
 def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
@@ -157,7 +153,6 @@ def fetch_all_today(limit=5000):
         params = {}
     return pd.DataFrame(all_results)
 
-# ────────────────────────────────
 # INITIALIZATION
 init_db()
 history_df    = load_history()
@@ -165,14 +160,12 @@ summary       = []
 uploaded_file = None
 threshold     = 10
 
-# ────────────────────────────────
 # TABS SETUP
 tabs = st.tabs([
     "🏆 Overview", "📋 Leaderboard", "📈 History",
     "📊 Live Counts", "⚙️ Settings", "📂 Clients"
 ])
 
-# ────────────────────────────────
 # SETTINGS TAB
 with tabs[4]:
     st.header("⚙️ Settings & Upload")
@@ -227,7 +220,6 @@ with tabs[4]:
             mime="application/zip"
         )
 
-# ────────────────────────────────
 # OVERVIEW TAB
 with tabs[0]:
     st.title("HCS Commission Dashboard")
@@ -257,7 +249,6 @@ with tabs[0]:
     s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
     s3.metric("Jarad (1%)",  f"${rev*0.01:,.2f}")
 
-# ────────────────────────────────
 # LEADERBOARD TAB
 with tabs[1]:
     st.header("Agent Leaderboard & Drill-Down")
@@ -275,7 +266,6 @@ with tabs[1]:
     else:
         st.info("No data—upload in Settings first.")
 
-# ────────────────────────────────
 # HISTORY TAB
 with tabs[2]:
     st.header("Historical Reports")
@@ -292,9 +282,9 @@ with tabs[2]:
         c4.metric("Owner Profit", f"${rec.owner_profit:,.2f}")
         st.line_chart(history_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
 
-# ────────────────────────────────
-# LIVE COUNTS TAB (DAILY/WEEKLY/MONTHLY/YEARLY)
+# LIVE COUNTS TAB (DAILY/WEEKLY/MONTHLY/YEARLY) with AUTO-REFRESH
 with tabs[3]:
+    st_autorefresh(interval=10 * 1000, key="live_counts_refresh")
     st.header("Live Daily/Weekly/Monthly/Yearly Counts")
     with st.spinner("Fetching today's leads..."):
         df_api = fetch_all_today(limit=5000)
@@ -329,7 +319,6 @@ with tabs[3]:
         c4.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${y_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
         st.markdown("---")
         def by_agent(mask):
-            # Use lead_vendor_name for grouping (for now)
             col = "lead_vendor_name" if "lead_vendor_name" in df_api.columns else df_api.columns[0]
             return (
                 df_api[mask]
@@ -355,9 +344,9 @@ with tabs[3]:
             use_container_width=True
         )
 
-# ────────────────────────────────
-# CLIENTS TAB (ALL TODAY)
+# CLIENTS TAB (ALL TODAY) with AUTO-REFRESH
 with tabs[5]:
+    st_autorefresh(interval=10 * 1000, key="clients_tab_refresh")
     st.header("📂 Live Client Leads (Sold Today)")
     df_api = fetch_all_today(limit=5000)
     if df_api.empty:
@@ -394,6 +383,7 @@ with tabs[5]:
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
+
 
 
 
