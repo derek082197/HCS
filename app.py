@@ -335,32 +335,34 @@ with tabs[2]:
 # ──────────────────────────────────────────────────────────────────────
 # LIVE COUNTS TAB
 with tabs[3]:
-    st.header("Live Daily/Monthly/Yearly Counts")
-    with st.spinner("⏳ Fetching all leads..."):
-        df_api = load_crm_leads()  # <-- pulls everything, fast if the API/server is fast
+    st.header("Live Daily/Weekly/Monthly/Yearly Counts")
+    with st.spinner("Fetching ALL leads..."):
+        df_api = load_crm_leads()
 
     if df_api.empty:
         st.error("No leads returned from API.")
     else:
-        # Parse and filter by date
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         today = date.today()
+        start_of_week = today - timedelta(days=today.weekday())
         this_month = today.replace(day=1)
         this_year = today.replace(month=1, day=1)
 
-        # Filter for each period
         daily_mask   = df_api["date_sold"].dt.date == today
+        weekly_mask  = df_api["date_sold"].dt.date >= start_of_week
         monthly_mask = df_api["date_sold"].dt.date >= this_month
         yearly_mask  = df_api["date_sold"].dt.date >= this_year
 
         d_tot = int(daily_mask.sum())
+        w_tot = int(weekly_mask.sum())
         m_tot = int(monthly_mask.sum())
         y_tot = int(yearly_mask.sum())
 
-        c1, c2, c3 = st.columns(3, gap="large")
+        c1, c2, c3, c4 = st.columns(4, gap="large")
         c1.metric("Today's Deals",   f"{d_tot:,}")
-        c2.metric("This Month's Deals", f"{m_tot:,}")
-        c3.metric("This Year's Deals",  f"{y_tot:,}")
+        c2.metric("This Week's Deals", f"{w_tot:,}")
+        c3.metric("This Month's Deals", f"{m_tot:,}")
+        c4.metric("This Year's Deals", f"{y_tot:,}")
 
         st.markdown("---")
 
@@ -373,10 +375,12 @@ with tabs[3]:
                 .sort_values(ascending=False)
             )
 
-        b1, b2, b3 = st.columns(3, gap="large")
+        b1, b2, b3, b4 = st.columns(4, gap="large")
         b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
-        b2.subheader("Monthly Sales by Agent"); b2.bar_chart(by_agent(monthly_mask))
-        b3.subheader("Yearly Sales by Agent");  b3.bar_chart(by_agent(yearly_mask))
+        b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
+        b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(monthly_mask))
+        b4.subheader("Yearly Sales by Agent");  b4.bar_chart(by_agent(yearly_mask))
+
 
 
 
