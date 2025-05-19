@@ -168,8 +168,9 @@ threshold     = 10
 # TABS SETUP
 tabs = st.tabs([
     "🏆 Overview", "📋 Leaderboard", "📈 History",
-    "📊 Live Counts", "⚙️ Settings", "📂 Clients"
+    "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay"
 ])
+
 
 # SETTINGS TAB
 with tabs[4]:
@@ -388,6 +389,92 @@ with tabs[5]:
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
+        # VENDOR PAY TAB
+with tabs[6]:
+    st.header("💼 Vendor Pay Summary")
+
+    # ---- Vendor rates ----
+    VENDOR_RATES = {
+        "Fran Calls": 65,
+        "HCS Media": 55,
+        "Aetna": 80,
+        "ACA King": 75,
+    }
+
+    def normalize_name(x):
+        return str(x).strip().lower().replace(' ', '')
+
+    def vendor_pdf(paid, unpaid, vendor, rate):
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, f"Vendor Pay Summary – {vendor}", ln=True, align="C")
+        pdf.ln(5)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, f"Paid Clients", ln=True)
+        pdf.set_font("Arial", "", 10)
+        for _, row in paid.iterrows():
+            pdf.cell(0, 8, f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}", ln=True)
+        pdf.ln(3)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, f"Unpaid Clients & Reasons", ln=True)
+        pdf.set_font("Arial", "", 10)
+        for _, row in unpaid.iterrows():
+            pdf.multi_cell(0, 8, f"- {row['First Name']} {row['Last Name']} | Reason: {row['Reason'] or 'No reason provided'}")
+        pdf.ln(5)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid", ln=True)
+        return pdf.output(dest="S").encode("latin1")
+
+    tld_file = st.file_uploader("Upload TLD CSV (new/PHI export)", type=["csv"], key="vendor_tld")
+    fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo")
+
+    if tld_file and fmo_file:
+        st.success("Both files uploaded. Generating vendor ZIP...")
+
+        tld = pd.read_csv(tld_file, dtype=str)
+        # Vendor: col I (8), First/Last: D/E (3/4)
+        tld['Vendor'] = tld.iloc[:, 8].astype(str)
+        tld['First Name'] = tld.iloc[:, 3].astype(str)
+        tld['Last Name'] = tld.iloc[:, 4].astype(str)
+
+        fmo = pd.read_excel(fmo_file, dtype=str)
+        fmo['First Name'] = fmo.iloc[:, 7].astype(str)
+        fmo['Last Name'] = fmo.iloc[:, 8].astype(str)
+        fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
+        fmo['Reason'] = fmo.get('Advance Excluded Reason', "")
+
+        tld['full_name'] = (tld['First Name'] + tld['Last Name']).apply(normalize_name)
+        fmo['full_name'] = (fmo['First Name'] + fmo['Last Name']).apply(normalize_name)
+
+        merged = pd.merge(
+            tld,
+            fmo[['full_name', 'Advance', 'Reason']],
+            on='full_name', how='left'
+        )
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zipf:
+            for vendor in merged['Vendor'].unique():
+                if vendor not in VENDOR_RATES:
+                    continue
+                rate = VENDOR_RATES[vendor]
+                sub = merged[merged['Vendor'] == vendor]
+                paid = sub[sub['Advance'] > 0][['First Name', 'Last Name']]
+                unpaid = sub[sub['Advance'] == 0][['First Name', 'Last Name', 'Reason']]
+                pdf_bytes = vendor_pdf(paid, unpaid, vendor, rate)
+                zipf.writestr(f"{vendor.replace(' ', '_')}_Vendor_Pay.pdf", pdf_bytes)
+        st.download_button(
+            "Download ZIP of Vendor Pay Reports",
+            buf.getvalue(),
+            file_name="Vendor_Pay_Summaries.zip",
+            mime="application/zip"
+        )
+        st.info("Each PDF lists only converted deals (matched to FMO). Unpaid reasons included. Vendor rate auto-applied.")
+
+    else:
+        st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
