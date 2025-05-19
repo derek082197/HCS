@@ -164,7 +164,7 @@ def fetch_today_leads():
     js      = resp.json().get("response", {})
     return pd.DataFrame(js.get("results", []))
 
-def fetch_all_today(limit=1000):
+def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
     params = {
         "date_from": date.today().strftime("%Y-%m-%d"),
@@ -340,7 +340,7 @@ with tabs[2]:
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly/Yearly Counts")
     with st.spinner("Fetching today's leads..."):
-        df_api = fetch_all_today(limit=1000)  # ← grabs up to 1000 in one go
+        df_api = fetch_all_today(limit=5000)  # ← grabs up to 5000 in one go
 
     if df_api.empty:
         st.error("No leads returned from API.")
@@ -420,7 +420,7 @@ with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
 
     # fetch *all* of today's leads, across every API page
-    df_api = fetch_all_today(limit=1000)
+    df_api = fetch_all_today(limit=5000)
 
 
     if df_api.empty:
