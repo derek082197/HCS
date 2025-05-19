@@ -4,11 +4,9 @@ import sqlite3
 import io
 import zipfile
 import csv
-import re
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests  # for CRM API
-from urllib.parse import urlencode
 
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
@@ -24,8 +22,7 @@ if "logged_in" not in st.session_state:
 
 # STEP 4) LOGIN/LOGOUT CALLBACKS
 def do_login():
-    u = st.session_state.user.strip()
-    p = st.session_state.pwd
+    u, p = st.session_state.user.strip(), st.session_state.pwd
     if u in USERS and p == USERS[u]:
         st.session_state.logged_in = True
         st.success(f"✅ Welcome, {u}!")
@@ -49,12 +46,6 @@ st.sidebar.button("Log out", on_click=do_logout)
 
 # ──────────────────────────────────────────────────────────────────────
 # YOUR CONFIG CONSTANTS
-LIVE_SHEET_URL = (
-    "https://docs.google.com/spreadsheets/d/e/"
-    "2PACX-1vS1kek7ytwtLfJa6peHTp8WknP4l6oeIH6t0luVLJs9hySW0w-"
-    "jPvZZSuy9mO4MJmJFB06-b3wtgNBw/pub?gid=1891837351"
-    "&single=true&output=csv"
-)
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
 CRM_API_ID      = "310"
@@ -83,15 +74,18 @@ def insert_report(dt, totals):
       INSERT OR REPLACE INTO reports
       (upload_date,total_deals,agent_payout,owner_revenue,owner_profit)
       VALUES (?, ?, ?, ?, ?)
-    """, (dt, totals["deals"], totals["agent"], totals["owner_rev"], totals["owner_prof"]))
+    """, (dt, totals["deals"], totals["agent"],
+          totals["owner_rev"], totals["owner_prof"]))
     conn.commit()
     conn.close()
 
 @st.cache_data
 def load_history():
     conn = sqlite3.connect(DB)
-    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn,
-                     parse_dates=["upload_date"])
+    df = pd.read_sql(
+        "SELECT * FROM reports ORDER BY upload_date",
+        conn, parse_dates=["upload_date"]
+    )
     conn.close()
     return df
 
@@ -101,55 +95,59 @@ def generate_agent_pdf(df_agent, agent_name):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial","B",16)
-    pdf.cell(0,10,"Health Connect Solutions",ln=True,align="C")
+    pdf.cell(0,10,"Health Connect Solutions", ln=True, align="C")
     pdf.ln(5)
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,10,f"Commission Statement - {agent_name}",ln=True)
+    pdf.cell(0,10,f"Commission Statement - {agent_name}", ln=True)
     pdf.ln(5)
 
     total_deals = len(df_agent)
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
     unpaid_count= total_deals - paid_count
+
+    # tiered rate + bonus
     if paid_count>=200:    rate=25
     elif paid_count>=150:  rate=22.5
     elif paid_count>=120:  rate=17.5
     else:                  rate=15
     bonus = 1200 if paid_count>=70 else 0
-    payout= paid_count*rate+bonus
+    payout= paid_count*rate + bonus
 
     pdf.set_font("Arial","",12)
-    pdf.cell(0,8,f"Total Deals Submitted: {total_deals}",ln=True)
-    pdf.cell(0,8,f"Paid Deals: {paid_count}",ln=True)
-    pdf.cell(0,8,f"Unpaid Deals: {unpaid_count}",ln=True)
-    pdf.cell(0,8,f"Rate: ${rate:.2f}",ln=True)
-    pdf.cell(0,8,f"Bonus: ${bonus}",ln=True)
+    pdf.cell(0,8,f"Total Deals Submitted: {total_deals}", ln=True)
+    pdf.cell(0,8,f"Paid Deals: {paid_count}", ln=True)
+    pdf.cell(0,8,f"Unpaid Deals: {unpaid_count}", ln=True)
+    pdf.cell(0,8,f"Rate: ${rate:.2f}", ln=True)
+    pdf.cell(0,8,f"Bonus: ${bonus}", ln=True)
     pdf.set_text_color(0,150,0)
-    pdf.cell(0,10,f"Payout: ${payout:,.2f}",ln=True)
+    pdf.cell(0,10,f"Payout: ${payout:,.2f}", ln=True)
     pdf.set_text_color(0,0,0)
     pdf.ln(5)
 
+    # Paid clients list
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,8,"Paid Clients:",ln=True)
+    pdf.cell(0,8,"Paid Clients:", ln=True)
     pdf.set_font("Arial","",10)
-    for _,row in df_agent[df_agent["Paid Status"]=="Paid"].iterrows():
+    for _, row in df_agent[df_agent["Paid Status"]=="Paid"].iterrows():
         eff = row.get("Effective Date")
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
         pdf.multi_cell(0,6,f"- {row['Client']} | Eff: {eff_str}")
+
+    # Unpaid + reasons
     pdf.ln(3)
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,8,"Unpaid Clients & Reasons:",ln=True)
+    pdf.cell(0,8,"Unpaid Clients & Reasons:", ln=True)
     pdf.set_font("Arial","",10)
-    for _,row in df_agent[df_agent["Paid Status"]!="Paid"].iterrows():
+    for _, row in df_agent[df_agent["Paid Status"]!="Paid"].iterrows():
         eff = row.get("Effective Date")
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
-        reason = str(row.get("Reason",""))
+        reason = row.get("Reason", "")
         pdf.multi_cell(0,6,f"- {row['Client']} | Eff: {eff_str} | {reason}")
-        pdf.ln(1)
 
     return pdf.output(dest="S").encode("latin1")
 
 # ──────────────────────────────────────────────────────────────────────
-# HELPER — fetch only today's leads in one (paginated) call, cached 60 s
+# HELPER — fetch only today’s leads (paginated, cached for 60s)
 @st.cache_data(ttl=60)
 def fetch_today_leads():
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
@@ -157,11 +155,10 @@ def fetch_today_leads():
     all_results, url, seen = [], CRM_API_URL, set()
     while url and url not in seen:
         seen.add(url)
-        r = requests.get(url, headers=headers,
-                         params=params if params else {},
-                         timeout=10)
-        r.raise_for_status()
-        js = r.json().get("response", {})
+        resp = requests.get(url, headers=headers,
+                            params=params, timeout=10)
+        resp.raise_for_status()
+        js = resp.json().get("response", {})
         chunk = js.get("results", [])
         if not chunk:
             break
@@ -201,16 +198,15 @@ with tabs[4]:
         df.dropna(subset=["Agent","first_name","last_name","Advance"], inplace=True)
         df["Client"]         = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
         df["Paid Status"]    = df["Advance"].fillna(0).astype(float)\
-                                 .apply(lambda x: "Paid" if x>0 else "Not Paid")
+                                     .apply(lambda x: "Paid" if x>0 else "Not Paid")
         df["Reason"]         = df.get("Advance Excluded Reason","")\
-                                 .fillna("").astype(str)
-        df["Effective Date"] = pd.to_datetime(df.get("Eff Date"),
-                                               errors="coerce")
+                                     .fillna("").astype(str)
+        df["Effective Date"] = pd.to_datetime(df.get("Eff Date"), errors="coerce")
 
-        totals = {"deals":0,"agent":0.0,"owner_rev":0.0,"owner_prof":0.0}
+        totals = {"deals":0, "agent":0.0, "owner_rev":0.0, "owner_prof":0.0}
         summary.clear()
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf,"w") as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             for agent in df["Agent"].unique():
                 sub     = df[df["Agent"]==agent]
                 paid_ct = (sub["Paid Status"]=="Paid").sum()
@@ -227,10 +223,10 @@ with tabs[4]:
                 totals["owner_prof"]+= owner_prof
 
                 summary.append({
-                    "Agent":agent,
-                    "Paid Deals":paid_ct,
-                    "Agent Payout":payout,
-                    "Owner Profit":owner_prof
+                    "Agent": agent,
+                    "Paid Deals": paid_ct,
+                    "Agent Payout": payout,
+                    "Owner Profit": owner_prof
                 })
 
                 pdf_bytes = generate_agent_pdf(sub, agent)
@@ -241,8 +237,8 @@ with tabs[4]:
             w = csv.writer(csv_buf)
             w.writerow(["Agent","Paid Deals","Agent Payout","Owner Profit"])
             for r in summary:
-                w.writerow([r["Agent"],r["Paid Deals"],
-                            r["Agent Payout"],r["Owner Profit"]])
+                w.writerow([r["Agent"], r["Paid Deals"],
+                            r["Agent Payout"], r["Owner Profit"]])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
 
         default_dt = (df["Effective Date"].max().date()
@@ -260,9 +256,10 @@ with tabs[4]:
 # OVERVIEW TAB
 with tabs[0]:
     st.title("HCS Commission Dashboard")
+
     if uploaded_file:
         c1, c2, c3, c4 = st.columns(4, gap="large")
-        c1.metric("Total Paid Deals", f"{totals['deals']:,}")
+        c1.metric("Total Paid Deals", f"{int(totals['deals']):,}")
         c2.metric("Agent Payout",      f"${totals['agent']:,.2f}")
         c3.metric("Owner Revenue",     f"${totals['owner_rev']:,.2f}")
         c4.metric("Owner Profit",      f"${totals['owner_prof']:,.2f}")
@@ -272,11 +269,12 @@ with tabs[0]:
         else:
             latest = history_df.iloc[-1]
             c1, c2, c3, c4 = st.columns(4, gap="large")
-            c1.metric("Total Paid Deals", f"{latest.total_deals:,}")
+            c1.metric("Total Paid Deals", f"{int(latest.total_deals):,}")
             c2.metric("Agent Payout",      f"${latest.agent_payout:,.2f}")
             c3.metric("Owner Revenue",     f"${latest.owner_revenue:,.2f}")
             c4.metric("Owner Profit",      f"${latest.owner_profit:,.2f}")
-    st.markdown("—" * 50)
+
+    st.markdown("---")
     rev = (totals["owner_rev"] if uploaded_file
            else (history_df.iloc[-1].owner_revenue
                  if not history_df.empty else 0))
@@ -317,15 +315,18 @@ with tabs[2]:
             conn = sqlite3.connect(DB)
             for d in to_del:
                 conn.execute("DELETE FROM reports WHERE upload_date=?", (d,))
-            conn.commit(); conn.close()
+            conn.commit()
+            conn.close()
             st.success("Deleted—refresh to update.")
+
         sel = st.selectbox("View report:", dates)
-        rec = history_df[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
+        rec = history_df.loc[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
         cols = st.columns(4)
-        cols[0].metric("Deals",         f"{rec.total_deals:,}")
+        cols[0].metric("Deals",         f"{int(rec.total_deals):,}")
         cols[1].metric("Agent Payout",  f"${rec.agent_payout:,.2f}")
-        cols[2].metric("Owner Revenue", f="${rec.owner_revenue:,.2f}")
-        cols[3].metric("Owner Profit",  f="${rec.owner_profit:,.2f}")
+        cols[2].metric("Owner Revenue", f"${rec.owner_revenue:,.2f}")
+        cols[3].metric("Owner Profit",  f"${rec.owner_profit:,.2f}")
+
         st.line_chart(history_df.set_index("upload_date")[
             ["total_deals","agent_payout","owner_revenue","owner_profit"]
         ])
@@ -350,13 +351,13 @@ with tabs[3]:
                                int(monthly_mask.sum()))
 
         c1, c2, c3 = st.columns(3, gap="large")
-        c1.metric("Today's Deals",  f"{d_tot:,}")
-        c1.metric("Today's Profit", f"${d_tot*PROFIT_PER_SALE:,.2f}")
+        c1.metric("Today's Deals",      f"{d_tot:,}")
+        c1.metric("Today's Profit",     f"${d_tot*PROFIT_PER_SALE:,.2f}")
         c2.metric("This Week's Deals",  f"{w_tot:,}")
-        c2.metric("This Week's Profit", f="${w_tot*PROFIT_PER_SALE:,.2f}")
+        c2.metric("This Week's Profit", f"${w_tot*PROFIT_PER_SALE:,.2f}")
         c3.metric("This Month's Deals", f"{m_tot:,}")
         c3.metric("This Month's Profit",f"${m_tot*PROFIT_PER_SALE:,.2f}")
-        st.markdown("—" * 50)
+        st.markdown("---")
 
         def by_agent(mask):
             return (
@@ -407,20 +408,23 @@ with tabs[5]:
     if "manual_leads" not in st.session_state:
         st.session_state.manual_leads = pd.DataFrame()
 
-    # … your existing manual-upload/historical-leads logic here …
+    # … your manual-upload/historical-leads logic here …
 
     # Combine & render
     combined = (
         api_display
         if st.session_state.manual_leads.empty
-        else pd.concat([api_display, st.session_state.manual_leads],
-                       ignore_index=True, sort=False)
+        else pd.concat(
+            [api_display, st.session_state.manual_leads],
+            ignore_index=True, sort=False
+        )
     )
     if combined.empty:
         st.warning("No leads to display for today.")
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
+
 
 
 
