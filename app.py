@@ -429,6 +429,7 @@ with tabs[6]:
 
     if tld_file and fmo_file:
         st.success("Both files uploaded. Generating vendor ZIP...")
+
         tld = pd.read_csv(tld_file, dtype=str)
         tld['Vendor'] = tld.iloc[:, 8].astype(str)
         tld['First Name'] = tld.iloc[:, 3].astype(str)
@@ -445,6 +446,57 @@ with tabs[6]:
             fmo[['full_name', 'Advance', 'Reason']],
             on='full_name', how='left'
         )
+
+        # Build summary table
+        vendor_summaries = []
+        for vendor in sorted(merged['Vendor'].unique()):
+            if vendor not in VENDOR_RATES:
+                continue
+            rate = VENDOR_RATES[vendor]
+            sub = merged[merged['Vendor'] == vendor]
+            paid_ct = (sub['Advance'] > 0).sum()
+            unpaid_ct = (sub['Advance'] == 0).sum()
+            pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
+            paid_amt = paid_ct * rate
+            vendor_summaries.append({
+                "Vendor": vendor,
+                "Paid Deals": paid_ct,
+                "Unpaid Deals": unpaid_ct,
+                "Paid %": f"{pct_paid:.1f}%",
+                "Total Paid Amount": f"${paid_amt:,.2f}"
+            })
+
+        if vendor_summaries:
+            df_sum = pd.DataFrame(vendor_summaries)
+            st.subheader("Vendor Pay Summary Table")
+            st.dataframe(df_sum, use_container_width=True)
+
+        # Build PDFs for each vendor as before
+        def vendor_pdf(paid, unpaid, vendor, rate):
+            def fix(s):
+                return str(s).encode('latin1', errors='replace').decode('latin1')
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
+            pdf.set_font("Arial", "", 10)
+            for _, row in paid.iterrows():
+                pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
+            pdf.ln(3)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
+            pdf.set_font("Arial", "", 10)
+            for _, row in unpaid.iterrows():
+                reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
+                pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
+            return pdf.output(dest="S").encode("latin1")
+
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zipf:
             for vendor in merged['Vendor'].unique():
@@ -463,8 +515,10 @@ with tabs[6]:
             mime="application/zip"
         )
         st.info("Each PDF lists only converted deals (matched to FMO). Unpaid reasons included. Vendor rate auto-applied.")
+
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
