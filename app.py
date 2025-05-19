@@ -68,16 +68,28 @@ def init_db():
     conn.commit()
     conn.close()
 
-@st.cache_data
-def load_history():
-    # read and coerce numeric columns
+def insert_report(dt, totals):
     conn = sqlite3.connect(DB)
-    df = pd.read_sql(
-        "SELECT * FROM reports ORDER BY upload_date",
-        conn, parse_dates=["upload_date"]
-    )
+    conn.execute("""
+      INSERT OR REPLACE INTO reports
+        (upload_date,total_deals,agent_payout,owner_revenue,owner_profit)
+      VALUES (?, ?, ?, ?, ?)
+    """, (dt,
+          totals["deals"],
+          totals["agent"],
+          totals["owner_rev"],
+          totals["owner_prof"]))
+    conn.commit()
     conn.close()
 
+@st.cache_data
+def load_history():
+    conn = sqlite3.connect(DB)
+    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn,
+                     parse_dates=["upload_date"])
+    conn.close()
+
+    # coerce to numeric (avoid ValueError later)
     df["total_deals"]   = pd.to_numeric(df["total_deals"], errors="coerce").fillna(0).astype(int)
     df["agent_payout"]  = pd.to_numeric(df["agent_payout"], errors="coerce").fillna(0.0)
     df["owner_revenue"] = pd.to_numeric(df["owner_revenue"], errors="coerce").fillna(0.0)
@@ -99,6 +111,7 @@ def generate_agent_pdf(df_agent, agent_name):
     total_deals = len(df_agent)
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
     unpaid_count= total_deals - paid_count
+
     if paid_count>=200:    rate=25
     elif paid_count>=150:  rate=22.5
     elif paid_count>=120:  rate=17.5
@@ -137,7 +150,7 @@ def generate_agent_pdf(df_agent, agent_name):
     return pdf.output(dest="S").encode("latin1")
 
 # ──────────────────────────────────────────────────────────────────────
-# HELPERS — paginated loader for live counts/historical
+# HELPER — paginated loader for live counts/historical (cached 60s)
 @st.cache_data(ttl=60)
 def load_crm_leads(date_from: date=None):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
@@ -168,12 +181,11 @@ uploaded_file = None
 threshold     = 10
 
 # ──────────────────────────────────────────────────────────────────────
-# TABS
+# TABS SETUP
 tabs = st.tabs([
     "🏆 Overview", "📋 Leaderboard", "📈 History",
-    "📊 Live Counts", "⚙️ Settings", "📂 Clients",
+    "📊 Live Counts", "⚙️ Settings", "📂 Clients"
 ])
-
 
 # ──────────────────────────────────────────────────────────────────────
 # SETTINGS TAB
@@ -184,6 +196,7 @@ with tabs[4]:
 
     if uploaded_file:
         st.success("✅ Statement uploaded, processing…")
+        # — parse & clean your Excel here exactly as before —
         df = pd.read_excel(uploaded_file)
         df.dropna(subset=["Agent","first_name","last_name","Advance"], inplace=True)
         df["Client"]         = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
@@ -193,6 +206,7 @@ with tabs[4]:
                                      .fillna("").astype(str)
         df["Effective Date"] = pd.to_datetime(df.get("Eff Date"), errors="coerce")
 
+        # — compute totals & summary & zip of PDFs —
         totals = {"deals":0, "agent":0.0, "owner_rev":0.0, "owner_prof":0.0}
         summary.clear()
         buf = io.BytesIO()
@@ -222,17 +236,12 @@ with tabs[4]:
                 pdf_bytes = generate_agent_pdf(sub, agent)
                 zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf_bytes)
 
-            # Admin summary CSV
+            # Admin CSV
             csv_buf = io.StringIO()
             w = csv.writer(csv_buf)
             w.writerow(["Agent","Paid Deals","Agent Payout","Owner Profit"])
             for r in summary:
-                w.writerow([
-                    r["Agent"],
-                    r["Paid Deals"],
-                    r["Agent Payout"],
-                    r["Owner Profit"]
-                ])
+                w.writerow([r["Agent"], r["Paid Deals"], r["Agent Payout"], r["Owner Profit"]])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
 
         default_dt = (df["Effective Date"].max().date()
@@ -252,8 +261,8 @@ with tabs[0]:
     st.title("HCS Commission Dashboard")
 
     if uploaded_file:
-        c1, c2, c3, c4 = st.columns(4, gap="large")
         deals = int(totals["deals"])
+        c1, c2, c3, c4 = st.columns(4, gap="large")
         c1.metric("Total Paid Deals", f"{deals:,}")
         c2.metric("Agent Payout",      f"${totals['agent']:,.2f}")
         c3.metric("Owner Revenue",     f"${totals['owner_rev']:,.2f}")
@@ -263,8 +272,7 @@ with tabs[0]:
             st.info("Upload a statement to see metrics.")
         else:
             latest = history_df.iloc[-1]
-            raw = pd.to_numeric(latest.total_deals, errors="coerce")
-            deals = int(raw) if not pd.isna(raw) else 0
+            deals  = int(latest.total_deals)
             c1, c2, c3, c4 = st.columns(4, gap="large")
             c1.metric("Total Paid Deals", f"{deals:,}")
             c2.metric("Agent Payout",      f"${latest.agent_payout:,.2f}")
@@ -273,8 +281,7 @@ with tabs[0]:
 
     st.markdown("---")
     rev = (totals["owner_rev"] if uploaded_file
-           else (history_df.iloc[-1].owner_revenue
-                 if not history_df.empty else 0))
+           else history_df.iloc[-1].owner_revenue if not history_df.empty else 0)
     s1, s2, s3 = st.columns(3, gap="large")
     s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
     s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
@@ -290,6 +297,7 @@ with tabs[1]:
             "Agent Payout":"${:,.2f}",
             "Owner Profit":"${:,.2f}"
         }), use_container_width=True)
+
         low     = st.slider("Highlight agents below deals:", 0,
                             int(df_led["Paid Deals"].max()), threshold)
         flagged = df_led[df_led["Paid Deals"]<low]
@@ -307,23 +315,22 @@ with tabs[2]:
         st.info("No history yet.")
     else:
         dates = history_df["upload_date"].dt.strftime("%Y-%m-%d").tolist()
-        sel = st.selectbox("View report:", dates)
-        rec = history_df.loc[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
-        cols = st.columns(4)
-        # no more int(...) on potentially invalid
-        deals       = rec.total_deals
-        agent_out   = rec.agent_payout
-        owner_rev   = rec.owner_revenue
-        owner_prof  = rec.owner_profit
-        cols[0].metric("Deals",         f"{deals:,}")
-        cols[1].metric("Agent Payout",  f"${agent_out:,.2f}")
-        cols[2].metric("Owner Revenue", f"${owner_rev:,.2f}")
-        cols[3].metric("Owner Profit",  f"${owner_prof:,.2f}")
+        sel   = st.selectbox("View report:", dates)
+        rec   = history_df.loc[
+                    history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel
+                ].iloc[0]
+        c0, c1, c2, c3 = st.columns(4, gap="large")
+        c0.metric("Deals",         f"{rec.total_deals:,}")
+        c1.metric("Agent Payout",  f"${rec.agent_payout:,.2f}")
+        c2.metric("Owner Revenue", f"${rec.owner_revenue:,.2f}")
+        c3.metric("Owner Profit",  f"${rec.owner_profit:,.2f}")
+
         st.line_chart(history_df.set_index("upload_date")[
             ["total_deals","agent_payout","owner_revenue","owner_profit"]
         ])
 
-# LIVE COUNTS TAB (use load_crm_leads with date filter)
+# ──────────────────────────────────────────────────────────────────────
+# LIVE COUNTS TAB
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
     with st.spinner("⏳ Fetching latest leads…"):
@@ -337,19 +344,27 @@ with tabs[3]:
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=6))
         monthly_mask = df_api["date_sold"].dt.month == today.month
-        d_tot, w_tot, m_tot = (int(daily_mask.sum()), int(weekly_mask.sum()), int(monthly_mask.sum()))
+        d_tot = int(daily_mask.sum())
+        w_tot = int(weekly_mask.sum())
+        m_tot = int(monthly_mask.sum())
 
         c1, c2, c3 = st.columns(3, gap="large")
-        c1.metric("Today's Deals",      f"{d_tot:,}")
-        c1.metric("Today's Profit",     f"${d_tot*PROFIT_PER_SALE:,.2f}")
+        c1.metric("Today's Deals",  f"{d_tot:,}")
+        c1.metric("Today's Profit", f"${d_tot*PROFIT_PER_SALE:,.2f}")
         c2.metric("This Week's Deals",  f"{w_tot:,}")
-        c2.metric("This Week's Profit", f"${w_tot*PROFIT_PER_SALE:,.2f}")
+        c2.metric("This Week's Profit", f="${w_tot*PROFIT_PER_SALE:,.2f}")
         c3.metric("This Month's Deals", f"{m_tot:,}")
-        c3.metric("This Month's Profit",f"${m_tot*PROFIT_PER_SALE:,.2f}")
+        c3.metric("This Month's Profit",f="${m_tot*PROFIT_PER_SALE:,.2f}")
         st.markdown("---")
 
         def by_agent(mask):
-            return df_api[mask].groupby("lead_vendor_name").size().rename("Sales").sort_values(ascending=False)
+            return (
+                df_api[mask]
+                .groupby("lead_vendor_name")
+                .size()
+                .rename("Sales")
+                .sort_values(ascending=False)
+            )
 
         b1, b2, b3 = st.columns(3, gap="large")
         b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
@@ -360,23 +375,23 @@ with tabs[3]:
 # CLIENTS TAB
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
-    df_api = fetch_today_leads()
+    df_api = load_crm_leads(date_from=date.today())
 
     if df_api.empty:
         st.info("No API leads returned.")
         api_display = pd.DataFrame()
     else:
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
-        today = date.today()
-        api_today = df_api[df_api["date_sold"].dt.date == today]
+        today    = date.today()
+        api_today= df_api[df_api["date_sold"].dt.date == today]
 
         api_cols = [
             "policy_id","lead_first_name","lead_last_name","lead_state",
             "date_sold","carrier","product","duration","premium",
             "policy_number","lead_vendor_name"
         ]
-        api_cols = [c for c in api_cols if c in api_today.columns]
-        api_display = api_today[api_cols].rename(columns={
+        api_cols     = [c for c in api_cols if c in api_today.columns]
+        api_display  = api_today[api_cols].rename(columns={
             "policy_id":       "Policy ID",
             "lead_first_name": "First Name",
             "lead_last_name":  "Last Name",
@@ -387,17 +402,17 @@ with tabs[5]:
         if "lead_id" in api_today.columns:
             api_display["Lead ID"] = api_today["lead_id"].astype(str)
 
+    # Manual‐upload stash (if you still support it)
     if "manual_leads" not in st.session_state:
         st.session_state.manual_leads = pd.DataFrame()
 
     combined = (
         api_display
         if st.session_state.manual_leads.empty
-        else pd.concat(
-            [api_display, st.session_state.manual_leads],
-            ignore_index=True, sort=False
-        )
+        else pd.concat([api_display, st.session_state.manual_leads],
+                       ignore_index=True, sort=False)
     )
+
     if combined.empty:
         st.warning("No leads to display for today.")
     else:
