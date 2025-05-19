@@ -191,7 +191,7 @@ uploaded_file = None
 threshold     = 10
 
 # Pre-load API leads once (for Live Counts & Clients tabs)
-df_api = load_crm_leads()
+
 
 # ──────────────────────────────────────────────────────────────────────
 # TABS SETUP
