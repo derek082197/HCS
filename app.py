@@ -33,6 +33,7 @@ authenticator = stauth.Authenticate(
     credentials, cookie["name"], cookie["key"], cookie["expiry_days"], preauthorized=[]
 )
 name, authentication_status, username = authenticator.login("Login", "sidebar")
+
 if authentication_status is False:
     st.error("Username/password is incorrect")
 if authentication_status is None:
