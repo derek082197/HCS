@@ -81,10 +81,8 @@ def insert_report(dt, totals):
 @st.cache_data
 def load_history():
     conn = sqlite3.connect(DB)
-    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn,
-                     parse_dates=["upload_date"])
+    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn, parse_dates=["upload_date"])
     conn.close()
-    # coerce to numeric to avoid any None/NaN issues
     for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
@@ -104,19 +102,11 @@ def generate_agent_pdf(df_agent, agent_name):
     total_deals = len(df_agent)
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
     unpaid_count= total_deals - paid_count
-
-    # Compute paid percentage
     pct_paid = (paid_count / total_deals * 100) if total_deals else 0
-
-    # Tiered rate + bonus
-    if paid_count >= 200:
-        rate = 25
-    elif paid_count >= 150:
-        rate = 22.5
-    elif paid_count >= 120:
-        rate = 17.5
-    else:
-        rate = 15
+    if paid_count >= 200: rate = 25
+    elif paid_count >= 150: rate = 22.5
+    elif paid_count >= 120: rate = 17.5
+    else: rate = 15
     bonus  = 1200 if paid_count >= 70 else 0
     payout = paid_count * rate + bonus
 
@@ -124,7 +114,7 @@ def generate_agent_pdf(df_agent, agent_name):
     pdf.cell(0,8, f"Total Deals Submitted: {total_deals}", ln=True)
     pdf.cell(0,8, f"Paid Deals: {paid_count}", ln=True)
     pdf.cell(0,8, f"Unpaid Deals: {unpaid_count}", ln=True)
-    pdf.cell(0,8, f"Paid Percentage: {pct_paid:.1f}%", ln=True)  # ← new line
+    pdf.cell(0,8, f"Paid Percentage: {pct_paid:.1f}%", ln=True)
     pdf.cell(0,8, f"Rate: ${rate:.2f}", ln=True)
     pdf.cell(0,8, f"Bonus: ${bonus}", ln=True)
     pdf.set_text_color(0,150,0)
@@ -154,16 +144,7 @@ def generate_agent_pdf(df_agent, agent_name):
 
 
 # ──────────────────────────────────────────────────────────────────────
-# HELPERS — single‐page “today’s” fetch (fast!) and paginated loader
-@st.cache_data(ttl=60)
-def fetch_today_leads():
-    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
-    params  = {"date_from": date.today().strftime("%Y-%m-%d")}
-    resp    = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
-    resp.raise_for_status()
-    js      = resp.json().get("response", {})
-    return pd.DataFrame(js.get("results", []))
-
+# FAST PAGINATED LEADS LOADER FOR "ALL TODAY"
 def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
     params = {
@@ -184,7 +165,7 @@ def fetch_all_today(limit=5000):
         if not nxt or nxt in seen:
             break
         url = nxt
-        params = {}  # only on first page
+        params = {}
     return pd.DataFrame(all_results)
 
 
@@ -335,19 +316,17 @@ with tabs[2]:
         ])
 
 # ──────────────────────────────────────────────────────────────────────
-# LIVE COUNTS TAB
-# LIVE COUNTS TAB
+# LIVE COUNTS TAB (DAILY/WEEKLY/MONTHLY/YEARLY)
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly/Yearly Counts")
     with st.spinner("Fetching today's leads..."):
-        df_api = fetch_all_today(limit=5000)  # ← grabs up to 5000 in one go
+        df_api = fetch_all_today(limit=5000)
 
     if df_api.empty:
         st.error("No leads returned from API.")
     else:
         import pytz
 
-        # Timezone conversion logic as before...
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         if df_api["date_sold"].dt.tz is None or str(df_api["date_sold"].dt.tz) == "None":
             df_api["date_sold"] = df_api["date_sold"].dt.tz_localize('UTC')
@@ -416,26 +395,16 @@ with tabs[3]:
             use_container_width=True
         )
 
-
-
-
-
-
 # ──────────────────────────────────────────────────────────────────────
-# CLIENTS TAB
-# CLIENTS TAB (paginated!)
+# CLIENTS TAB (ALL TODAY)
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
 
-    # fetch *all* of today's leads, across every API page
     df_api = fetch_all_today(limit=5000)
-
-
     if df_api.empty:
         st.info("No API leads returned.")
         api_display = pd.DataFrame()
     else:
-        # same filtering/renaming logic you already had
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         api_today = df_api[df_api["date_sold"].dt.date == date.today()]
 
@@ -456,17 +425,22 @@ with tabs[5]:
         if "lead_id" in api_today.columns:
             api_display["Lead ID"] = api_today["lead_id"].astype(str)
 
-    # Make sure 'manual_leads' exists in session state
-if "manual_leads" not in st.session_state:
-    st.session_state.manual_leads = pd.DataFrame()
+    if "manual_leads" not in st.session_state:
+        st.session_state.manual_leads = pd.DataFrame()
 
-# combine & render
-combined = (
-    api_display
-    if st.session_state.manual_leads.empty
-    else pd.concat([api_display, st.session_state.manual_leads],
-                   ignore_index=True, sort=False)
-)
+    combined = (
+        api_display
+        if st.session_state.manual_leads.empty
+        else pd.concat([api_display, st.session_state.manual_leads],
+                       ignore_index=True, sort=False)
+    )
+
+    if combined.empty:
+        st.warning("No leads to display for today.")
+    else:
+        st.subheader(f"Showing {len(combined)} total leads")
+        st.dataframe(combined, use_container_width=True)
+
 
 
 
