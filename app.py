@@ -473,29 +473,42 @@ with tabs[6]:
 
         # Build PDFs for each vendor as before
         def vendor_pdf(paid, unpaid, vendor, rate):
-            def fix(s):
-                return str(s).encode('latin1', errors='replace').decode('latin1')
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", "B", 14)
-            pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
-            pdf.ln(5)
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
-            pdf.set_font("Arial", "", 10)
-            for _, row in paid.iterrows():
-                pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
-            pdf.ln(3)
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
-            pdf.set_font("Arial", "", 10)
-            for _, row in unpaid.iterrows():
-                reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
-                pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
-            pdf.ln(5)
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
-            return pdf.output(dest="S").encode("latin1")
+    def fix(s):
+        return str(s).encode('latin1', errors='replace').decode('latin1')
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
+    pdf.ln(3)
+    pdf.set_font("Arial", "B", 12)
+    # --- Summary stats at top ---
+    paid_ct = len(paid)
+    unpaid_ct = len(unpaid)
+    pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
+    total_paid_amt = paid_ct * rate
+    pdf.cell(0, 8, fix(f"Summary:"), ln=True)
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(0, 8, fix(f"Paid Deals: {paid_ct}"), ln=True)
+    pdf.cell(0, 8, fix(f"Unpaid Deals: {unpaid_ct}"), ln=True)
+    pdf.cell(0, 8, fix(f"Paid Percentage: {pct_paid:.1f}%"), ln=True)
+    pdf.cell(0, 8, fix(f"Total Paid Amount: ${total_paid_amt:,.2f}"), ln=True)
+    pdf.ln(6)
+
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
+    pdf.set_font("Arial", "", 10)
+    for _, row in paid.iterrows():
+        pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
+    pdf.ln(3)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
+    pdf.set_font("Arial", "", 10)
+    for _, row in unpaid.iterrows():
+        reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
+        pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
+    pdf.ln(5)
+    return pdf.output(dest="S").encode("latin1")
+
 
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zipf:
