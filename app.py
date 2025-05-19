@@ -347,25 +347,26 @@ with tabs[3]:
 
         # Parse and localize as UTC, then convert to your local timezone (US/Eastern)
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
-
         if df_api["date_sold"].dt.tz is None or str(df_api["date_sold"].dt.tz) == "None":
             df_api["date_sold"] = df_api["date_sold"].dt.tz_localize('UTC')
-
         df_api["date_sold"] = df_api["date_sold"].dt.tz_convert('US/Eastern')
+
         today = pd.Timestamp.now(tz='US/Eastern').date()
         start_of_week = today - timedelta(days=today.weekday())
         this_month = today.replace(day=1)
         this_year = today.replace(month=1, day=1)
 
+        # Masks
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= start_of_week
         monthly_mask = df_api["date_sold"].dt.date >= this_month
         yearly_mask  = df_api["date_sold"].dt.date >= this_year
 
-        d_tot = int(daily_mask.sum())
-        w_tot = int(weekly_mask.sum())
-        m_tot = int(monthly_mask.sum())
-        y_tot = int(yearly_mask.sum())
+        # Use length of filtered frames for counts to match tables
+        d_tot = len(df_api[daily_mask])
+        w_tot = len(df_api[weekly_mask])
+        m_tot = len(df_api[monthly_mask])
+        y_tot = len(df_api[yearly_mask])
 
         c1, c2, c3, c4 = st.columns(4, gap="large")
         c1.metric("Today's Deals",   f"{d_tot:,}")
