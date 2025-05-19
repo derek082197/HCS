@@ -30,7 +30,10 @@ credentials = {
     }
 }
 cookie = {"expiry_days": 7, "key": "hcs_login", "name": "hcs_cookie"}
-authenticator = stauth.Authenticate(credentials, cookie["name"], cookie["key"], cookie["expiry_days"], {})
+authenticator = stauth.Authenticate(
+    credentials, cookie["name"], cookie["key"], cookie["expiry_days"], preauthorized=[]
+)
+
 
 name, authentication_status, username = authenticator.login("Login", "main")
 if authentication_status is False:
