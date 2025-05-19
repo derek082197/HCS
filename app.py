@@ -68,24 +68,9 @@ def init_db():
     conn.commit()
     conn.close()
 
-def insert_report(dt, totals):
-    conn = sqlite3.connect(DB)
-    conn.execute("""
-      INSERT OR REPLACE INTO reports
-      (upload_date,total_deals,agent_payout,owner_revenue,owner_profit)
-      VALUES (?, ?, ?, ?, ?)
-    """, (
-        dt,
-        int(totals["deals"]),
-        float(totals["agent"]),
-        float(totals["owner_rev"]),
-        float(totals["owner_prof"]),
-    ))
-    conn.commit()
-    conn.close()
-
 @st.cache_data
 def load_history():
+    # read and coerce numeric columns
     conn = sqlite3.connect(DB)
     df = pd.read_sql(
         "SELECT * FROM reports ORDER BY upload_date",
@@ -93,14 +78,11 @@ def load_history():
     )
     conn.close()
 
-    # — Coerce any bad / missing values to 0
-    df["total_deals"]   = pd.to_numeric(df["total_deals"],   errors="coerce").fillna(0).astype(int)
-    df["agent_payout"]  = pd.to_numeric(df["agent_payout"],  errors="coerce").fillna(0.0)
+    df["total_deals"]   = pd.to_numeric(df["total_deals"], errors="coerce").fillna(0).astype(int)
+    df["agent_payout"]  = pd.to_numeric(df["agent_payout"], errors="coerce").fillna(0.0)
     df["owner_revenue"] = pd.to_numeric(df["owner_revenue"], errors="coerce").fillna(0.0)
-    df["owner_profit"]  = pd.to_numeric(df["owner_profit"],  errors="coerce").fillna(0.0)
-
+    df["owner_profit"]  = pd.to_numeric(df["owner_profit"], errors="coerce").fillna(0.0)
     return df
-
 
 # ──────────────────────────────────────────────────────────────────────
 # PDF GENERATOR
@@ -117,7 +99,6 @@ def generate_agent_pdf(df_agent, agent_name):
     total_deals = len(df_agent)
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
     unpaid_count= total_deals - paid_count
-
     if paid_count>=200:    rate=25
     elif paid_count>=150:  rate=22.5
     elif paid_count>=120:  rate=17.5
@@ -151,17 +132,16 @@ def generate_agent_pdf(df_agent, agent_name):
     for _, row in df_agent[df_agent["Paid Status"]!="Paid"].iterrows():
         eff = row.get("Effective Date")
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
-        reason = row.get("Reason", "")
-        pdf.multi_cell(0,6,f"- {row['Client']} | Eff: {eff_str} | {reason}")
+        pdf.multi_cell(0,6,f"- {row['Client']} | Eff: {eff_str} | {row.get('Reason','')}")
 
     return pdf.output(dest="S").encode("latin1")
 
 # ──────────────────────────────────────────────────────────────────────
-# HELPER — fetch only today’s leads (paginated, cached for 60s)
+# HELPERS — paginated loader for live counts/historical
 @st.cache_data(ttl=60)
-def fetch_today_leads():
+def load_crm_leads(date_from: date=None):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
-    params  = {"date_from": date.today().strftime("%Y-%m-%d")}
+    params  = {"date_from": date_from.strftime("%Y-%m-%d")} if date_from else {}
     all_results, url, seen = [], CRM_API_URL, set()
     while url and url not in seen:
         seen.add(url)
@@ -176,7 +156,7 @@ def fetch_today_leads():
         if not nxt or nxt in seen:
             break
         url = nxt
-        params = {}  # only send date_from once
+        params = {}
     return pd.DataFrame(all_results)
 
 # ──────────────────────────────────────────────────────────────────────
@@ -188,11 +168,10 @@ uploaded_file = None
 threshold     = 10
 
 # ──────────────────────────────────────────────────────────────────────
-# TABS SETUP
+# TABS
 tabs = st.tabs([
     "🏆 Overview", "📋 Leaderboard", "📈 History",
     "📊 Live Counts", "⚙️ Settings", "📂 Clients"
-])
 
 # ──────────────────────────────────────────────────────────────────────
 # SETTINGS TAB
@@ -326,38 +305,27 @@ with tabs[2]:
         st.info("No history yet.")
     else:
         dates = history_df["upload_date"].dt.strftime("%Y-%m-%d").tolist()
-        to_del = st.multiselect("Delete reports:", dates)
-        if st.button("Delete Selected"):
-            conn = sqlite3.connect(DB)
-            for d in to_del:
-                conn.execute(
-                    "DELETE FROM reports WHERE upload_date=?", (d,)
-                )
-            conn.commit()
-            conn.close()
-            st.success("Deleted—refresh to update.")
-
         sel = st.selectbox("View report:", dates)
-        rec = history_df.loc[
-            history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel
-        ].iloc[0]
+        rec = history_df.loc[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
         cols = st.columns(4)
-        # <-- here, colon before comma
-        cols[0].metric("Deals",        f"{int(rec.total_deals):,}")
-        cols[1].metric("Agent Payout", f"${rec.agent_payout:,.2f}")
-        cols[2].metric("Owner Revenue",f"${rec.owner_revenue:,.2f}")
-        cols[3].metric("Owner Profit", f"${rec.owner_profit:,.2f}")
-
+        # no more int(...) on potentially invalid
+        deals       = rec.total_deals
+        agent_out   = rec.agent_payout
+        owner_rev   = rec.owner_revenue
+        owner_prof  = rec.owner_profit
+        cols[0].metric("Deals",         f"{deals:,}")
+        cols[1].metric("Agent Payout",  f"${agent_out:,.2f}")
+        cols[2].metric("Owner Revenue", f"${owner_rev:,.2f}")
+        cols[3].metric("Owner Profit",  f"${owner_prof:,.2f}")
         st.line_chart(history_df.set_index("upload_date")[
             ["total_deals","agent_payout","owner_revenue","owner_profit"]
         ])
 
-# ──────────────────────────────────────────────────────────────────────
-# LIVE COUNTS TAB
+# LIVE COUNTS TAB (use load_crm_leads with date filter)
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
     with st.spinner("⏳ Fetching latest leads…"):
-        df_api = fetch_today_leads()
+        df_api = load_crm_leads(date_from=date.today())
 
     if df_api.empty:
         st.error("No leads returned from API.")
@@ -367,11 +335,7 @@ with tabs[3]:
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=6))
         monthly_mask = df_api["date_sold"].dt.month == today.month
-        d_tot, w_tot, m_tot = (
-            int(daily_mask.sum()),
-            int(weekly_mask.sum()),
-            int(monthly_mask.sum())
-        )
+        d_tot, w_tot, m_tot = (int(daily_mask.sum()), int(weekly_mask.sum()), int(monthly_mask.sum()))
 
         c1, c2, c3 = st.columns(3, gap="large")
         c1.metric("Today's Deals",      f"{d_tot:,}")
@@ -383,13 +347,7 @@ with tabs[3]:
         st.markdown("---")
 
         def by_agent(mask):
-            return (
-                df_api[mask]
-                .groupby("lead_vendor_name")
-                .size()
-                .rename("Sales")
-                .sort_values(ascending=False)
-            )
+            return df_api[mask].groupby("lead_vendor_name").size().rename("Sales").sort_values(ascending=False)
 
         b1, b2, b3 = st.columns(3, gap="large")
         b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
