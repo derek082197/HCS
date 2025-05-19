@@ -451,6 +451,7 @@ with tabs[6]:
         "hcsmedia": 55,
         "buffercall": 80,      # Aetna
         "acaking": 75,
+        "raycalls": 69,
         # Add more here if you pay other vendors!
     }
 
