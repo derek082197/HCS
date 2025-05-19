@@ -505,9 +505,20 @@ with tabs[6]:
                 "Total Paid Amount": f"${paid_amt:,.2f}"
             })
         if vendor_summaries:
-            df_sum = pd.DataFrame(vendor_summaries)
-            st.subheader("Vendor Pay Summary Table")
-            st.dataframe(df_sum, use_container_width=True)
+    df_sum = pd.DataFrame(vendor_summaries)
+    st.subheader("Vendor Pay Summary Table")
+    st.dataframe(df_sum, use_container_width=True)
+
+    # GRAND TOTAL below the table
+    total_paid = sum(
+        float(str(row["Total Paid Amount"]).replace("$", "").replace(",", ""))
+        for row in vendor_summaries
+    )
+    st.markdown(
+        f"<div style='font-size:1.2em; margin-top:12px; color:#175017;'><b>Total Paid to All Vendors:</b> ${total_paid:,.2f}</div>",
+        unsafe_allow_html=True,
+    )
+
 
         # --- PDF GENERATOR ---
         def vendor_pdf(paid, unpaid, pretty, rate):
