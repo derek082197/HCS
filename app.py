@@ -337,7 +337,9 @@ with tabs[2]:
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
     with st.spinner("⏳ Fetching latest leads…"):
-        df_api = fetch_today_leads()
+        # Pull all leads from the earliest date you care about
+        # (For a real 'yearly' count, you may want date_from=date(date.today().year, 1, 1))
+        df_api = load_crm_leads(date_from=date(date.today().year, 1, 1))
 
     if df_api.empty:
         st.error("No leads returned from API.")
