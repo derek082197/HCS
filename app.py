@@ -6,21 +6,19 @@ import zipfile
 import csv
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
-import requests  # for CRM API
+import requests
 
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# ──────────────────────────────────────────────────────────────────────
-# STEP 2) LOAD YOUR USERS FROM CSV (username,password)
+# ────────────────────────────────
+# USERS CSV LOGIN
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
 USERS = dict(zip(df_users.username.str.strip(), df_users.password))
 
-# STEP 3) SESSION-STATE INIT
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-# STEP 4) LOGIN/LOGOUT CALLBACKS
 def do_login():
     u, p = st.session_state.user.strip(), st.session_state.pwd
     if u in USERS and p == USERS[u]:
@@ -33,26 +31,24 @@ def do_logout():
     st.session_state.logged_in = False
     st.experimental_rerun()
 
-# 5) SHOW LOGIN FORM IN THE SIDEBAR (blocks main until logged in)
 if not st.session_state.logged_in:
     st.sidebar.title("🔒 HCS CRM Login")
     st.sidebar.text_input("Username", key="user")
     st.sidebar.text_input("Password", type="password", key="pwd")
     st.sidebar.button("Log in", on_click=do_login)
     st.stop()
-
-# 6) Once logged in, show Log out in the sidebar
 st.sidebar.button("Log out", on_click=do_logout)
 
-# ──────────────────────────────────────────────────────────────────────
-# CONFIG CONSTANTS
+# ────────────────────────────────
+# CONSTANTS
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
+CRM_USERS_URL   = "https://hcs.tldcrm.com/api/ingress/users"
 CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
 DB              = "crm_history.db"
 
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # DATABASE HELPERS
 def init_db():
     conn = sqlite3.connect(DB)
@@ -87,7 +83,7 @@ def load_history():
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # PDF GENERATOR
 def generate_agent_pdf(df_agent, agent_name):
     pdf = FPDF()
@@ -98,7 +94,6 @@ def generate_agent_pdf(df_agent, agent_name):
     pdf.set_font("Arial","B",12)
     pdf.cell(0,10,f"Commission Statement - {agent_name}", ln=True)
     pdf.ln(5)
-
     total_deals = len(df_agent)
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
     unpaid_count= total_deals - paid_count
@@ -109,7 +104,6 @@ def generate_agent_pdf(df_agent, agent_name):
     else: rate = 15
     bonus  = 1200 if paid_count >= 70 else 0
     payout = paid_count * rate + bonus
-
     pdf.set_font("Arial","",12)
     pdf.cell(0,8, f"Total Deals Submitted: {total_deals}", ln=True)
     pdf.cell(0,8, f"Paid Deals: {paid_count}", ln=True)
@@ -121,7 +115,6 @@ def generate_agent_pdf(df_agent, agent_name):
     pdf.cell(0,10, f"Payout: ${payout:,.2f}", ln=True)
     pdf.set_text_color(0,0,0)
     pdf.ln(5)
-
     pdf.set_font("Arial","B",12)
     pdf.cell(0,8, "Paid Clients:", ln=True)
     pdf.set_font("Arial","",10)
@@ -129,7 +122,6 @@ def generate_agent_pdf(df_agent, agent_name):
         eff = row.get("Effective Date")
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
         pdf.multi_cell(0,6, f"- {row['Client']} | Eff: {eff_str}")
-
     pdf.ln(3)
     pdf.set_font("Arial","B",12)
     pdf.cell(0,8, "Unpaid Clients & Reasons:", ln=True)
@@ -139,11 +131,9 @@ def generate_agent_pdf(df_agent, agent_name):
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
         reason  = row.get("Reason","")
         pdf.multi_cell(0,6, f"- {row['Client']} | Eff: {eff_str} | {reason}")
-
     return pdf.output(dest="S").encode("latin1")
 
-
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # FAST PAGINATED LEADS LOADER FOR "ALL TODAY"
 def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
@@ -168,8 +158,16 @@ def fetch_all_today(limit=5000):
         params = {}
     return pd.DataFrame(all_results)
 
+@st.cache_data(ttl=600)
+def fetch_agents():
+    url = CRM_USERS_URL
+    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
+    r = requests.get(url, headers=headers, timeout=10)
+    r.raise_for_status()
+    data = r.json().get("response", [])
+    return pd.DataFrame(data)
 
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # INITIALIZATION
 init_db()
 history_df    = load_history()
@@ -177,20 +175,22 @@ summary       = []
 uploaded_file = None
 threshold     = 10
 
-# ──────────────────────────────────────────────────────────────────────
+# Fetch agent info (can move into each tab for less upfront API hit if you want)
+df_agents = fetch_agents()
+
+# ────────────────────────────────
 # TABS SETUP
 tabs = st.tabs([
     "🏆 Overview", "📋 Leaderboard", "📈 History",
     "📊 Live Counts", "⚙️ Settings", "📂 Clients"
 ])
 
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # SETTINGS TAB
 with tabs[4]:
     st.header("⚙️ Settings & Upload")
     uploaded_file = st.file_uploader("📥 Upload Excel Statement", type="xlsx")
     threshold     = st.slider("Coaching threshold (Paid Deals)", 0, 100, threshold)
-
     if uploaded_file:
         st.success("✅ Statement uploaded, processing…")
         df = pd.read_excel(uploaded_file)
@@ -199,7 +199,6 @@ with tabs[4]:
         df["Paid Status"]    = df["Advance"].fillna(0).astype(float).apply(lambda x: "Paid" if x>0 else "Not Paid")
         df["Reason"]         = df.get("Advance Excluded Reason","").fillna("").astype(str)
         df["Effective Date"] = pd.to_datetime(df.get("Eff Date"), errors="coerce")
-
         totals = {"deals":0, "agent":0.0, "owner_rev":0.0, "owner_prof":0.0}
         summary.clear()
         buf = io.BytesIO()
@@ -212,22 +211,18 @@ with tabs[4]:
                 payout  = paid_ct * rate + bonus
                 owner_rev  = paid_ct * 150
                 owner_prof = paid_ct * 43
-
                 totals["deals"]     += paid_ct
                 totals["agent"]     += payout
                 totals["owner_rev"] += owner_rev
                 totals["owner_prof"]+= owner_prof
-
                 summary.append({
                     "Agent": agent,
                     "Paid Deals": paid_ct,
                     "Agent Payout": payout,
                     "Owner Profit": owner_prof
                 })
-
                 pdf_bytes = generate_agent_pdf(sub, agent)
                 zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf_bytes)
-
             # Write admin summary CSV
             csv_buf = io.StringIO()
             w = csv.writer(csv_buf)
@@ -235,11 +230,9 @@ with tabs[4]:
             for r in summary:
                 w.writerow([r["Agent"], r["Paid Deals"], r["Agent Payout"], r["Owner Profit"]])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
-
         default_dt = (df["Effective Date"].max().date()
                       if "Effective Date" in df else date.today())
         insert_report(default_dt.strftime("%Y-%m-%d"), totals)
-
         st.download_button(
             "📦 Download ZIP of Pay Stubs",
             buf.getvalue(),
@@ -247,7 +240,7 @@ with tabs[4]:
             mime="application/zip"
         )
 
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # OVERVIEW TAB
 with tabs[0]:
     st.title("HCS Commission Dashboard")
@@ -269,7 +262,6 @@ with tabs[0]:
             c2.metric("Agent Payout",    f"${latest.agent_payout:,.2f}")
             c3.metric("Owner Revenue",   f"${latest.owner_revenue:,.2f}")
             c4.metric("Owner Profit",    f"${latest.owner_profit:,.2f}")
-
     st.markdown("---")
     rev = (totals["owner_rev"] if uploaded_file else
            (history_df.iloc[-1].owner_revenue if not history_df.empty else 0))
@@ -278,7 +270,7 @@ with tabs[0]:
     s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
     s3.metric("Jarad (1%)",  f"${rev*0.01:,.2f}")
 
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # LEADERBOARD TAB
 with tabs[1]:
     st.header("Agent Leaderboard & Drill-Down")
@@ -296,7 +288,7 @@ with tabs[1]:
     else:
         st.info("No data—upload in Settings first.")
 
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # HISTORY TAB
 with tabs[2]:
     st.header("Historical Reports")
@@ -311,108 +303,104 @@ with tabs[2]:
         c2.metric("Agent Payout", f"${rec.agent_payout:,.2f}")
         c3.metric("Owner Revenue",f"${rec.owner_revenue:,.2f}")
         c4.metric("Owner Profit", f"${rec.owner_profit:,.2f}")
-        st.line_chart(history_df.set_index("upload_date")[
-            ["total_deals","agent_payout","owner_revenue","owner_profit"]
-        ])
+        st.line_chart(history_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
 
-# ──────────────────────────────────────────────────────────────────────
-# LIVE COUNTS TAB (DAILY/WEEKLY/MONTHLY/YEARLY)
+# ────────────────────────────────
+# LIVE COUNTS TAB (DAILY/WEEKLY/MONTHLY/YEARLY, AGENT MERGED)
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly/Yearly Counts")
     with st.spinner("Fetching today's leads..."):
         df_api = fetch_all_today(limit=5000)
 
+    # Merge agent info if you have a field to join on; example using "lead_vendor_name" to "username" if that's how it matches
+    if not df_api.empty and not df_agents.empty:
+        # Try all reasonable merge options; update as needed for your schema!
+        if "lead_vendor_name" in df_api.columns and "username" in df_agents.columns:
+            df_api = df_api.merge(df_agents, left_on="lead_vendor_name", right_on="username", how="left", suffixes=("","_agent"))
+        # You can add more smart merges here if you have fields like agent_id, extension, etc.
+
     if df_api.empty:
         st.error("No leads returned from API.")
     else:
         import pytz
-
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         if df_api["date_sold"].dt.tz is None or str(df_api["date_sold"].dt.tz) == "None":
             df_api["date_sold"] = df_api["date_sold"].dt.tz_localize('UTC')
         df_api["date_sold"] = df_api["date_sold"].dt.tz_convert('US/Eastern')
-
         today = pd.Timestamp.now(tz='US/Eastern').date()
         start_of_week = today - timedelta(days=today.weekday())
         this_month = today.replace(day=1)
         this_year = today.replace(month=1, day=1)
-
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= start_of_week
         monthly_mask = df_api["date_sold"].dt.date >= this_month
         yearly_mask  = df_api["date_sold"].dt.date >= this_year
-
         d_tot = len(df_api[daily_mask])
         w_tot = len(df_api[weekly_mask])
         m_tot = len(df_api[monthly_mask])
         y_tot = len(df_api[yearly_mask])
-
         c1, c2, c3, c4 = st.columns(4, gap="large")
-        # Today
         c1.metric("Today's Deals", f"{d_tot:,}")
         c1.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${d_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
-        # This Week
         c2.metric("This Week's Deals", f"{w_tot:,}")
         c2.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${w_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
-        # This Month
         c3.metric("This Month's Deals", f"{m_tot:,}")
         c3.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${m_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
-        # This Year
         c4.metric("This Year's Deals", f"{y_tot:,}")
         c4.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${y_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
-
         st.markdown("---")
-
         def by_agent(mask):
+            # If merged, use 'username' or another agent field, else fall back to lead_vendor_name
+            col = "username" if "username" in df_api.columns else "lead_vendor_name"
             return (
                 df_api[mask]
-                .groupby("lead_vendor_name")
+                .groupby(col)
                 .size()
                 .rename("Sales")
                 .sort_values(ascending=False)
             )
-
         b1, b2, b3, b4 = st.columns(4, gap="large")
         b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
         b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
         b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(monthly_mask))
         b4.subheader("Yearly Sales by Agent");  b4.bar_chart(by_agent(yearly_mask))
-
         st.markdown("---")
         st.subheader("Today's Deals Table (Eastern Time)")
+        cols_to_show = [
+            "policy_id", "lead_first_name", "lead_last_name", "date_sold", "carrier", "product"
+        ]
+        if "username" in df_api.columns:
+            cols_to_show.append("username")
+        if "sip" in df_api.columns:
+            cols_to_show.append("sip")
+        if "lead_vendor_name" in df_api.columns:
+            cols_to_show.append("lead_vendor_name")
         st.dataframe(
-            df_api[daily_mask][
-                [
-                    "policy_id", "lead_first_name", "lead_last_name",
-                    "date_sold", "carrier", "product", "lead_vendor_name"
-                ]
-                if "lead_vendor_name" in df_api.columns else
-                [
-                    "policy_id", "lead_first_name", "lead_last_name",
-                    "date_sold", "carrier", "product"
-                ]
-            ].sort_values("date_sold"),
+            df_api[daily_mask][cols_to_show].sort_values("date_sold"),
             use_container_width=True
         )
 
-# ──────────────────────────────────────────────────────────────────────
+# ────────────────────────────────
 # CLIENTS TAB (ALL TODAY)
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
-
     df_api = fetch_all_today(limit=5000)
+    if not df_api.empty and not df_agents.empty:
+        if "lead_vendor_name" in df_api.columns and "username" in df_agents.columns:
+            df_api = df_api.merge(df_agents, left_on="lead_vendor_name", right_on="username", how="left", suffixes=("","_agent"))
     if df_api.empty:
         st.info("No API leads returned.")
         api_display = pd.DataFrame()
     else:
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         api_today = df_api[df_api["date_sold"].dt.date == date.today()]
-
         api_cols = [
             "policy_id","lead_first_name","lead_last_name","lead_state",
             "date_sold","carrier","product","duration","premium",
             "policy_number","lead_vendor_name"
         ]
+        if "username" in df_api.columns: api_cols.append("username")
+        if "sip" in df_api.columns: api_cols.append("sip")
         api_cols = [c for c in api_cols if c in api_today.columns]
         api_display = api_today[api_cols].rename(columns={
             "policy_id":       "Policy ID",
@@ -421,25 +409,24 @@ with tabs[5]:
             "lead_state":      "State",
             "date_sold":       "Date Sold",
             "lead_vendor_name":"Vendor",
+            "username":        "Agent User",
+            "sip":             "SIP/Extension"
         })
         if "lead_id" in api_today.columns:
             api_display["Lead ID"] = api_today["lead_id"].astype(str)
-
     if "manual_leads" not in st.session_state:
         st.session_state.manual_leads = pd.DataFrame()
-
     combined = (
         api_display
         if st.session_state.manual_leads.empty
-        else pd.concat([api_display, st.session_state.manual_leads],
-                       ignore_index=True, sort=False)
+        else pd.concat([api_display, st.session_state.manual_leads], ignore_index=True, sort=False)
     )
-
     if combined.empty:
         st.warning("No leads to display for today.")
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
+
 
 
 
