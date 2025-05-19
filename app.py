@@ -447,7 +447,7 @@ with tabs[6]:
 
     # Assign rates to each vendor code that gets paid (expand as needed)
     VENDOR_RATES = {
-        "francalls": 65,
+        "francalls": 55,
         "hcsmedia": 55,
         "buffercall": 80,      # Aetna
         "acaking": 75,
