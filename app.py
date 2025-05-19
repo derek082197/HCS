@@ -336,37 +336,49 @@ with tabs[2]:
 # LIVE COUNTS TAB
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
-    with st.spinner("⏳ Fetching latest leads…"):
-        # Pull all leads from the earliest date you care about
-        # (For a real 'yearly' count, you may want date_from=date(date.today().year, 1, 1))
-        df_api = load_crm_leads(date_from=date(date.today().year, 1, 1))
+    today = date.today()
+    this_week = today - timedelta(days=today.weekday())
+    this_month = today.replace(day=1)
+    this_year = today.replace(month=1, day=1)
 
-    if df_api.empty:
-        st.error("No leads returned from API.")
-    else:
-        df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
-        today = date.today()
-        daily_mask   = df_api["date_sold"].dt.date == today
-        weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=6))
-        monthly_mask = df_api["date_sold"].dt.month == today.month
-        d_tot, w_tot, m_tot = int(daily_mask.sum()), int(weekly_mask.sum()), int(monthly_mask.sum())
+    # Each call only pulls the records you need (very fast)
+    with st.spinner("Fetching today's leads…"):
+        df_today = load_crm_leads(date_from=today)
+    with st.spinner("Fetching weekly leads…"):
+        df_week = load_crm_leads(date_from=this_week)
+    with st.spinner("Fetching monthly leads…"):
+        df_month = load_crm_leads(date_from=this_month)
+    with st.spinner("Fetching yearly leads…"):
+        df_year = load_crm_leads(date_from=this_year)
 
-        c1, c2, c3 = st.columns(3, gap="large")
-        c1.metric("Today's Deals",      f"{d_tot:,}")
-        c1.metric("Today's Profit",     f"${d_tot*PROFIT_PER_SALE:,.2f}")
-        c2.metric("This Week's Deals",  f"{w_tot:,}")
-        c2.metric("This Week's Profit", f"${w_tot*PROFIT_PER_SALE:,.2f}")
-        c3.metric("This Month's Deals", f"{m_tot:,}")
-        c3.metric("This Month's Profit",f"${m_tot*PROFIT_PER_SALE:,.2f}")
-        st.markdown("---")
+    def deal_count(df):
+        return len(df) if not df.empty else 0
 
-        def by_agent(m):
-            return df_api[m].groupby("lead_vendor_name").size().rename("Sales").sort_values(ascending=False)
+    d_tot = deal_count(df_today)
+    w_tot = deal_count(df_week)
+    m_tot = deal_count(df_month)
+    y_tot = deal_count(df_year)
 
-        b1, b2, b3 = st.columns(3, gap="large")
-        b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
-        b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
-        b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(monthly_mask))
+    c1, c2, c3, c4 = st.columns(4, gap="large")
+    c1.metric("Today's Deals", f"{d_tot:,}")
+    c2.metric("This Week's Deals", f"{w_tot:,}")
+    c3.metric("This Month's Deals", f"{m_tot:,}")
+    c4.metric("This Year's Deals", f"{y_tot:,}")
+
+    # (Optionally, you can display bar charts by agent for each period:)
+    # Helper for bar charts by agent
+    def by_agent(df):
+        if df.empty: return pd.Series(dtype=int)
+        df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+        return df.groupby("lead_vendor_name").size().rename("Sales").sort_values(ascending=False)
+
+    st.markdown("---")
+    b1, b2, b3, b4 = st.columns(4, gap="large")
+    b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(df_today))
+    b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(df_week))
+    b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(df_month))
+    b4.subheader("Yearly Sales by Agent");  b4.bar_chart(by_agent(df_year))
+
 
 # ──────────────────────────────────────────────────────────────────────
 # CLIENTS TAB
