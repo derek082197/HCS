@@ -7,39 +7,37 @@ import csv
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
-try:
-    from streamlit_extras.st_autorefresh import st_autorefresh
-except ImportError:
-    def st_autorefresh(*args, **kwargs):
-        return None
+from streamlit_extras.st_autorefresh import st_autorefresh
 
-import streamlit_authenticator as stauth
+# 1) PAGE CONFIG — must be first
+st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# ---- SECURE LOGIN SETUP ----
-# users.csv: username,name,password (hashed!)
+# USERS CSV LOGIN
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
-usernames = df_users['username'].tolist()
-names     = df_users['name'].tolist() if "name" in df_users.columns else usernames
-passwords = df_users['password'].tolist()
+USERS = dict(zip(df_users.username.str.strip(), df_users.password))
 
-credentials = {
-    "usernames": {
-        u: {"name": n, "password": p}
-        for u, n, p in zip(usernames, names, passwords)
-    }
-}
-cookie = {"expiry_days": 7, "key": "hcs_login", "name": "hcs_cookie"}
-authenticator = stauth.Authenticate(
-    credentials, cookie["name"], cookie["key"], cookie["expiry_days"], preauthorized=[]
-)
-name, authentication_status, username = authenticator.login("Login", "sidebar")
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-if authentication_status is False:
-    st.error("Username/password is incorrect")
-if authentication_status is None:
-    st.warning("Please enter your username and password")
-if not authentication_status:
+def do_login():
+    u, p = st.session_state.user.strip(), st.session_state.pwd
+    if u in USERS and p == USERS[u]:
+        st.session_state.logged_in = True
+        st.success(f"✅ Welcome, {u}!")
+    else:
+        st.error("❌ Incorrect credentials")
+
+def do_logout():
+    st.session_state.logged_in = False
+    st.experimental_rerun()
+
+if not st.session_state.logged_in:
+    st.sidebar.title("🔒 HCS CRM Login")
+    st.sidebar.text_input("Username", key="user")
+    st.sidebar.text_input("Password", type="password", key="pwd")
+    st.sidebar.button("Log in", on_click=do_login)
     st.stop()
+st.sidebar.button("Log out", on_click=do_logout)
 
 
 # CONSTANTS
