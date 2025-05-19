@@ -164,22 +164,19 @@ def load_live_counts():
     return df.loc[:,~df.columns.str.contains("^Unnamed")]
 
 # ──────────────────────────────────────────────────────────────────────
-# CRM “Clients” loader w/ pagination (no caching)
-def load_crm_leads():
-    headers = {"tld-api-id":CRM_API_ID,"tld-api-key":CRM_API_KEY}
-    all_results, url, seen = [], CRM_API_URL, set()
-    while url and url not in seen:
-        seen.add(url)
-        r = requests.get(url, headers=headers, timeout=10)
-        r.raise_for_status()
-        js = r.json().get("response", {})
-        res = js.get("results", [])
-        if not res:
-            break
-        all_results.extend(res)
-        nxt = js.get("navigate", {}).get("next")
-        url = nxt if nxt and nxt != url else None
-    return pd.DataFrame(all_results)
+# CRM “Clients” loader w/ real-time date filter (no caching)
+def load_crm_leads(date_from: date = None):
+    from urllib.parse import urlencode
+    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
+    params = {}
+    if date_from:
+        params["date_from"] = date_from.strftime("%Y-%m-%d")
+    url = CRM_API_URL + ("?" + urlencode(params) if params else "")
+    r = requests.get(url, headers=headers, timeout=10)
+    r.raise_for_status()
+    js = r.json().get("response", {})
+    return pd.DataFrame(js.get("results", []))
+
 
 
 # ──────────────────────────────────────────────────────────────────────
