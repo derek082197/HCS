@@ -10,40 +10,42 @@ import requests
 try:
     from streamlit_extras.st_autorefresh import st_autorefresh
 except ImportError:
-    # If not installed, define a dummy function so the rest of your code still runs
     def st_autorefresh(*args, **kwargs):
         return None
 
+import streamlit_authenticator as stauth
 
-# 1) PAGE CONFIG — must be first
-st.set_page_config(page_title="HCS Commission CRM", layout="wide")
-
-# USERS CSV LOGIN
+# USER CREDENTIALS (you can also load from CSV)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
-USERS = dict(zip(df_users.username.str.strip(), df_users.password))
+# Use username, name, password columns in users.csv
+usernames = df_users['username'].tolist()
+names     = df_users['username'].tolist()  # Or use 'name' if you have a column
+passwords = df_users['password'].tolist()
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+# Only generate hashes ONCE and copy to CSV for security!
+hashed_passwords = stauth.Hasher(passwords).generate()
 
-def do_login():
-    u, p = st.session_state.user.strip(), st.session_state.pwd
-    if u in USERS and p == USERS[u]:
-        st.session_state.logged_in = True
-        st.success(f"✅ Welcome, {u}!")
-    else:
-        st.error("❌ Incorrect credentials")
+credentials = {
+    "usernames": {
+        u: {"name": n, "password": p}
+        for u, n, p in zip(usernames, names, hashed_passwords)
+    }
+}
 
-def do_logout():
-    st.session_state.logged_in = False
-    st.experimental_rerun()
+cookie = {"expiry_days": 7, "key": "hcs_login", "name": "hcs_cookie"}
+authenticator = stauth.Authenticate(credentials, cookie["name"], cookie["key"], cookie["expiry_days"], {})
 
-if not st.session_state.logged_in:
-    st.sidebar.title("🔒 HCS CRM Login")
-    st.sidebar.text_input("Username", key="user")
-    st.sidebar.text_input("Password", type="password", key="pwd")
-    st.sidebar.button("Log in", on_click=do_login)
+name, authentication_status, username = authenticator.login("Login", "main")
+if authentication_status is False:
+    st.error("Username/password is incorrect")
+if authentication_status is None:
+    st.warning("Please enter your username and password")
+if not authentication_status:
     st.stop()
-st.sidebar.button("Log out", on_click=do_logout)
+# If logged in:
+authenticator.logout("Logout", "sidebar")
+st.sidebar.success(f"Welcome, {name}!")
+
 
 # CONSTANTS
 PROFIT_PER_SALE = 43.3
