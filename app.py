@@ -43,6 +43,7 @@ st.sidebar.button("Log out", on_click=do_logout)
 # CONSTANTS
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
+CRM_USERS_URL   = "https://hcs.tldcrm.com/api/ingress/users"
 CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
 DB              = "crm_history.db"
@@ -157,6 +158,15 @@ def fetch_all_today(limit=5000):
         params = {}
     return pd.DataFrame(all_results)
 
+@st.cache_data(ttl=600)
+def fetch_agents():
+    url = CRM_USERS_URL
+    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
+    r = requests.get(url, headers=headers, timeout=10)
+    r.raise_for_status()
+    data = r.json().get("response", [])
+    return pd.DataFrame(data)
+
 # ────────────────────────────────
 # INITIALIZATION
 init_db()
@@ -164,6 +174,9 @@ history_df    = load_history()
 summary       = []
 uploaded_file = None
 threshold     = 10
+
+# Fetch agent info (can move into each tab for less upfront API hit if you want)
+df_agents = fetch_agents()
 
 # ────────────────────────────────
 # TABS SETUP
@@ -293,11 +306,19 @@ with tabs[2]:
         st.line_chart(history_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
 
 # ────────────────────────────────
-# LIVE COUNTS TAB (DAILY/WEEKLY/MONTHLY/YEARLY)
+# LIVE COUNTS TAB (DAILY/WEEKLY/MONTHLY/YEARLY, AGENT MERGED)
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly/Yearly Counts")
     with st.spinner("Fetching today's leads..."):
         df_api = fetch_all_today(limit=5000)
+
+    # Merge agent info if you have a field to join on; example using "lead_vendor_name" to "username" if that's how it matches
+    if not df_api.empty and not df_agents.empty:
+        # Try all reasonable merge options; update as needed for your schema!
+        if "lead_vendor_name" in df_api.columns and "username" in df_agents.columns:
+            df_api = df_api.merge(df_agents, left_on="lead_vendor_name", right_on="username", how="left", suffixes=("","_agent"))
+        # You can add more smart merges here if you have fields like agent_id, extension, etc.
+
     if df_api.empty:
         st.error("No leads returned from API.")
     else:
@@ -329,8 +350,8 @@ with tabs[3]:
         c4.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${y_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
         st.markdown("---")
         def by_agent(mask):
-            # Use lead_vendor_name for grouping (for now)
-            col = "lead_vendor_name" if "lead_vendor_name" in df_api.columns else df_api.columns[0]
+            # If merged, use 'username' or another agent field, else fall back to lead_vendor_name
+            col = "username" if "username" in df_api.columns else "lead_vendor_name"
             return (
                 df_api[mask]
                 .groupby(col)
@@ -348,6 +369,10 @@ with tabs[3]:
         cols_to_show = [
             "policy_id", "lead_first_name", "lead_last_name", "date_sold", "carrier", "product"
         ]
+        if "username" in df_api.columns:
+            cols_to_show.append("username")
+        if "sip" in df_api.columns:
+            cols_to_show.append("sip")
         if "lead_vendor_name" in df_api.columns:
             cols_to_show.append("lead_vendor_name")
         st.dataframe(
@@ -360,6 +385,9 @@ with tabs[3]:
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
     df_api = fetch_all_today(limit=5000)
+    if not df_api.empty and not df_agents.empty:
+        if "lead_vendor_name" in df_api.columns and "username" in df_agents.columns:
+            df_api = df_api.merge(df_agents, left_on="lead_vendor_name", right_on="username", how="left", suffixes=("","_agent"))
     if df_api.empty:
         st.info("No API leads returned.")
         api_display = pd.DataFrame()
@@ -371,6 +399,8 @@ with tabs[5]:
             "date_sold","carrier","product","duration","premium",
             "policy_number","lead_vendor_name"
         ]
+        if "username" in df_api.columns: api_cols.append("username")
+        if "sip" in df_api.columns: api_cols.append("sip")
         api_cols = [c for c in api_cols if c in api_today.columns]
         api_display = api_today[api_cols].rename(columns={
             "policy_id":       "Policy ID",
@@ -379,6 +409,8 @@ with tabs[5]:
             "lead_state":      "State",
             "date_sold":       "Date Sold",
             "lead_vendor_name":"Vendor",
+            "username":        "Agent User",
+            "sip":             "SIP/Extension"
         })
         if "lead_id" in api_today.columns:
             api_display["Lead ID"] = api_today["lead_id"].astype(str)
