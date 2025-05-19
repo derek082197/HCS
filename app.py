@@ -415,21 +415,47 @@ with tabs[5]:
 # VENDOR PAY TAB
 with tabs[6]:
     st.header("💼 Vendor Pay Summary")
-    # All vendor keys lowercase, no spaces (for matching)
+
+    # These are all your vendors (code name: pretty name)
+    VENDOR_CODES = {
+        "general": "GENERAL",
+        "inbound": "INBOUND",
+        "sms": "SMS",
+        "advancegro": "Advance gro",
+        "axad": "AXAD",
+        "googlecalls": "GOOGLE CALLS",
+        "buffercall": "Aetna",
+        "ancletadvising": "Anclet advising",
+        "blmcalls": "BLM CALLS",
+        "loopcalls": "LOOP CALLS",
+        "nobufferaca": "NO BUFFER ACA",
+        "raycalls": "RAY CALLS",
+        "nomiaca": "Nomi ACA",
+        "hcsmedia": "HCS MEDIA",
+        "francalls": "Fran Calls",
+        "acaking": "ACA KING",
+        "ptacacalls": "PT ACA CALLS",
+        "hcscaa": "HCS CAA",
+        "slavaaca": "Slava ACA",
+        "slavaaca2": "Slava ACA 2",
+        "francallssupp": "Fran Calls SUPP",
+        "derekinhousefb": "DEREK INHOUSE FB",
+        "allicalladdoncall": "ALI CALL ADDON CALL",
+        "joshaca": "JOSH ACA",
+        "hcs1p": "HCS1p"
+    }
+
+    # Assign rates to each vendor code (add more as needed)
     VENDOR_RATES = {
         "francalls": 65,
         "hcsmedia": 55,
-        "aetna": 80,
+        "buffercall": 80,      # Aetna
         "acaking": 75,
+        # ...add more here if you pay other vendors!
     }
-    PRETTY_VENDOR = {  # for display on table and PDFs
-        "francalls": "Fran Calls",
-        "hcsmedia": "HCS Media",
-        "aetna": "Aetna",
-        "acaking": "ACA KING",
-    }
+
     def normalize_key(x):
-        return str(x).strip().lower().replace(' ', '')
+        return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
 
     tld_file = st.file_uploader("Upload TLD CSV (new/PHI export)", type=["csv"], key="vendor_tld")
     fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo")
@@ -437,20 +463,22 @@ with tabs[6]:
     if tld_file and fmo_file:
         st.success("Both files uploaded. Generating vendor ZIP...")
 
+        # Load and normalize vendor names from TLD
         tld = pd.read_csv(tld_file, dtype=str)
-        tld['Vendor'] = tld.iloc[:, 8].astype(str)
+        tld['VendorRaw'] = tld.iloc[:, 8].astype(str)
         tld['First Name'] = tld.iloc[:, 3].astype(str)
         tld['Last Name'] = tld.iloc[:, 4].astype(str)
+
+        # Normalize vendor codes in TLD
+        tld['vendor_key'] = tld['VendorRaw'].apply(normalize_key)
 
         fmo = pd.read_excel(fmo_file, dtype=str)
         fmo['First Name'] = fmo.iloc[:, 7].astype(str)
         fmo['Last Name'] = fmo.iloc[:, 8].astype(str)
         fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
         fmo['Reason'] = fmo.get('Advance Excluded Reason', "")
-
         tld['full_name'] = (tld['First Name'] + tld['Last Name']).apply(normalize_key)
         fmo['full_name'] = (fmo['First Name'] + fmo['Last Name']).apply(normalize_key)
-        tld['vendor_key'] = tld['Vendor'].apply(normalize_key)
 
         merged = pd.merge(
             tld,
@@ -460,15 +488,17 @@ with tabs[6]:
 
         # --- Display Vendor Summary Table ---
         vendor_summaries = []
-        for vkey in sorted(VENDOR_RATES):
-            vname = PRETTY_VENDOR[vkey]
+        for vkey, pretty in VENDOR_CODES.items():
+            if vkey not in VENDOR_RATES:
+                continue
+            rate = VENDOR_RATES[vkey]
             sub = merged[merged['vendor_key'] == vkey]
             paid_ct = (sub['Advance'] > 0).sum()
             unpaid_ct = (sub['Advance'] == 0).sum()
             pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
-            paid_amt = paid_ct * VENDOR_RATES[vkey]
+            paid_amt = paid_ct * rate
             vendor_summaries.append({
-                "Vendor": vname,
+                "Vendor": pretty,
                 "Paid Deals": paid_ct,
                 "Unpaid Deals": unpaid_ct,
                 "Paid %": f"{pct_paid:.1f}%",
@@ -479,14 +509,13 @@ with tabs[6]:
             st.subheader("Vendor Pay Summary Table")
             st.dataframe(df_sum, use_container_width=True)
 
-        # --- PDF GENERATOR with summary block at top ---
-        def vendor_pdf(paid, unpaid, vendor, rate):
-            def fix(s):
-                return str(s).encode('latin1', errors='replace').decode('latin1')
+        # --- PDF GENERATOR ---
+        def vendor_pdf(paid, unpaid, pretty, rate):
+            def fix(s): return str(s).encode('latin1', errors='replace').decode('latin1')
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", "B", 14)
-            pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
+            pdf.cell(0, 10, fix(f"Vendor Pay Summary – {pretty}"), ln=True, align="C")
             pdf.ln(3)
             pdf.set_font("Arial", "B", 12)
             # --- Summary stats at top ---
@@ -520,13 +549,15 @@ with tabs[6]:
         # --- Zip all PDFs ---
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zipf:
-            for vkey in VENDOR_RATES:
-                vname = PRETTY_VENDOR[vkey]
+            for vkey, pretty in VENDOR_CODES.items():
+                if vkey not in VENDOR_RATES:
+                    continue
+                rate = VENDOR_RATES[vkey]
                 sub = merged[merged['vendor_key'] == vkey]
                 paid = sub[sub['Advance'] > 0][['First Name', 'Last Name']]
                 unpaid = sub[sub['Advance'] == 0][['First Name', 'Last Name', 'Reason']]
-                pdf_bytes = vendor_pdf(paid, unpaid, vname, VENDOR_RATES[vkey])
-                zipf.writestr(f"{vname.replace(' ', '_')}_Vendor_Pay.pdf", pdf_bytes)
+                pdf_bytes = vendor_pdf(paid, unpaid, pretty, rate)
+                zipf.writestr(f"{pretty.replace(' ', '_')}_Vendor_Pay.pdf", pdf_bytes)
 
         st.download_button(
             "Download ZIP of Vendor Pay Reports",
