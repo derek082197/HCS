@@ -334,6 +334,7 @@ with tabs[2]:
 
 # ──────────────────────────────────────────────────────────────────────
 # LIVE COUNTS TAB
+# LIVE COUNTS TAB
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly/Yearly Counts")
     with st.spinner("Fetching ALL leads..."):
@@ -342,8 +343,16 @@ with tabs[3]:
     if df_api.empty:
         st.error("No leads returned from API.")
     else:
+        import pytz
+
+        # Parse and localize as UTC, then convert to your local timezone (US/Eastern)
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
-        today = date.today()
+
+        if df_api["date_sold"].dt.tz is None or str(df_api["date_sold"].dt.tz) == "None":
+            df_api["date_sold"] = df_api["date_sold"].dt.tz_localize('UTC')
+
+        df_api["date_sold"] = df_api["date_sold"].dt.tz_convert('US/Eastern')
+        today = pd.Timestamp.now(tz='US/Eastern').date()
         start_of_week = today - timedelta(days=today.weekday())
         this_month = today.replace(day=1)
         this_year = today.replace(month=1, day=1)
@@ -380,6 +389,24 @@ with tabs[3]:
         b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
         b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(monthly_mask))
         b4.subheader("Yearly Sales by Agent");  b4.bar_chart(by_agent(yearly_mask))
+
+        st.markdown("---")
+        st.subheader("Today's Deals Table (Eastern Time)")
+        st.dataframe(
+            df_api[daily_mask][
+                [
+                    "policy_id", "lead_first_name", "lead_last_name",
+                    "date_sold", "carrier", "product", "lead_vendor_name"
+                ]
+                if "lead_vendor_name" in df_api.columns else
+                [
+                    "policy_id", "lead_first_name", "lead_last_name",
+                    "date_sold", "carrier", "product"
+                ]
+            ].sort_values("date_sold"),
+            use_container_width=True
+        )
+
 
 
 
