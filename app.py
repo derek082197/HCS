@@ -164,17 +164,18 @@ def fetch_today_leads():
     js      = resp.json().get("response", {})
     return pd.DataFrame(js.get("results", []))
 
-@st.cache_data
-def load_crm_leads(date_from: date=None):
-    # only use for deep historical pagination
+def fetch_all_today(limit=1000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
-    params  = {"date_from": date_from.strftime("%Y-%m-%d")} if date_from else {}
+    params = {
+        "date_from": date.today().strftime("%Y-%m-%d"),
+        "limit": limit
+    }
     all_results, url, seen = [], CRM_API_URL, set()
     while url and url not in seen:
         seen.add(url)
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
-        resp.raise_for_status()
-        js    = resp.json().get("response", {})
+        r = requests.get(url, headers=headers, params=params, timeout=10)
+        r.raise_for_status()
+        js = r.json().get("response", {})
         chunk = js.get("results", [])
         if not chunk:
             break
@@ -183,8 +184,9 @@ def load_crm_leads(date_from: date=None):
         if not nxt or nxt in seen:
             break
         url = nxt
-        params = {}
+        params = {}  # only on first page
     return pd.DataFrame(all_results)
+
 
 # ──────────────────────────────────────────────────────────────────────
 # INITIALIZATION
@@ -337,15 +339,15 @@ with tabs[2]:
 # LIVE COUNTS TAB
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly/Yearly Counts")
-    with st.spinner("Fetching ALL leads..."):
-        df_api = load_crm_leads()
+    with st.spinner("Fetching today's leads..."):
+        df_api = fetch_all_today(limit=1000)  # ← grabs up to 1000 in one go
 
     if df_api.empty:
         st.error("No leads returned from API.")
     else:
         import pytz
 
-        # Parse and localize as UTC, then convert to your local timezone (US/Eastern)
+        # Timezone conversion logic as before...
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
         if df_api["date_sold"].dt.tz is None or str(df_api["date_sold"].dt.tz) == "None":
             df_api["date_sold"] = df_api["date_sold"].dt.tz_localize('UTC')
@@ -356,13 +358,11 @@ with tabs[3]:
         this_month = today.replace(day=1)
         this_year = today.replace(month=1, day=1)
 
-        # Masks
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= start_of_week
         monthly_mask = df_api["date_sold"].dt.date >= this_month
         yearly_mask  = df_api["date_sold"].dt.date >= this_year
 
-        # Use length of filtered frames for counts to match tables
         d_tot = len(df_api[daily_mask])
         w_tot = len(df_api[weekly_mask])
         m_tot = len(df_api[monthly_mask])
@@ -407,6 +407,7 @@ with tabs[3]:
             ].sort_values("date_sold"),
             use_container_width=True
         )
+
 
 
 
