@@ -11,7 +11,7 @@ import requests  # for CRM API
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # STEP 2) LOAD YOUR USERS FROM CSV (username,password)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
 USERS    = dict(zip(df_users.username.str.strip(), df_users.password))
@@ -44,7 +44,7 @@ if not st.session_state.logged_in:
 # 6) Once logged in, show Log out in the sidebar
 st.sidebar.button("Log out", on_click=do_logout)
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # YOUR CONFIG CONSTANTS
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
@@ -52,7 +52,7 @@ CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
 DB              = "crm_history.db"
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # DATABASE HELPERS
 def init_db():
     conn = sqlite3.connect(DB)
@@ -74,8 +74,11 @@ def insert_report(dt, totals):
       INSERT OR REPLACE INTO reports
       (upload_date,total_deals,agent_payout,owner_revenue,owner_profit)
       VALUES (?, ?, ?, ?, ?)
-    """, (dt, totals["deals"], totals["agent"],
-          totals["owner_rev"], totals["owner_prof"]))
+    """, (dt,
+          int(totals["deals"]),
+          float(totals["agent"]),
+          float(totals["owner_rev"]),
+          float(totals["owner_prof"])))
     conn.commit()
     conn.close()
 
@@ -87,11 +90,9 @@ def load_history():
         conn, parse_dates=["upload_date"]
     )
     conn.close()
-    if not df.empty and not pd.api.types.is_datetime64_any_dtype(df["upload_date"]):
-        df["upload_date"] = pd.to_datetime(df["upload_date"], errors="coerce")
     return df
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # PDF GENERATOR
 def generate_agent_pdf(df_agent, agent_name):
     pdf = FPDF()
@@ -148,7 +149,7 @@ def generate_agent_pdf(df_agent, agent_name):
 
     return pdf.output(dest="S").encode("latin1")
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # HELPER — fetch only today’s leads (paginated, cached for 60s)
 @st.cache_data(ttl=60)
 def fetch_today_leads():
@@ -157,7 +158,8 @@ def fetch_today_leads():
     all_results, url, seen = [], CRM_API_URL, set()
     while url and url not in seen:
         seen.add(url)
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
+        resp = requests.get(url, headers=headers,
+                            params=params, timeout=10)
         resp.raise_for_status()
         js = resp.json().get("response", {})
         chunk = js.get("results", [])
@@ -171,23 +173,22 @@ def fetch_today_leads():
         params = {}  # only send date_from once
     return pd.DataFrame(all_results)
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # INITIALIZATION
 init_db()
 history_df    = load_history()
 summary       = []
 uploaded_file = None
 threshold     = 10
-totals        = {"deals":0, "agent":0.0, "owner_rev":0.0, "owner_prof":0.0}  # Ensure totals always exists
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # TABS SETUP
 tabs = st.tabs([
     "🏆 Overview", "📋 Leaderboard", "📈 History",
     "📊 Live Counts", "⚙️ Settings", "📂 Clients"
 ])
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # SETTINGS TAB
 with tabs[4]:
     st.header("⚙️ Settings & Upload")
@@ -243,11 +244,8 @@ with tabs[4]:
                             r["Agent Payout"], r["Owner Profit"]])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
 
-        # Ensure we have a valid date for the report
-        if "Effective Date" in df.columns and df["Effective Date"].notna().any():
-            default_dt = df["Effective Date"].max().date()
-        else:
-            default_dt = date.today()
+        default_dt = (df["Effective Date"].max().date()
+                      if "Effective Date" in df else date.today())
         insert_report(default_dt.strftime("%Y-%m-%d"), totals)
 
         st.download_button(
@@ -257,37 +255,43 @@ with tabs[4]:
             mime="application/zip"
         )
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # OVERVIEW TAB
 with tabs[0]:
     st.title("HCS Commission Dashboard")
 
     if uploaded_file:
+        # use int() here, no stray semicolons
+        deals = int(totals["deals"])
         c1, c2, c3, c4 = st.columns(4, gap="large")
-        c1.metric("Total Paid Deals",  f"{int(totals['deals']):,}")
-        c2.metric("Agent Payout",       f"${totals['agent']:,.2f}")
-        c3.metric("Owner Revenue",      f"${totals['owner_rev']:,.2f}")
-        c4.metric("Owner Profit",       f"${totals['owner_prof']:,.2f}")
+        c1.metric("Total Paid Deals",  f"{deals:,}")
+        c2.metric("Agent Payout",      f"${totals['agent']:,.2f}")
+        c3.metric("Owner Revenue",     f"${totals['owner_rev']:,.2f}")
+        c4.metric("Owner Profit",      f"${totals['owner_prof']:,.2f}")
     else:
         if history_df.empty:
             st.info("Upload a statement to see metrics.")
         else:
             latest = history_df.iloc[-1]
+            # safely coerce to int
+            raw = pd.to_numeric(latest.total_deals, errors="coerce")
+            deals = int(raw) if not pd.isna(raw) else 0
             c1, c2, c3, c4 = st.columns(4, gap="large")
-            c1.metric("Total Paid Deals",  f"{int(latest.total_deals):,}")
-            c2.metric("Agent Payout",       f"${latest.agent_payout:,.2f}")
-            c3.metric("Owner Revenue",      f"${latest.owner_revenue:,.2f}")
-            c4.metric("Owner Profit",       f"${latest.owner_profit:,.2f}")
+            c1.metric("Total Paid Deals",  f"{deals:,}")
+            c2.metric("Agent Payout",      f"${latest.agent_payout:,.2f}")
+            c3.metric("Owner Revenue",     f"${latest.owner_revenue:,.2f}")
+            c4.metric("Owner Profit",      f"${latest.owner_profit:,.2f}")
 
     st.markdown("---")
     rev = (totals["owner_rev"] if uploaded_file
-           else (history_df.iloc[-1].owner_revenue if not history_df.empty else 0))
+           else (history_df.iloc[-1].owner_revenue
+                 if not history_df.empty else 0))
     s1, s2, s3 = st.columns(3, gap="large")
     s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
     s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
     s3.metric("Jarad (1%)",  f"${rev*0.01:,.2f}")
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # LEADERBOARD TAB
 with tabs[1]:
     st.header("Agent Leaderboard & Drill-Down")
@@ -306,7 +310,7 @@ with tabs[1]:
     else:
         st.info("No data—upload in Settings first.")
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # HISTORY TAB
 with tabs[2]:
     st.header("Historical Reports")
@@ -324,35 +328,20 @@ with tabs[2]:
             st.success("Deleted—refresh to update.")
 
         sel = st.selectbox("View report:", dates)
-        rec = history_df.loc[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
+        rec = history_df.loc[
+            history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel
+        ].iloc[0]
         cols = st.columns(4)
-        try:
-    hist_deals = int(getattr(rec, 'total_deals', 0))
-except (TypeError, ValueError):
-    hist_deals = 0
-try:
-    hist_agent_payout = float(getattr(rec, 'agent_payout', 0))
-except (TypeError, ValueError):
-    hist_agent_payout = 0.0
-try:
-    hist_owner_revenue = float(getattr(rec, 'owner_revenue', 0))
-except (TypeError, ValueError):
-    hist_owner_revenue = 0.0
-try:
-    hist_owner_profit = float(getattr(rec, 'owner_profit', 0))
-except (TypeError, ValueError):
-    hist_owner_profit = 0.0
-
-cols[0].metric("Deals",         f"{hist_deals:,}")
-cols[1].metric("Agent Payout",  f"${hist_agent_payout:,.2f}")
-cols[2].metric("Owner Revenue", f"${hist_owner_revenue:,.2f}")
-cols[3].metric("Owner Profit",  f"${hist_owner_profit:,.2f}")
+        cols[0].metric("Deals",         f"{int(rec.total_deals):,}")
+        cols[1].metric("Agent Payout",  f"${rec.agent_payout:,.2f}")
+        cols[2].metric("Owner Revenue", f"${rec.owner_revenue:,.2f}")
+        cols[3].metric("Owner Profit",  f"${rec.owner_profit:,.2f}")
 
         st.line_chart(history_df.set_index("upload_date")[
             ["total_deals","agent_payout","owner_revenue","owner_profit"]
         ])
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # LIVE COUNTS TAB
 with tabs[3]:
     st.header("Live Daily/Weekly/Monthly Counts")
@@ -367,9 +356,11 @@ with tabs[3]:
         daily_mask   = df_api["date_sold"].dt.date == today
         weekly_mask  = df_api["date_sold"].dt.date >= (today - timedelta(days=6))
         monthly_mask = df_api["date_sold"].dt.month == today.month
-        d_tot, w_tot, m_tot = (int(daily_mask.sum()),
-                               int(weekly_mask.sum()),
-                               int(monthly_mask.sum()))
+        d_tot, w_tot, m_tot = (
+            int(daily_mask.sum()),
+            int(weekly_mask.sum()),
+            int(monthly_mask.sum())
+        )
 
         c1, c2, c3 = st.columns(3, gap="large")
         c1.metric("Today's Deals",      f"{d_tot:,}")
@@ -394,7 +385,7 @@ with tabs[3]:
         b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
         b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(monthly_mask))
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 # CLIENTS TAB
 with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
@@ -429,22 +420,21 @@ with tabs[5]:
     if "manual_leads" not in st.session_state:
         st.session_state.manual_leads = pd.DataFrame()
 
-    # … insert your manual-upload/historical-leads logic here …
+    # … your manual-upload/historical-leads logic here …
 
     # Combine & render
     combined = (
         api_display
         if st.session_state.manual_leads.empty
-        else pd.concat(
-            [api_display, st.session_state.manual_leads],
-            ignore_index=True, sort=False
-        )
+        else pd.concat([api_display, st.session_state.manual_leads],
+                       ignore_index=True, sort=False)
     )
     if combined.empty:
         st.warning("No leads to display for today.")
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
+
 
 
 
