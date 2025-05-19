@@ -92,7 +92,15 @@ def load_history():
         conn, parse_dates=["upload_date"]
     )
     conn.close()
+
+    # — Coerce any bad / missing values to 0
+    df["total_deals"]   = pd.to_numeric(df["total_deals"],   errors="coerce").fillna(0).astype(int)
+    df["agent_payout"]  = pd.to_numeric(df["agent_payout"],  errors="coerce").fillna(0.0)
+    df["owner_revenue"] = pd.to_numeric(df["owner_revenue"], errors="coerce").fillna(0.0)
+    df["owner_profit"]  = pd.to_numeric(df["owner_profit"],  errors="coerce").fillna(0.0)
+
     return df
+
 
 # ──────────────────────────────────────────────────────────────────────
 # PDF GENERATOR
