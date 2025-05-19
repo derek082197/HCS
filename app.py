@@ -7,7 +7,13 @@ import csv
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
-from streamlit_extras.st_autorefresh import st_autorefresh
+try:
+    from streamlit_extras.st_autorefresh import st_autorefresh
+except ImportError:
+    # If not installed, define a dummy function so the rest of your code still runs
+    def st_autorefresh(*args, **kwargs):
+        return None
+
 
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
