@@ -414,21 +414,17 @@ with tabs[5]:
         if "lead_id" in api_today.columns:
             api_display["Lead ID"] = api_today["lead_id"].astype(str)
 
-    # manual uploads logic unchanged…
+    # Make sure 'manual_leads' exists in session state
+if "manual_leads" not in st.session_state:
+    st.session_state.manual_leads = pd.DataFrame()
 
-    # combine & render
-    combined = (
-        api_display
-        if st.session_state.manual_leads.empty
-        else pd.concat([api_display, st.session_state.manual_leads],
-                       ignore_index=True, sort=False)
-    )
-
-    if combined.empty:
-        st.warning("No leads to display for today.")
-    else:
-        st.subheader(f"Showing {len(combined)} total leads")
-        st.dataframe(combined, use_container_width=True)
+# combine & render
+combined = (
+    api_display
+    if st.session_state.manual_leads.empty
+    else pd.concat([api_display, st.session_state.manual_leads],
+                   ignore_index=True, sort=False)
+)
 
 
 
