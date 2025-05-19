@@ -104,26 +104,36 @@ def generate_agent_pdf(df_agent, agent_name):
     total_deals = len(df_agent)
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
     unpaid_count= total_deals - paid_count
-    if paid_count>=200:    rate=25
-    elif paid_count>=150:  rate=22.5
-    elif paid_count>=120:  rate=17.5
-    else:                  rate=15
-    bonus  = 1200 if paid_count>=70 else 0
-    payout = paid_count*rate + bonus
+
+    # Compute paid percentage
+    pct_paid = (paid_count / total_deals * 100) if total_deals else 0
+
+    # Tiered rate + bonus
+    if paid_count >= 200:
+        rate = 25
+    elif paid_count >= 150:
+        rate = 22.5
+    elif paid_count >= 120:
+        rate = 17.5
+    else:
+        rate = 15
+    bonus  = 1200 if paid_count >= 70 else 0
+    payout = paid_count * rate + bonus
 
     pdf.set_font("Arial","",12)
-    pdf.cell(0,8,f"Total Deals Submitted: {total_deals}", ln=True)
-    pdf.cell(0,8,f"Paid Deals: {paid_count}", ln=True)
-    pdf.cell(0,8,f"Unpaid Deals: {unpaid_count}", ln=True)
-    pdf.cell(0,8,f"Rate: ${rate:.2f}", ln=True)
-    pdf.cell(0,8,f"Bonus: ${bonus}", ln=True)
+    pdf.cell(0,8, f"Total Deals Submitted: {total_deals}", ln=True)
+    pdf.cell(0,8, f"Paid Deals: {paid_count}", ln=True)
+    pdf.cell(0,8, f"Unpaid Deals: {unpaid_count}", ln=True)
+    pdf.cell(0,8, f"Paid Percentage: {pct_paid:.1f}%", ln=True)  # ← new line
+    pdf.cell(0,8, f"Rate: ${rate:.2f}", ln=True)
+    pdf.cell(0,8, f"Bonus: ${bonus}", ln=True)
     pdf.set_text_color(0,150,0)
-    pdf.cell(0,10,f"Payout: ${payout:,.2f}", ln=True)
+    pdf.cell(0,10, f"Payout: ${payout:,.2f}", ln=True)
     pdf.set_text_color(0,0,0)
     pdf.ln(5)
 
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,8,"Paid Clients:", ln=True)
+    pdf.cell(0,8, "Paid Clients:", ln=True)
     pdf.set_font("Arial","",10)
     for _, row in df_agent[df_agent["Paid Status"]=="Paid"].iterrows():
         eff = row.get("Effective Date")
@@ -132,7 +142,7 @@ def generate_agent_pdf(df_agent, agent_name):
 
     pdf.ln(3)
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,8,"Unpaid Clients & Reasons:", ln=True)
+    pdf.cell(0,8, "Unpaid Clients & Reasons:", ln=True)
     pdf.set_font("Arial","",10)
     for _, row in df_agent[df_agent["Paid Status"]!="Paid"].iterrows():
         eff = row.get("Effective Date")
@@ -141,6 +151,7 @@ def generate_agent_pdf(df_agent, agent_name):
         pdf.multi_cell(0,6, f"- {row['Client']} | Eff: {eff_str} | {reason}")
 
     return pdf.output(dest="S").encode("latin1")
+
 
 # ──────────────────────────────────────────────────────────────────────
 # HELPERS — single‐page “today’s” fetch (fast!) and paginated loader
