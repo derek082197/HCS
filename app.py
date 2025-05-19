@@ -74,11 +74,13 @@ def insert_report(dt, totals):
       INSERT OR REPLACE INTO reports
       (upload_date,total_deals,agent_payout,owner_revenue,owner_profit)
       VALUES (?, ?, ?, ?, ?)
-    """, (dt,
-          int(totals["deals"]),
-          float(totals["agent"]),
-          float(totals["owner_rev"]),
-          float(totals["owner_prof"])))
+    """, (
+        dt,
+        int(totals["deals"]),
+        float(totals["agent"]),
+        float(totals["owner_rev"]),
+        float(totals["owner_prof"]),
+    ))
     conn.commit()
     conn.close()
 
@@ -108,7 +110,6 @@ def generate_agent_pdf(df_agent, agent_name):
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
     unpaid_count= total_deals - paid_count
 
-    # tiered rate + bonus
     if paid_count>=200:    rate=25
     elif paid_count>=150:  rate=22.5
     elif paid_count>=120:  rate=17.5
@@ -127,7 +128,6 @@ def generate_agent_pdf(df_agent, agent_name):
     pdf.set_text_color(0,0,0)
     pdf.ln(5)
 
-    # Paid clients list
     pdf.set_font("Arial","B",12)
     pdf.cell(0,8,"Paid Clients:", ln=True)
     pdf.set_font("Arial","",10)
@@ -136,7 +136,6 @@ def generate_agent_pdf(df_agent, agent_name):
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
         pdf.multi_cell(0,6,f"- {row['Client']} | Eff: {eff_str}")
 
-    # Unpaid + reasons
     pdf.ln(3)
     pdf.set_font("Arial","B",12)
     pdf.cell(0,8,"Unpaid Clients & Reasons:", ln=True)
@@ -158,8 +157,7 @@ def fetch_today_leads():
     all_results, url, seen = [], CRM_API_URL, set()
     while url and url not in seen:
         seen.add(url)
-        resp = requests.get(url, headers=headers,
-                            params=params, timeout=10)
+        resp = requests.get(url, headers=headers, params=params, timeout=10)
         resp.raise_for_status()
         js = resp.json().get("response", {})
         chunk = js.get("results", [])
@@ -240,8 +238,12 @@ with tabs[4]:
             w = csv.writer(csv_buf)
             w.writerow(["Agent","Paid Deals","Agent Payout","Owner Profit"])
             for r in summary:
-                w.writerow([r["Agent"], r["Paid Deals"],
-                            r["Agent Payout"], r["Owner Profit"]])
+                w.writerow([
+                    r["Agent"],
+                    r["Paid Deals"],
+                    r["Agent Payout"],
+                    r["Owner Profit"]
+                ])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
 
         default_dt = (df["Effective Date"].max().date()
@@ -261,10 +263,9 @@ with tabs[0]:
     st.title("HCS Commission Dashboard")
 
     if uploaded_file:
-        # use int() here, no stray semicolons
-        deals = int(totals["deals"])
         c1, c2, c3, c4 = st.columns(4, gap="large")
-        c1.metric("Total Paid Deals",  f"{deals:,}")
+        deals = int(totals["deals"])
+        c1.metric("Total Paid Deals", f"{deals:,}")
         c2.metric("Agent Payout",      f"${totals['agent']:,.2f}")
         c3.metric("Owner Revenue",     f"${totals['owner_rev']:,.2f}")
         c4.metric("Owner Profit",      f"${totals['owner_prof']:,.2f}")
@@ -273,11 +274,10 @@ with tabs[0]:
             st.info("Upload a statement to see metrics.")
         else:
             latest = history_df.iloc[-1]
-            # safely coerce to int
             raw = pd.to_numeric(latest.total_deals, errors="coerce")
             deals = int(raw) if not pd.isna(raw) else 0
             c1, c2, c3, c4 = st.columns(4, gap="large")
-            c1.metric("Total Paid Deals",  f"{deals:,}")
+            c1.metric("Total Paid Deals", f"{deals:,}")
             c2.metric("Agent Payout",      f"${latest.agent_payout:,.2f}")
             c3.metric("Owner Revenue",     f"${latest.owner_revenue:,.2f}")
             c4.metric("Owner Profit",      f"${latest.owner_profit:,.2f}")
@@ -322,7 +322,9 @@ with tabs[2]:
         if st.button("Delete Selected"):
             conn = sqlite3.connect(DB)
             for d in to_del:
-                conn.execute("DELETE FROM reports WHERE upload_date=?", (d,))
+                conn.execute(
+                    "DELETE FROM reports WHERE upload_date=?", (d,)
+                )
             conn.commit()
             conn.close()
             st.success("Deleted—refresh to update.")
@@ -332,10 +334,11 @@ with tabs[2]:
             history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel
         ].iloc[0]
         cols = st.columns(4)
-        cols[0].metric("Deals",         f"{int(rec.total_deals):,}")
-        cols[1].metric("Agent Payout",  f"${rec.agent_payout:,.2f}")
-        cols[2].metric("Owner Revenue", f"${rec.owner_revenue:,.2f}")
-        cols[3].metric("Owner Profit",  f"${rec.owner_profit:,.2f}")
+        # <-- here, colon before comma
+        cols[0].metric("Deals",        f"{int(rec.total_deals):,}")
+        cols[1].metric("Agent Payout", f"${rec.agent_payout:,.2f}")
+        cols[2].metric("Owner Revenue",f"${rec.owner_revenue:,.2f}")
+        cols[3].metric("Owner Profit", f"${rec.owner_profit:,.2f}")
 
         st.line_chart(history_df.set_index("upload_date")[
             ["total_deals","agent_payout","owner_revenue","owner_profit"]
@@ -416,18 +419,16 @@ with tabs[5]:
         if "lead_id" in api_today.columns:
             api_display["Lead ID"] = api_today["lead_id"].astype(str)
 
-    # Initialize manual-upload stash if needed
     if "manual_leads" not in st.session_state:
         st.session_state.manual_leads = pd.DataFrame()
 
-    # … your manual-upload/historical-leads logic here …
-
-    # Combine & render
     combined = (
         api_display
         if st.session_state.manual_leads.empty
-        else pd.concat([api_display, st.session_state.manual_leads],
-                       ignore_index=True, sort=False)
+        else pd.concat(
+            [api_display, st.session_state.manual_leads],
+            ignore_index=True, sort=False
+        )
     )
     if combined.empty:
         st.warning("No leads to display for today.")
