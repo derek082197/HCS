@@ -416,7 +416,7 @@ with tabs[5]:
 with tabs[6]:
     st.header("💼 Vendor Pay Summary")
 
-    # These are all your vendors (code name: pretty name)
+    # All vendor keys/code names and pretty display names
     VENDOR_CODES = {
         "general": "GENERAL",
         "inbound": "INBOUND",
@@ -445,13 +445,13 @@ with tabs[6]:
         "hcs1p": "HCS1p"
     }
 
-    # Assign rates to each vendor code (add more as needed)
+    # Assign rates to each vendor code that gets paid (expand as needed)
     VENDOR_RATES = {
         "francalls": 65,
         "hcsmedia": 55,
         "buffercall": 80,      # Aetna
         "acaking": 75,
-        # ...add more here if you pay other vendors!
+        # Add more here if you pay other vendors!
     }
 
     def normalize_key(x):
@@ -469,7 +469,6 @@ with tabs[6]:
         tld['First Name'] = tld.iloc[:, 3].astype(str)
         tld['Last Name'] = tld.iloc[:, 4].astype(str)
 
-        # Normalize vendor codes in TLD
         tld['vendor_key'] = tld['VendorRaw'].apply(normalize_key)
 
         fmo = pd.read_excel(fmo_file, dtype=str)
@@ -505,22 +504,21 @@ with tabs[6]:
                 "Total Paid Amount": f"${paid_amt:,.2f}"
             })
         if vendor_summaries:
-    df_sum = pd.DataFrame(vendor_summaries)
-    st.subheader("Vendor Pay Summary Table")
-    st.dataframe(df_sum, use_container_width=True)
+            df_sum = pd.DataFrame(vendor_summaries)
+            st.subheader("Vendor Pay Summary Table")
+            st.dataframe(df_sum, use_container_width=True)
 
-    # GRAND TOTAL below the table
-    total_paid = sum(
-        float(str(row["Total Paid Amount"]).replace("$", "").replace(",", ""))
-        for row in vendor_summaries
-    )
-    st.markdown(
-        f"<div style='font-size:1.2em; margin-top:12px; color:#175017;'><b>Total Paid to All Vendors:</b> ${total_paid:,.2f}</div>",
-        unsafe_allow_html=True,
-    )
+            # --- Grand Total Paid (bottom) ---
+            total_paid = sum(
+                float(str(row["Total Paid Amount"]).replace("$", "").replace(",", ""))
+                for row in vendor_summaries
+            )
+            st.markdown(
+                f"<div style='font-size:1.15em; margin-top:12px; color:#1a4301;'><b>Total Paid to All Vendors:</b> ${total_paid:,.2f}</div>",
+                unsafe_allow_html=True,
+            )
 
-
-        # --- PDF GENERATOR ---
+        # --- PDF GENERATOR with summary block at top ---
         def vendor_pdf(paid, unpaid, pretty, rate):
             def fix(s): return str(s).encode('latin1', errors='replace').decode('latin1')
             pdf = FPDF()
