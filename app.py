@@ -15,23 +15,20 @@ except ImportError:
 
 import streamlit_authenticator as stauth
 
-# USER CREDENTIALS (you can also load from CSV)
+# ---- SECURE LOGIN SETUP ----
+# 1. users.csv should have: username,name,password (hashed only!)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
-# Use username, name, password columns in users.csv
 usernames = df_users['username'].tolist()
-names     = df_users['username'].tolist()  # Or use 'name' if you have a column
-passwords = df_users['password'].tolist()
+names     = df_users['name'].tolist() if "name" in df_users.columns else usernames
+passwords = df_users['password'].tolist()  # These must be hashed already!
 
-# Only generate hashes ONCE and copy to CSV for security!
-hashed_passwords = stauth.Hasher(passwords).generate()
-
+# 2. Build the credentials object (no new hashing here)
 credentials = {
     "usernames": {
         u: {"name": n, "password": p}
-        for u, n, p in zip(usernames, names, hashed_passwords)
+        for u, n, p in zip(usernames, names, passwords)
     }
 }
-
 cookie = {"expiry_days": 7, "key": "hcs_login", "name": "hcs_cookie"}
 authenticator = stauth.Authenticate(credentials, cookie["name"], cookie["key"], cookie["expiry_days"], {})
 
@@ -42,9 +39,13 @@ if authentication_status is None:
     st.warning("Please enter your username and password")
 if not authentication_status:
     st.stop()
-# If logged in:
+
 authenticator.logout("Logout", "sidebar")
 st.sidebar.success(f"Welcome, {name}!")
+
+# ---- ALL YOUR CRM CODE STARTS BELOW ----
+# ... rest of your CRM/Streamlit logic ...
+
 
 
 # CONSTANTS
