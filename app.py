@@ -10,8 +10,7 @@ import requests
 try:
     from streamlit_extras.st_autorefresh import st_autorefresh
 except ImportError:
-    def st_autorefresh(*args, **kwargs): pass  # fallback, does nothing
-
+    def st_autorefresh(*args, **kwargs): pass
 
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
@@ -42,7 +41,6 @@ if not st.session_state.logged_in:
     st.sidebar.button("Log in", on_click=do_login)
     st.stop()
 st.sidebar.button("Log out", on_click=do_logout)
-
 
 # CONSTANTS
 PROFIT_PER_SALE = 43.3
@@ -85,15 +83,17 @@ def load_history():
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
-# PDF GENERATOR
+# PDF GENERATORS
 def generate_agent_pdf(df_agent, agent_name):
+    def fix(s):
+        return str(s).encode('latin1', errors='replace').decode('latin1')
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial","B",16)
-    pdf.cell(0,10,"Health Connect Solutions", ln=True, align="C")
+    pdf.cell(0,10,fix("Health Connect Solutions"), ln=True, align="C")
     pdf.ln(5)
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,10,f"Commission Statement - {agent_name}", ln=True)
+    pdf.cell(0,10,fix(f"Commission Statement - {agent_name}"), ln=True)
     pdf.ln(5)
     total_deals = len(df_agent)
     paid_count  = (df_agent["Paid Status"]=="Paid").sum()
@@ -106,35 +106,59 @@ def generate_agent_pdf(df_agent, agent_name):
     bonus  = 1200 if paid_count >= 70 else 0
     payout = paid_count * rate + bonus
     pdf.set_font("Arial","",12)
-    pdf.cell(0,8, f"Total Deals Submitted: {total_deals}", ln=True)
-    pdf.cell(0,8, f"Paid Deals: {paid_count}", ln=True)
-    pdf.cell(0,8, f"Unpaid Deals: {unpaid_count}", ln=True)
-    pdf.cell(0,8, f"Paid Percentage: {pct_paid:.1f}%", ln=True)
-    pdf.cell(0,8, f"Rate: ${rate:.2f}", ln=True)
-    pdf.cell(0,8, f"Bonus: ${bonus}", ln=True)
+    pdf.cell(0,8,fix(f"Total Deals Submitted: {total_deals}"), ln=True)
+    pdf.cell(0,8,fix(f"Paid Deals: {paid_count}"), ln=True)
+    pdf.cell(0,8,fix(f"Unpaid Deals: {unpaid_count}"), ln=True)
+    pdf.cell(0,8,fix(f"Paid Percentage: {pct_paid:.1f}%"), ln=True)
+    pdf.cell(0,8,fix(f"Rate: ${rate:.2f}"), ln=True)
+    pdf.cell(0,8,fix(f"Bonus: ${bonus}"), ln=True)
     pdf.set_text_color(0,150,0)
-    pdf.cell(0,10, f"Payout: ${payout:,.2f}", ln=True)
+    pdf.cell(0,10,fix(f"Payout: ${payout:,.2f}"), ln=True)
     pdf.set_text_color(0,0,0)
     pdf.ln(5)
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,8, "Paid Clients:", ln=True)
+    pdf.cell(0,8,fix("Paid Clients:"), ln=True)
     pdf.set_font("Arial","",10)
     for _, row in df_agent[df_agent["Paid Status"]=="Paid"].iterrows():
         eff = row.get("Effective Date")
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
-        pdf.multi_cell(0,6, f"- {row['Client']} | Eff: {eff_str}")
+        pdf.multi_cell(0,6,fix(f"- {row['Client']} | Eff: {eff_str}"))
     pdf.ln(3)
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,8, "Unpaid Clients & Reasons:", ln=True)
+    pdf.cell(0,8,fix("Unpaid Clients & Reasons:"), ln=True)
     pdf.set_font("Arial","",10)
     for _, row in df_agent[df_agent["Paid Status"]!="Paid"].iterrows():
         eff = row.get("Effective Date")
         eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
         reason  = row.get("Reason","")
-        pdf.multi_cell(0,6, f"- {row['Client']} | Eff: {eff_str} | {reason}")
+        pdf.multi_cell(0,6,fix(f"- {row['Client']} | Eff: {eff_str} | {reason}"))
     return pdf.output(dest="S").encode("latin1")
 
-# FAST PAGINATED LEADS LOADER FOR "ALL TODAY"
+def vendor_pdf(paid, unpaid, vendor, rate):
+    def fix(s):
+        return str(s).encode('latin1', errors='replace').decode('latin1')
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
+    pdf.set_font("Arial", "", 10)
+    for _, row in paid.iterrows():
+        pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
+    pdf.ln(3)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
+    pdf.set_font("Arial", "", 10)
+    for _, row in unpaid.iterrows():
+        reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
+        pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
+    return pdf.output(dest="S").encode("latin1")
+
 def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
     params = {
@@ -165,12 +189,10 @@ summary       = []
 uploaded_file = None
 threshold     = 10
 
-# TABS SETUP
 tabs = st.tabs([
     "🏆 Overview", "📋 Leaderboard", "📈 History",
     "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay"
 ])
-
 
 # SETTINGS TAB
 with tabs[4]:
@@ -288,7 +310,7 @@ with tabs[2]:
         c4.metric("Owner Profit", f"${rec.owner_profit:,.2f}")
         st.line_chart(history_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
 
-# LIVE COUNTS TAB (DAILY/WEEKLY/MONTHLY/YEARLY) with AUTO-REFRESH
+# LIVE COUNTS TAB
 with tabs[3]:
     st_autorefresh(interval=10 * 1000, key="live_counts_refresh")
     st.header("Live Daily/Weekly/Monthly/Yearly Counts")
@@ -389,75 +411,40 @@ with tabs[5]:
     else:
         st.subheader(f"Showing {len(combined)} total leads")
         st.dataframe(combined, use_container_width=True)
-        # VENDOR PAY TAB
+
+# VENDOR PAY TAB
 with tabs[6]:
     st.header("💼 Vendor Pay Summary")
-
-    # ---- Vendor rates ----
     VENDOR_RATES = {
         "Fran Calls": 65,
         "HCS Media": 55,
         "Aetna": 80,
         "ACA King": 75,
     }
-
     def normalize_name(x):
         return str(x).strip().lower().replace(' ', '')
-
-    def vendor_pdf(paid, unpaid, vendor, rate):
-    def fix(s):
-        # Ensures string is ascii-compatible for FPDF
-        return str(s).encode('latin1', errors='replace').decode('latin1')
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
-    pdf.set_font("Arial", "", 10)
-    for _, row in paid.iterrows():
-        pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
-    pdf.ln(3)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
-    pdf.set_font("Arial", "", 10)
-    for _, row in unpaid.iterrows():
-        reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
-        pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
-    return pdf.output(dest="S").encode("latin1")
-
 
     tld_file = st.file_uploader("Upload TLD CSV (new/PHI export)", type=["csv"], key="vendor_tld")
     fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo")
 
     if tld_file and fmo_file:
         st.success("Both files uploaded. Generating vendor ZIP...")
-
         tld = pd.read_csv(tld_file, dtype=str)
-        # Vendor: col I (8), First/Last: D/E (3/4)
         tld['Vendor'] = tld.iloc[:, 8].astype(str)
         tld['First Name'] = tld.iloc[:, 3].astype(str)
         tld['Last Name'] = tld.iloc[:, 4].astype(str)
-
         fmo = pd.read_excel(fmo_file, dtype=str)
         fmo['First Name'] = fmo.iloc[:, 7].astype(str)
         fmo['Last Name'] = fmo.iloc[:, 8].astype(str)
         fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
         fmo['Reason'] = fmo.get('Advance Excluded Reason', "")
-
         tld['full_name'] = (tld['First Name'] + tld['Last Name']).apply(normalize_name)
         fmo['full_name'] = (fmo['First Name'] + fmo['Last Name']).apply(normalize_name)
-
         merged = pd.merge(
             tld,
             fmo[['full_name', 'Advance', 'Reason']],
             on='full_name', how='left'
         )
-
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zipf:
             for vendor in merged['Vendor'].unique():
@@ -476,9 +463,9 @@ with tabs[6]:
             mime="application/zip"
         )
         st.info("Each PDF lists only converted deals (matched to FMO). Unpaid reasons included. Vendor rate auto-applied.")
-
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
