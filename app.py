@@ -420,7 +420,8 @@ with tabs[5]:
     st.header("📂 Live Client Leads (Sold Today)")
 
     # fetch *all* of today's leads, across every API page
-    df_api = load_crm_leads(date_from=date.today())
+    df_api = fetch_all_today(limit=1000)
+
 
     if df_api.empty:
         st.info("No API leads returned.")
