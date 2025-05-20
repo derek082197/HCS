@@ -20,7 +20,7 @@ PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
 CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
-DB              = "crm_history.db"
+DB              = "crm_.db"
 
 # --- Load Admins (users.csv)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
@@ -213,14 +213,14 @@ elif st.session_state.user_role.lower() == "admin":
         """, unsafe_allow_html=True,
     )
 
-    # --- Upload summary for today or pull last from history ---
+    # --- Upload summary for today or pull last from  ---
     if 'uploaded_file' in locals() and uploaded_file:
         deals = int(totals["deals"])
         agent_payout = totals["agent"]
         owner_rev = totals["owner_rev"]
         owner_profit = totals["owner_prof"]
-    elif not history_df.empty:
-        latest = history_df.iloc[-1]
+    elif not _df.empty:
+        latest = _df.iloc[-1]
         deals = int(latest.total_deals)
         agent_payout = latest.agent_payout
         owner_rev = latest.owner_revenue
@@ -272,11 +272,11 @@ elif st.session_state.user_role.lower() == "admin":
 
     st.markdown("---")
 
-    # --- History quickview (last 6 periods) ---
-    st.markdown("#### 📅 Recent History")
-    if not history_df.empty:
+    # ---  quickview (last 6 periods) ---
+    st.markdown("#### 📅 Recent ")
+    if not _df.empty:
         st.dataframe(
-            history_df.tail(6)[
+            _df.tail(6)[
                 ["upload_date", "total_deals", "agent_payout", "owner_revenue", "owner_profit"]
             ].rename(columns={
                 "upload_date": "Date",
@@ -291,7 +291,7 @@ elif st.session_state.user_role.lower() == "admin":
             }), use_container_width=True, hide_index=True
         )
     else:
-        st.info("No history yet.")
+        st.info("No  yet.")
 
 
 # ... and the rest of your app logic continues as usual!
@@ -326,13 +326,14 @@ def insert_report(dt, totals):
     conn.close()
 
 @st.cache_data
-def load_history():
+def load_():
     conn = sqlite3.connect(DB)
     df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn, parse_dates=["upload_date"])
     conn.close()
     for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
+    history_df = load_history()
 
 # PDF GENERATORS
 def generate_agent_pdf(df_agent, agent_name):
@@ -435,13 +436,13 @@ def fetch_all_today(limit=5000):
 
 # INITIALIZATION
 init_db()
-history_df    = load_history()
+_df    = load_()
 summary       = []
 uploaded_file = None
 threshold     = 10
 
 tabs = st.tabs([
-    "🏆 Overview", "📋 Leaderboard", "📈 History",
+    "🏆 Overview", "📋 Leaderboard", "📈 ",
     "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay"
 ])
 
@@ -511,10 +512,10 @@ with tabs[0]:
         c3.metric("Owner Revenue",   f"${totals['owner_rev']:,.2f}")
         c4.metric("Owner Profit",    f"${totals['owner_prof']:,.2f}")
     else:
-        if history_df.empty:
+        if _df.empty:
             st.info("Upload a statement to see metrics.")
         else:
-            latest = history_df.iloc[-1]
+            latest = _df.iloc[-1]
             deals = int(latest.total_deals)
             c1, c2, c3, c4 = st.columns(4, gap="large")
             c1.metric("Total Paid Deals", f"{deals:,}")
@@ -523,7 +524,7 @@ with tabs[0]:
             c4.metric("Owner Profit",    f"${latest.owner_profit:,.2f}")
     st.markdown("---")
     rev = (totals["owner_rev"] if uploaded_file else
-           (history_df.iloc[-1].owner_revenue if not history_df.empty else 0))
+           (_df.iloc[-1].owner_revenue if not _df.empty else 0))
     s1, s2, s3 = st.columns(3, gap="large")
     s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
     s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
@@ -546,21 +547,21 @@ with tabs[1]:
     else:
         st.info("No data—upload in Settings first.")
 
-# HISTORY TAB
+#  TAB
 with tabs[2]:
     st.header("Historical Reports")
-    if history_df.empty:
-        st.info("No history yet.")
+    if _df.empty:
+        st.info("No  yet.")
     else:
-        dates = history_df["upload_date"].dt.strftime("%Y-%m-%d").tolist()
+        dates = _df["upload_date"].dt.strftime("%Y-%m-%d").tolist()
         sel   = st.selectbox("View report:", dates)
-        rec   = history_df.loc[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
+        rec   = _df.loc[_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Deals",        f"{int(rec.total_deals):,}")
         c2.metric("Agent Payout", f"${rec.agent_payout:,.2f}")
         c3.metric("Owner Revenue",f"${rec.owner_revenue:,.2f}")
         c4.metric("Owner Profit", f"${rec.owner_profit:,.2f}")
-        st.line_chart(history_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
+        st.line_chart(_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
 
 # LIVE COUNTS TAB
 with tabs[3]:
