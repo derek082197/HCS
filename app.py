@@ -12,15 +12,13 @@ try:
 except ImportError:
     def st_autorefresh(*args, **kwargs): pass
 
-# 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# --- CONSTANTS
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
 CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
-DB              = "crm_.db"
+DB              = "crm_history.db"
 
 # --- Load Admins (users.csv)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
@@ -42,16 +40,12 @@ def fetch_agents():
     users = js.get('results', [])
     return pd.DataFrame(users)
 
-
-
-
 df_agents = fetch_agents()
 AGENT_USERNAMES = df_agents['username'].tolist()
-AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}  # Use API user, password="password"
+AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
 AGENT_NAMES = dict(zip(df_agents['username'], [f"{row['first_name']} {row['last_name']}" for _, row in df_agents.iterrows()]))
 AGENT_ROLES = dict(zip(df_agents['username'], df_agents['role_descriptions']))
 
-# --- SESSION STATE SETUP ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_role = ""
@@ -61,14 +55,12 @@ if "logged_in" not in st.session_state:
 def do_login():
     u = st.session_state.user.strip()
     p = st.session_state.pwd
-    # AGENT (API user)
     if u in AGENT_CREDENTIALS and p == AGENT_CREDENTIALS[u]:
         st.session_state.logged_in = True
         st.session_state.user_email = u
         st.session_state.user_name = AGENT_NAMES[u]
         st.session_state.user_role = AGENT_ROLES[u] if AGENT_ROLES.get(u) else "Agent"
         st.success(f"✅ Welcome, {AGENT_NAMES[u]}!")
-    # ADMIN (users.csv)
     elif u in USERS and p == USERS[u]:
         st.session_state.logged_in = True
         st.session_state.user_email = u
@@ -93,8 +85,7 @@ if not st.session_state.logged_in:
     st.stop()
 st.sidebar.button("Log out", on_click=do_logout)
 
-# --- FETCH DEALS FOR AGENT ---
-# --- Fetch All Deals (define this first!) ---
+# --- Fetch All Deals (for agent dashboards, live counts, etc)
 def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
     params = {"date_from": date.today().strftime("%Y-%m-%d"), "limit": limit}
@@ -115,13 +106,52 @@ def fetch_all_today(limit=5000):
         params = {}
     return pd.DataFrame(all_results)
 
-# --- Fetch Deals for Agent (define this right after fetch_all_today) ---
 def fetch_deals_for_agent(username):
     df_deals = fetch_all_today(limit=5000)
     if "lead_vendor_name" in df_deals.columns:
         mask = df_deals['lead_vendor_name'].astype(str).str.lower() == username.lower()
         return df_deals[mask].copy()
     return df_deals.iloc[0:0]
+
+# --- DATABASE HELPERS
+def init_db():
+    conn = sqlite3.connect(DB)
+    conn.execute("""
+      CREATE TABLE IF NOT EXISTS reports (
+        upload_date TEXT PRIMARY KEY,
+        total_deals INTEGER,
+        agent_payout REAL,
+        owner_revenue REAL,
+        owner_profit REAL
+      )
+    """)
+    conn.commit()
+    conn.close()
+
+def insert_report(dt, totals):
+    conn = sqlite3.connect(DB)
+    conn.execute("""
+      INSERT OR REPLACE INTO reports
+      (upload_date, total_deals, agent_payout, owner_revenue, owner_profit)
+      VALUES (?, ?, ?, ?, ?)
+    """, (dt, totals["deals"], totals["agent"], totals["owner_rev"], totals["owner_prof"]))
+    conn.commit()
+    conn.close()
+
+@st.cache_data
+def load_history():
+    conn = sqlite3.connect(DB)
+    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn, parse_dates=["upload_date"])
+    conn.close()
+    for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    return df
+
+init_db()
+history_df    = load_history()
+summary       = []
+uploaded_file = None
+threshold     = 10
 
 # --- ROLE-BASED DASHBOARD ---
 if st.session_state.user_role.lower() == "agent":
@@ -160,7 +190,6 @@ if st.session_state.user_role.lower() == "agent":
     bonus = 1200 if paid_count >= 70 else 0
     payout = paid_count * rate + bonus
 
-    # --- Metrics layout ---
     c1, c2, c3 = st.columns(3)
     with c1:
         st.metric("🔄 Today's Deals", len(agent_deals[today_mask]))
@@ -172,19 +201,13 @@ if st.session_state.user_role.lower() == "agent":
         st.metric("🎁 Bonus", f"${bonus:,.2f}")
         st.metric("🏆 Total MTD Payout", f"${payout:,.2f}")
 
-    # Performance reward/encouragement
     if paid_count >= 120:
         st.success("🔥 **You're on a commission tier! Keep it up for even higher bonuses!**")
 
     st.markdown("---")
-
-    st.markdown(
-        f"<h3 style='margin-bottom:0.3em;'>📊 Today's Deals Table</h3>", unsafe_allow_html=True
-    )
-
+    st.markdown("<h3 style='margin-bottom:0.3em;'>📊 Today's Deals Table</h3>", unsafe_allow_html=True)
     deals_today = agent_deals[today_mask]
     if not deals_today.empty:
-        # Show a more compact, modern table
         st.dataframe(
             deals_today[['date_sold', 'carrier', 'product', 'policy_id']],
             use_container_width=True,
@@ -201,7 +224,6 @@ if st.session_state.user_role.lower() == "agent":
         )
     st.stop()
 
-
 elif st.session_state.user_role.lower() == "admin":
     st.markdown(
         """
@@ -214,7 +236,7 @@ elif st.session_state.user_role.lower() == "admin":
     )
 
     # --- Smartly determine totals (if just uploaded, else pull last) ---
-    if 'uploaded_file' in locals() and uploaded_file:
+    if uploaded_file:
         _deals = int(totals["deals"])
         _agent_payout = totals["agent"]
         _owner_rev = totals["owner_rev"]
@@ -290,6 +312,9 @@ elif st.session_state.user_role.lower() == "admin":
         )
     else:
         st.info("No payroll history yet.")
+
+# (The rest of your code — settings, leaderboards, history, live counts, vendor pay, etc. — stays as in your current app below this point!)
+
 
 
 
