@@ -109,15 +109,18 @@ def fetch_all_today(limit=5000):
     return pd.DataFrame(all_results)
 
 def fetch_deals_for_agent(username):
+    # Find agent row
     agent = df_agents[df_agents['username'] == username]
     if agent.empty:
         return pd.DataFrame()
-    agent_lmb = agent['lmb_name'].iloc[0].lower()
+    agent_lmb = agent['lmb_name'].iloc[0].lower().strip()
     df_deals = fetch_all_today(limit=5000)
+    # You may need to create "lmb_name" column in deals too, if not already present
     if "lmb_name" in df_deals.columns:
         mask = df_deals['lmb_name'].astype(str).str.strip().str.lower() == agent_lmb
         return df_deals[mask].copy()
     return df_deals.iloc[0:0]
+
 
 # ...rest of your Streamlit app
 
