@@ -112,21 +112,31 @@ def fetch_all_today(limit=5000):
     return pd.DataFrame(all_results)
 
 def fetch_deals_for_agent(username):
-    # Find agent's user_id from df_agents (API user table)
     agent_row = df_agents[df_agents['username'] == username]
     if agent_row.empty or 'user_id' not in agent_row.columns:
         st.warning("No agent_id for this user in TLD API.")
         return pd.DataFrame()
     user_id = str(agent_row['user_id'].iloc[0]).strip()
-    # Load today's deals (policies) from API
-    df_deals = fetch_all_today(limit=5000)
-    # Defensive: Ensure 'agent_id' column exists
-    if 'agent_id' not in df_deals.columns:
-        st.warning("No agent_id column in deals export/API.")
-        return pd.DataFrame()
-    # Only show deals where agent_id matches user_id
-    deals = df_deals[df_deals['agent_id'].astype(str) == user_id]
+    today = date.today().strftime("%Y-%m-%d")
+
+    params = {
+        "agent_id": [user_id],
+        "date_sold": [{">=": today}],
+        "limit": 1000
+    }
+    resp = requests.get(
+        CRM_API_URL,
+        headers={
+            "tld-api-id": CRM_API_ID,
+            "tld-api-key": CRM_API_KEY,
+            "Content-Type": "application/json"
+        },
+        params={"params": json.dumps(params)}
+    )
+    js = resp.json()
+    deals = pd.DataFrame(js.get("response", {}).get("results", []))
     return deals
+
 
 
 
