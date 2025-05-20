@@ -206,55 +206,6 @@ def fetch_all_today(limit=5000):
     
     return pd.DataFrame(all_results)
 
-def fetch_deals_for_agent_date_range(username, start_date, end_date, resolve_agent=False):
-    agent_row = df_agents[df_agents['username'] == username]
-    if agent_row.empty or 'user_id' not in agent_row.columns:
-        st.warning("No agent_id for this user in TLD API.")
-        return pd.DataFrame()
-    user_id = str(agent_row['user_id'].iloc[0]).strip()
-    columns = [
-        'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
-        'carrier', 'product', 'duration', 'premium', 'policy_number',
-        'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
-        'agent_id', 'agent_name'
-    ]
-    params = {
-        "agent_id": user_id,
-        "date_from": start_date,
-        "date_to": end_date,
-        "limit": 1000,
-        "columns": ",".join(columns)
-    }
-    if resolve_agent:
-        params["resolve"] = "agent"
-    headers = {
-        "tld-api-id": CRM_API_ID,
-        "tld-api-key": CRM_API_KEY
-    }
-    all_results = []
-    url = CRM_API_URL
-    seen_urls = set()
-    while url and url not in seen_urls:
-        seen_urls.add(url)
-        try:
-            resp = requests.get(url, headers=headers, params=params, timeout=10)
-            resp.raise_for_status()
-            js = resp.json().get("response", {})
-            chunk = js.get("results", [])
-            if not chunk: break
-            all_results.extend(chunk)
-            next_url = js.get("navigate", {}).get("next")
-            if not next_url or next_url in seen_urls: break
-            url = next_url
-            params = {}
-        except Exception as e:
-            st.error(f"API Error: {str(e)}")
-            break
-    df = pd.DataFrame(all_results)
-    if "date_sold" in df.columns and not df.empty:
-        df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
-    return df
-
         
     except Exception as e:
         st.error(f"API Error: {str(e)}")
