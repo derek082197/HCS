@@ -36,26 +36,28 @@ def fetch_agents():
         "tld-api-id": CRM_API_ID,
         "tld-api-key": CRM_API_KEY,
     }
+    params = {"limit": 500}  # Adjust if you ever have more agents!
     all_users = []
     seen_urls = set()
-    max_pages = 10  # Prevent infinite loops (raise if you expect more)
     page = 0
+    max_pages = 5
 
     while url and page < max_pages:
         if url in seen_urls:
             break
         seen_urls.add(url)
-        r = requests.get(url, headers=headers, timeout=10)
+        r = requests.get(url, headers=headers, params=params, timeout=10)
         js = r.json().get('response', {})
         results = js.get('results', [])
         all_users.extend(results)
-        # Stop if no more results or next is missing
         url = js.get('navigate', {}).get('next')
         if not results or not url:
             break
+        params = {}  # Only send limit on first page
         page += 1
 
     return pd.DataFrame(all_users)
+
 
 
 df_agents = fetch_agents()
