@@ -474,12 +474,11 @@ if st.session_state.user_role.lower() == "agent":
     cycle_count = len(deals_cycle)
 
 # --- Commission Calculation (Current Cycle) ---
-if 'cycle_count' not in locals():
-    cycle_count = 0
-if cycle_count is None:
+try:
+    cycle_count = len(deals_cycle)
+except Exception:
     cycle_count = 0
 
-# Always define rate and payout, even if 0
 if cycle_count >= 200:
     rate = 25
 elif cycle_count >= 150:
@@ -492,13 +491,14 @@ else:
 bonus = 1200 if cycle_count >= 70 else 0
 payout = cycle_count * rate + bonus
 
+
 # --- Previous Cycle ---
-prev_cycle = commission_cycles[commission_cycles["end"] < pd.to_datetime(cycle_start)].tail(1)
+prev_count = prev_payout = 0
+prev_start = prev_end = prev_pay = ""
 if not prev_cycle.empty:
     prev_start = prev_cycle["start"].iloc[0].strftime("%Y-%m-%d")
     prev_end = prev_cycle["end"].iloc[0].strftime("%Y-%m-%d")
     prev_pay = prev_cycle["pay"].iloc[0].strftime("%m/%d/%y")
-    # -- Make sure deals_prev_cycle will *always* exist
     try:
         deals_prev_cycle = fetch_deals_tql(agent_id=user_id, date_from=prev_start, date_to=prev_end, columns=columns)
     except Exception:
@@ -517,8 +517,6 @@ if not prev_cycle.empty:
         prev_rate = 15
     prev_bonus = 1200 if prev_count >= 70 else 0
     prev_payout = prev_count * prev_rate + prev_bonus
-else:
-    prev_count = prev_payout = prev_start = prev_end = prev_pay = 0
 
 
     # --- DISPLAY DASHBOARD ---
