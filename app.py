@@ -6,6 +6,7 @@ import sqlite3
 import io
 import zipfile
 import csv
+import json         # <--- ADD THIS
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
