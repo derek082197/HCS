@@ -112,11 +112,12 @@ def fetch_all_today(limit=5000):
     return pd.DataFrame(all_results)
 
 def fetch_deals_for_agent(username):
-    # Get the agent's user_id from TLD agent list
-    agent = df_agents[df_agents['username'] == username]
-    if agent.empty or 'user_id' not in agent.columns:
+    # Find agent's user_id from df_agents (API user table)
+    agent_row = df_agents[df_agents['username'] == username]
+    if agent_row.empty or 'user_id' not in agent_row.columns:
+        st.warning("No agent_id for this user in TLD API.")
         return pd.DataFrame()
-    user_id = str(agent['user_id'].iloc[0]).strip()
+    user_id = str(agent_row['user_id'].iloc[0]).strip()
     # Load today's deals (policies) from API
     df_deals = fetch_all_today(limit=5000)
     # Defensive: Ensure 'agent_id' column exists
@@ -188,61 +189,52 @@ if st.session_state.user_role.lower() == "agent":
     )
 
     agent_deals = fetch_deals_for_agent(st.session_state.user_email)
+    if agent_deals.empty:
+        st.warning("No deals found for this agent.")
+        st.stop()
 
-    # Defensive: If empty, set all to 0
-    if agent_deals.empty or 'date_sold' not in agent_deals.columns:
-        today_deals = 0
-        mtd_deals = 0
-        ytd_deals = 0
-        rate = 15
-        bonus = 0
-        payout = 0
-        deals_today_df = pd.DataFrame()
+    today = pd.Timestamp.now(tz='US/Eastern').date()
+    mtd = today.replace(day=1)
+    ytd = today.replace(month=1, day=1)
+
+    today_mask = agent_deals['date_sold'].dt.date == today
+    mtd_mask = agent_deals['date_sold'].dt.date >= mtd
+    ytd_mask = agent_deals['date_sold'].dt.date >= ytd
+
+    # --- COMMISSION LOGIC (by Month-to-Date count)
+    month_deals = agent_deals[mtd_mask]
+    paid_count = len(month_deals)
+    if paid_count >= 200:
+        rate = 25
+    elif paid_count >= 150:
+        rate = 22.5
+    elif paid_count >= 120:
+        rate = 17.5
     else:
-        agent_deals['date_sold'] = pd.to_datetime(agent_deals['date_sold'], errors='coerce')
-        today = pd.Timestamp.now(tz='US/Eastern').date()
-        mtd = today.replace(day=1)
-        ytd = today.replace(month=1, day=1)
-        today_mask = agent_deals['date_sold'].dt.date == today
-        mtd_mask = agent_deals['date_sold'].dt.date >= mtd
-        ytd_mask = agent_deals['date_sold'].dt.date >= ytd
-
-        today_deals = agent_deals[today_mask].shape[0]
-        mtd_deals = agent_deals[mtd_mask].shape[0]
-        ytd_deals = agent_deals[ytd_mask].shape[0]
-
-        paid_count = mtd_deals  # or however you define paid
-        if paid_count >= 200:
-            rate = 25
-        elif paid_count >= 150:
-            rate = 22.5
-        elif paid_count >= 120:
-            rate = 17.5
-        else:
-            rate = 15
-        bonus = 1200 if paid_count >= 70 else 0
-        payout = paid_count * rate + bonus
-        deals_today_df = agent_deals[today_mask]
+        rate = 15
+    bonus = 1200 if paid_count >= 70 else 0
+    payout = paid_count * rate + bonus
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.metric("🔄 Today's Deals", today_deals)
-        st.metric("📅 Month-to-Date", mtd_deals)
+        st.metric("🔄 Today's Deals", len(agent_deals[today_mask]))
+        st.metric("📅 Month-to-Date", len(agent_deals[mtd_mask]))
     with c2:
-        st.metric("📆 Year-to-Date", ytd_deals)
+        st.metric("📆 Year-to-Date", len(agent_deals[ytd_mask]))
         st.metric("💵 Commission Rate", f"${rate:,.2f} per deal")
     with c3:
         st.metric("🎁 Bonus", f"${bonus:,.2f}")
         st.metric("🏆 Total MTD Payout", f"${payout:,.2f}")
 
-    if mtd_deals >= 120:
+    if paid_count >= 120:
         st.success("🔥 **You're on a commission tier! Keep it up for even higher bonuses!**")
 
     st.markdown("---")
     st.markdown("<h3 style='margin-bottom:0.3em;'>📊 Today's Deals Table</h3>", unsafe_allow_html=True)
-    if not deals_today_df.empty:
+    deals_today = agent_deals[today_mask]
+    if not deals_today.empty:
         st.dataframe(
-            deals_today_df[['date_sold', 'carrier', 'product', 'policy_id']],
+            deals_today[['date_sold', 'carrier', 'product', 'policy_id']],
             use_container_width=True,
             hide_index=True
         )
