@@ -219,6 +219,7 @@ elif st.session_state.user_role.lower() == "admin":
         agent_payout = totals["agent"]
         owner_rev = totals["owner_rev"]
         owner_profit = totals["owner_prof"]
+        history_df = load_history()
         latest = _df.iloc[-1]
         deals = int(latest.total_deals)
         agent_payout = latest.agent_payout
