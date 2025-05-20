@@ -213,33 +213,33 @@ elif st.session_state.user_role.lower() == "admin":
         """, unsafe_allow_html=True,
     )
 
-    # --- Upload summary for today or pull last from  ---
+    # --- Smartly determine totals (if just uploaded, else pull last) ---
     if 'uploaded_file' in locals() and uploaded_file:
-        deals = int(totals["deals"])
-        agent_payout = totals["agent"]
-        owner_rev = totals["owner_rev"]
-        owner_profit = totals["owner_prof"]
-        history_df = load_history()
-        latest = _df.iloc[-1]
-        deals = int(latest.total_deals)
-        agent_payout = latest.agent_payout
-        owner_rev = latest.owner_revenue
-        owner_profit = latest.owner_profit
+        _deals = int(totals["deals"])
+        _agent_payout = totals["agent"]
+        _owner_rev = totals["owner_rev"]
+        _owner_profit = totals["owner_prof"]
+    elif not history_df.empty:
+        latest = history_df.iloc[-1]
+        _deals = int(latest.total_deals)
+        _agent_payout = latest.agent_payout
+        _owner_rev = latest.owner_revenue
+        _owner_profit = latest.owner_profit
     else:
-        deals = agent_payout = owner_rev = owner_profit = 0
+        _deals = _agent_payout = _owner_rev = _owner_profit = 0
 
     # --- Overview Cards ---
     st.markdown("<div style='margin-top:1.5em;'></div>", unsafe_allow_html=True)
     o1, o2, o3, o4 = st.columns(4)
-    o1.metric("Total Paid Deals", f"{deals:,}")
-    o2.metric("Agent Payout", f"${agent_payout:,.2f}")
-    o3.metric("Owner Revenue", f"${owner_rev:,.2f}")
-    o4.metric("Owner Profit", f"${owner_profit:,.2f}")
+    o1.metric("Total Paid Deals", f"{_deals:,}")
+    o2.metric("Agent Payout", f"${_agent_payout:,.2f}")
+    o3.metric("Owner Revenue", f"${_owner_rev:,.2f}")
+    o4.metric("Owner Profit", f"${_owner_profit:,.2f}")
 
     st.markdown("---")
 
     # --- Top Agents Leaderboard ---
-    st.markdown("#### 🥇 Top Agents This Month")
+    st.markdown("<h4 style='margin-bottom:0.3em;'>🥇 Top Agents This Month</h4>", unsafe_allow_html=True)
     if summary:
         df_led = pd.DataFrame(summary).sort_values("Paid Deals", ascending=False).head(6)
         st.dataframe(df_led.style.format({
@@ -252,9 +252,7 @@ elif st.session_state.user_role.lower() == "admin":
     st.markdown("---")
 
     # --- Live Counts (Cards) ---
-    st.markdown(
-        "<h4 style='margin-bottom:0.3em;'>📈 Live Deal Counts</h4>", unsafe_allow_html=True
-    )
+    st.markdown("<h4 style='margin-bottom:0.3em;'>📈 Live Deal Counts</h4>", unsafe_allow_html=True)
     try:
         df_api = fetch_all_today(limit=5000)
         df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
@@ -272,11 +270,11 @@ elif st.session_state.user_role.lower() == "admin":
 
     st.markdown("---")
 
-    # ---  quickview (last 6 periods) ---
-    st.markdown("#### 📅 Recent ")
-    if not _df.empty:
+    # --- Quickview (last 6 periods) ---
+    st.markdown("<h4 style='margin-bottom:0.3em;'>📅 Recent Payroll Periods</h4>", unsafe_allow_html=True)
+    if not history_df.empty:
         st.dataframe(
-            _df.tail(6)[
+            history_df.tail(6)[
                 ["upload_date", "total_deals", "agent_payout", "owner_revenue", "owner_profit"]
             ].rename(columns={
                 "upload_date": "Date",
@@ -291,7 +289,8 @@ elif st.session_state.user_role.lower() == "admin":
             }), use_container_width=True, hide_index=True
         )
     else:
-        st.info("No  yet.")
+        st.info("No payroll history yet.")
+
 
 
 # ... and the rest of your app logic continues as usual!
