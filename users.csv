@@ -1,5 +1,6 @@
-username,password
-derek082197,Xd5gihbw!
-anita,hcs123
-agent_bob,Quarterly#1
-# … 30+ rows …
+username,password,role,first_name,last_name
+derek082197,Xd5gihbw!,Admin,Derek,Bennett
+anita,hcs123,Admin,Anita,Bennett
+agent_bob,Quarterly#1,Agent,Bob,Agent
+camos@hcs,password,Agent,Cheyenne,Amos
+
