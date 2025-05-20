@@ -109,9 +109,13 @@ def fetch_all_today(limit=5000):
     return pd.DataFrame(all_results)
 
 def fetch_deals_for_agent(username):
+    agent = df_agents[df_agents['username'] == username]
+    if agent.empty:
+        return pd.DataFrame()
+    agent_lmb = agent['lmb_name'].iloc[0].lower()
     df_deals = fetch_all_today(limit=5000)
-    if "lead_vendor_name" in df_deals.columns:
-        mask = df_deals['lead_vendor_name'].astype(str).str.lower() == username.lower()
+    if "lmb_name" in df_deals.columns:
+        mask = df_deals['lmb_name'].astype(str).str.strip().str.lower() == agent_lmb
         return df_deals[mask].copy()
     return df_deals.iloc[0:0]
 
