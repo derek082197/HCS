@@ -219,7 +219,6 @@ elif st.session_state.user_role.lower() == "admin":
         agent_payout = totals["agent"]
         owner_rev = totals["owner_rev"]
         owner_profit = totals["owner_prof"]
-    elif not _df.empty:
         latest = _df.iloc[-1]
         deals = int(latest.total_deals)
         agent_payout = latest.agent_payout
@@ -333,7 +332,6 @@ def load_():
     for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
-    history_df = load_history()
 
 # PDF GENERATORS
 def generate_agent_pdf(df_agent, agent_name):
