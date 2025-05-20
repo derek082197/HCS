@@ -151,8 +151,7 @@ elif st.session_state.user_role.lower() == "admin":
     st.header("Admin Dashboard")
     # ... (rest of your admin tabs as normal)
 
-# Now you set up your tabs
-tabs = st.tabs([...])
+
 # ... and the rest of your app logic continues as usual!
 
 
