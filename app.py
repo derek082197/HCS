@@ -177,7 +177,7 @@ def fetch_deals_for_agent(username, day="Today"):
     return df
 
 def fetch_deals_for_agent_date_range(username, start_date, end_date):
-    """Fetch all deals for an agent within a specific date range by making multiple API calls."""
+    """Fetch all deals for an agent within a specific date range by making API calls."""
     agent_row = df_agents[df_agents['username'] == username]
     if agent_row.empty or 'user_id' not in agent_row.columns:
         st.warning("No agent_id for this user in TLD API.")
@@ -197,49 +197,48 @@ def fetch_deals_for_agent_date_range(username, start_date, end_date):
     if isinstance(end_date, (datetime, date)):
         end_date = end_date.strftime("%Y-%m-%d")
     
-    # For debugging purposes, let's hardcode some values based on the date range
-    # This is a temporary solution until the API is fixed
-    if pd.to_datetime(start_date).date() >= pd.to_datetime("2025-05-17").date() and pd.to_datetime(end_date).date() <= pd.to_datetime("2025-05-30").date():
-        # Current cycle (05/17/25-05/30/25) should have 24 deals
-        return create_mock_deals(24, start_date, end_date)
-    elif pd.to_datetime(start_date).date() >= pd.to_datetime("2025-04-19").date() and pd.to_datetime(end_date).date() <= pd.to_datetime("2025-05-02").date():
-        # Previous cycle (04/19/25-05/02/25) should have 38 deals
-        return create_mock_deals(38, start_date, end_date)
-    elif pd.to_datetime(start_date).date() == pd.to_datetime(end_date).date() and pd.to_datetime(start_date).date() == pd.Timestamp.now(tz='US/Eastern').date():
-        # Today should have 16 deals
-        return create_mock_deals(16, start_date, end_date)
-    elif pd.to_datetime(end_date).date() >= pd.to_datetime(start_date).date() + timedelta(days=6):
-        # Last 7 days should have 45 deals
-        return create_mock_deals(45, start_date, end_date)
-    elif pd.to_datetime(start_date).date().day == 1:
-        # This month should have 120 deals
-        return create_mock_deals(120, start_date, end_date)
-    else:
-        # Default to 10 deals for any other date range
-        return create_mock_deals(10, start_date, end_date)
-
-def create_mock_deals(count, start_date, end_date):
-    """Create mock deals for testing purposes."""
-    start = pd.to_datetime(start_date)
-    end = pd.to_datetime(end_date)
-    date_range = pd.date_range(start=start, end=end)
+    # Make API call with date range parameters
+    params = {
+        "agent_id": [user_id],
+        "date_from": start_date,
+        "date_to": end_date,
+        "limit": 1000
+    }
     
-    deals = []
-    for i in range(count):
-        # Distribute deals evenly across the date range
-        date_idx = i % len(date_range)
-        deal_date = date_range[date_idx]
+    all_results = []
+    seen_urls = set()
+    
+    # Initial request
+    while url and url not in seen_urls:
+        seen_urls.add(url)
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            resp.raise_for_status()
+            js = resp.json().get("response", {})
+            chunk = js.get("results", [])
+            
+            if not chunk:
+                break
+                
+            all_results.extend(chunk)
+            
+            # Check for next page
+            next_url = js.get("navigate", {}).get("next")
+            if not next_url or next_url in seen_urls:
+                break
+                
+            # For pagination, we don't need params on subsequent requests
+            url = next_url
+            params = {}
+            
+        except Exception as e:
+            st.error(f"API Error: {str(e)}")
+            break
+    
+    if not all_results:
+        return pd.DataFrame()
         
-        deals.append({
-            "policy_id": f"POL-{100000 + i}",
-            "date_sold": deal_date.strftime("%Y-%m-%d"),
-            "carrier": "Sample Carrier",
-            "product": "Health Insurance",
-            "lead_first_name": f"First{i}",
-            "lead_last_name": f"Last{i}"
-        })
-    
-    df = pd.DataFrame(deals)
+    df = pd.DataFrame(all_results)
     if "date_sold" in df.columns:
         df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
     
@@ -316,8 +315,9 @@ if st.session_state.user_role.lower() == "agent":
     
     # Find the current cycle
     today_ts = pd.Timestamp(today)
+    # Convert today to datetime for proper comparison
     cycle_row = commission_cycles[
-        (today_ts >= commission_cycles["start"]) & (today_ts <= commission_cycles["end"])
+        (commission_cycles["start"].dt.date <= today) & (commission_cycles["end"].dt.date >= today)
     ]
     
     if not cycle_row.empty:
@@ -1127,6 +1127,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
