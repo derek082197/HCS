@@ -237,8 +237,9 @@ if st.session_state.user_role.lower() == "agent":
         """, unsafe_allow_html=True,
     )
 
-    agent_deals = fetch_deals_for_agent(st.session_state.user_email)
-    if agent_deals.empty:
+    # First get today's deals to identify the current cycle
+    today_deals = fetch_deals_for_agent(st.session_state.user_email)
+    if today_deals.empty:
         st.warning("No deals found for this agent.")
         st.stop()
 
@@ -255,14 +256,46 @@ if st.session_state.user_role.lower() == "agent":
         cycle_end = cycle_row["end"].iloc[0].date()
         pay_date = cycle_row["pay"].iloc[0].date()
         
-        # Filter deals by cycle dates
-        cycle_start_ts = pd.Timestamp(cycle_start)
-        cycle_end_ts = pd.Timestamp(cycle_end)
-        in_cycle = (agent_deals["date_sold"] >= cycle_start_ts) & (agent_deals["date_sold"] <= cycle_end_ts)
-        cycle_deals = agent_deals[in_cycle].copy()
+        # Now fetch ALL deals for the entire cycle date range
+        # We need to use a custom date range instead of "Today"
+        cycle_start_str = cycle_start.strftime("%Y-%m-%d")
+        cycle_end_str = cycle_end.strftime("%Y-%m-%d")
+        
+        # Use a custom date range parameter
+        agent_row = df_agents[df_agents['username'] == st.session_state.user_email]
+        if not agent_row.empty and 'user_id' in agent_row.columns:
+            user_id = str(agent_row['user_id'].iloc[0]).strip()
+            
+            # Custom API call to get all deals in the cycle date range
+            params = {
+                "agent_id": [user_id],
+                "date_from": cycle_start_str,
+                "date_to": cycle_end_str,
+                "limit": 1000
+            }
+            url = CRM_API_URL
+            headers = {
+                "tld-api-id": CRM_API_ID,
+                "tld-api-key": CRM_API_KEY,
+                "content-type": "application/json"
+            }
+            
+            with st.spinner(f"Loading all deals from {cycle_start_str} to {cycle_end_str}..."):
+                resp = requests.get(url, headers=headers, params=params, timeout=10)
+                js = resp.json().get("response", {})
+                cycle_deals_data = js.get("results", [])
+                
+                if cycle_deals_data:
+                    cycle_deals = pd.DataFrame(cycle_deals_data)
+                    if "date_sold" in cycle_deals.columns:
+                        cycle_deals["date_sold"] = pd.to_datetime(cycle_deals["date_sold"], errors="coerce")
+                else:
+                    cycle_deals = pd.DataFrame()  # Empty DataFrame if no deals found
+        else:
+            cycle_deals = pd.DataFrame()  # Empty DataFrame if agent not found
     else:
         cycle_start = cycle_end = pay_date = None
-        cycle_deals = agent_deals.iloc[0:0]  # Empty DataFrame with same columns
+        cycle_deals = pd.DataFrame()  # Empty DataFrame if no cycle found
 
     # --- COMMISSION LOGIC (cycle-based only)
     paid_count = len(cycle_deals)
@@ -945,6 +978,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
