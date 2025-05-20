@@ -15,23 +15,68 @@ except ImportError:
 # 1) PAGE CONFIG — must be first
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# USERS CSV LOGIN
+# --- CONSTANTS
+PROFIT_PER_SALE = 43.3
+CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
+CRM_API_ID      = "310"
+CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
+DB              = "crm_history.db"
+
+# --- USERS CSV (Admins)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
 USERS = dict(zip(df_users.username.str.strip(), df_users.password))
 
+# --- AGENTS FROM API
+@st.cache_data(ttl=600)
+def fetch_agents():
+    url = "https://hcs.tldcrm.com/api/egress/users"
+    headers = {
+        "tld-api-id": CRM_API_ID,
+        "tld-api-key": CRM_API_KEY,
+    }
+    all_users = []
+    while url:
+        r = requests.get(url, headers=headers, timeout=10)
+        js = r.json()['response']
+        all_users.extend(js['results'])
+        url = js.get('navigate', {}).get('next')
+    return pd.DataFrame(all_users)
+df_agents = fetch_agents()
+AGENT_USERNAMES = df_agents['username'].tolist()
+AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
+AGENT_NAMES = dict(zip(df_agents['username'], [f"{row['first_name']} {row['last_name']}" for _, row in df_agents.iterrows()]))
+AGENT_ROLES = dict(zip(df_agents['username'], df_agents['role_descriptions']))
+
+# --- LOGIN LOGIC
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+    st.session_state.user_role = "Admin"
+    st.session_state.user_email = ""
+    st.session_state.user_name = ""
 
 def do_login():
-    u, p = st.session_state.user.strip(), st.session_state.pwd
-    if u in USERS and p == USERS[u]:
+    u = st.session_state.user.strip()
+    p = st.session_state.pwd
+    # AGENT login via API (default password = 'password')
+    if u in AGENT_CREDENTIALS and p == AGENT_CREDENTIALS[u]:
         st.session_state.logged_in = True
-        st.success(f"✅ Welcome, {u}!")
+        st.session_state.user_email = u
+        st.session_state.user_name = AGENT_NAMES[u]
+        st.session_state.user_role = AGENT_ROLES[u]
+        st.success(f"✅ Welcome, {AGENT_NAMES[u]}!")
+    # ADMIN login via users.csv
+    elif u in USERS and p == USERS[u]:
+        st.session_state.logged_in = True
+        st.session_state.user_email = u
+        st.session_state.user_name = u
+        st.session_state.user_role = "Admin"
+        st.success(f"✅ Welcome, {u}! (Admin)")
     else:
         st.error("❌ Incorrect credentials")
 
 def do_logout():
     st.session_state.logged_in = False
+    st.session_state.user_role = ""
     st.experimental_rerun()
 
 if not st.session_state.logged_in:
@@ -41,13 +86,35 @@ if not st.session_state.logged_in:
     st.sidebar.button("Log in", on_click=do_login)
     st.stop()
 st.sidebar.button("Log out", on_click=do_logout)
+# --- ROLE-BASED DASHBOARD ---
+if st.session_state.user_role.lower() == "agent":
+    st.header(f"Agent Dashboard – {st.session_state.user_name}")
+    agent_deals = fetch_deals_for_agent(st.session_state.user_email)
+    today = pd.Timestamp.now(tz='US/Eastern').date()
+    agent_deals['date_sold'] = pd.to_datetime(agent_deals['date_sold'], errors='coerce')
+    today_deals = agent_deals[agent_deals['date_sold'].dt.date == today]
+    st.metric("Today's Deals", len(today_deals))
+    st.metric("Month-to-Date Deals", len(agent_deals[
+        agent_deals['date_sold'].dt.month == today.month]))
+    st.dataframe(today_deals, use_container_width=True)
+    st.stop()  # Only show agent dashboard
 
-# CONSTANTS
-PROFIT_PER_SALE = 43.3
-CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
-CRM_API_ID      = "310"
-CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
-DB              = "crm_history.db"
+elif st.session_state.user_role.lower() == "admin":
+    st.header("Admin Dashboard")
+    # ... (rest of your admin tabs as normal)
+
+# Now you set up your tabs
+tabs = st.tabs([...])
+# ... and the rest of your app logic continues as usual!
+
+
+# --- Fetch deals for AGENT dashboard
+def fetch_deals_for_agent(username):
+    df_deals = fetch_all_today(limit=5000)
+    # Assuming TLD lead_vendor_name is username for agents
+    if "lead_vendor_name" in df_deals.columns:
+        df_deals = df_deals[df_deals['lead_vendor_name'].str.lower() == username.lower()]
+    return df_deals
 
 # DATABASE HELPERS
 def init_db():
