@@ -37,12 +37,26 @@ def fetch_agents():
         "tld-api-key": CRM_API_KEY,
     }
     all_users = []
-    while url:
+    seen_urls = set()
+    max_pages = 10  # Prevent infinite loops (raise if you expect more)
+    page = 0
+
+    while url and page < max_pages:
+        if url in seen_urls:
+            break
+        seen_urls.add(url)
         r = requests.get(url, headers=headers, timeout=10)
-        js = r.json()['response']
-        all_users.extend(js['results'])
+        js = r.json().get('response', {})
+        results = js.get('results', [])
+        all_users.extend(results)
+        # Stop if no more results or next is missing
         url = js.get('navigate', {}).get('next')
+        if not results or not url:
+            break
+        page += 1
+
     return pd.DataFrame(all_users)
+
 
 df_agents = fetch_agents()
 AGENT_USERNAMES = df_agents['username'].tolist()
