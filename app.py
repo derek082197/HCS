@@ -6,7 +6,7 @@ import sqlite3
 import io
 import zipfile
 import csv
-import json         # <--- ADD THIS
+import json
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
@@ -16,7 +16,6 @@ except ImportError:
     def st_autorefresh(*args, **kwargs): pass
 
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
-import pandas as pd
 
 # --- Hardcode commission cycle schedule
 commission_cycles = pd.DataFrame([
@@ -54,8 +53,6 @@ commission_cycles = pd.DataFrame([
 commission_cycles["start"] = pd.to_datetime(commission_cycles["start"])
 commission_cycles["end"] = pd.to_datetime(commission_cycles["end"])
 commission_cycles["pay"] = pd.to_datetime(commission_cycles["pay"])
-
-
 
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
@@ -183,7 +180,6 @@ def fetch_deals_for_agent(username, day="Today"):
 
 
 
-
 # ...rest of your Streamlit app
 
 
@@ -247,20 +243,26 @@ if st.session_state.user_role.lower() == "agent":
         st.stop()
 
     today = pd.Timestamp.now(tz='US/Eastern').date()
+    
     # Find the current cycle
+    today_ts = pd.Timestamp(today)
     cycle_row = commission_cycles[
-        (today >= commission_cycles["start"]) & (today <= commission_cycles["end"])
+        (today_ts >= commission_cycles["start"]) & (today_ts <= commission_cycles["end"])
     ]
+    
     if not cycle_row.empty:
         cycle_start = cycle_row["start"].iloc[0].date()
         cycle_end = cycle_row["end"].iloc[0].date()
         pay_date = cycle_row["pay"].iloc[0].date()
+        
         # Filter deals by cycle dates
-        in_cycle = (agent_deals["date_sold"].dt.date >= cycle_start) & (agent_deals["date_sold"].dt.date <= cycle_end)
+        cycle_start_ts = pd.Timestamp(cycle_start)
+        cycle_end_ts = pd.Timestamp(cycle_end)
+        in_cycle = (agent_deals["date_sold"] >= cycle_start_ts) & (agent_deals["date_sold"] <= cycle_end_ts)
         cycle_deals = agent_deals[in_cycle].copy()
     else:
         cycle_start = cycle_end = pay_date = None
-        cycle_deals = agent_deals.iloc[0:0]
+        cycle_deals = agent_deals.iloc[0:0]  # Empty DataFrame with same columns
 
     # --- COMMISSION LOGIC (cycle-based only)
     paid_count = len(cycle_deals)
@@ -298,7 +300,6 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
-
 
 
 elif st.session_state.user_role.lower() == "admin":
@@ -944,6 +945,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
