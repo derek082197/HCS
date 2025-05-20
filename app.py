@@ -474,10 +474,12 @@ if st.session_state.user_role.lower() == "agent":
     cycle_count = len(deals_cycle)
 
 # --- Commission Calculation (Current Cycle) ---
-try:
-    cycle_count = len(deals_cycle)
-except Exception:
-    cycle_count = 0
+cycle_count = len(deals_cycle) if 'deals_cycle' in locals() and deals_cycle is not None else 0
+
+# Always define rate, bonus, payout with default
+rate = 15
+bonus = 0
+payout = 0
 
 if cycle_count >= 200:
     rate = 25
@@ -488,25 +490,24 @@ elif cycle_count >= 120:
 else:
     rate = 15
 
-bonus = 1200 if cycle_count >= 70 else 0
+if cycle_count >= 70:
+    bonus = 1200
+
 payout = cycle_count * rate + bonus
 
-
 # --- Previous Cycle ---
-prev_count = prev_payout = 0
+prev_count = prev_payout = prev_rate = prev_bonus = 0
 prev_start = prev_end = prev_pay = ""
+prev_cycle = commission_cycles[commission_cycles["end"] < pd.to_datetime(cycle_start)].tail(1) if 'cycle_start' in locals() else pd.DataFrame()
 if not prev_cycle.empty:
     prev_start = prev_cycle["start"].iloc[0].strftime("%Y-%m-%d")
     prev_end = prev_cycle["end"].iloc[0].strftime("%Y-%m-%d")
     prev_pay = prev_cycle["pay"].iloc[0].strftime("%m/%d/%y")
     try:
-        deals_prev_cycle = fetch_deals_tql(agent_id=user_id, date_from=prev_start, date_to=prev_end, columns=columns)
+        deals_prev_cycle = fetch_deals_for_agent_date_range(st.session_state.user_email, prev_start, prev_end)
     except Exception:
         deals_prev_cycle = pd.DataFrame()
-    if deals_prev_cycle is not None and not deals_prev_cycle.empty:
-        prev_count = len(deals_prev_cycle)
-    else:
-        prev_count = 0
+    prev_count = len(deals_prev_cycle) if deals_prev_cycle is not None else 0
     if prev_count >= 200:
         prev_rate = 25
     elif prev_count >= 150:
@@ -517,6 +518,10 @@ if not prev_cycle.empty:
         prev_rate = 15
     prev_bonus = 1200 if prev_count >= 70 else 0
     prev_payout = prev_count * prev_rate + prev_bonus
+else:
+    prev_count = prev_payout = 0
+    prev_rate = prev_bonus = 0
+    prev_start = prev_end = prev_pay = ""
 
 
     # --- DISPLAY DASHBOARD ---
