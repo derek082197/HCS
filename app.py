@@ -43,10 +43,13 @@ def fetch_agents():
     return pd.DataFrame(users)
 
 df_agents = fetch_agents()
+
+# --- Logins setup (no change)
 AGENT_USERNAMES = df_agents['username'].tolist()
 AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
 AGENT_NAMES = dict(zip(df_agents['username'], [f"{row['first_name']} {row['last_name']}" for _, row in df_agents.iterrows()]))
 AGENT_ROLES = dict(zip(df_agents['username'], df_agents['role_descriptions']))
+AGENT_USERIDS = dict(zip(df_agents['username'], df_agents['user_id']))
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -109,37 +112,18 @@ def fetch_all_today(limit=5000):
     return pd.DataFrame(all_results)
 
 def fetch_deals_for_agent(username):
-    # --- Build agent lmb_name ("Last, First")
-    agent = df_agents[df_agents['username'] == username]
-    if agent.empty:
-        return pd.DataFrame()
-    # If lmb_name is missing, build it on-the-fly for agent df
-    if "lmb_name" not in agent.columns:
-        agent_lmb = agent['last_name'].str.strip() + ", " + agent['first_name'].str.strip()
-    else:
-        agent_lmb = agent['lmb_name']
-    agent_lmb = agent_lmb.iloc[0].strip().lower()
-
-    # --- Load today's deals
+    # Find user_id for this username from agents table
+    user_row = df_agents[df_agents['username'] == username]
+    if user_row.empty:
+        return pd.DataFrame()  # no user found
+    agent_id = str(user_row['user_id'].iloc[0]).strip()
+    # Load all deals, filter for this agent's agent_id (not LMB)
     df_deals = fetch_all_today(limit=5000)
-    # If "lmb_name" not in deals df, build it from Last Name, First Name
-    if "lmb_name" not in df_deals.columns:
-        if "Last Name" in df_deals.columns and "First Name" in df_deals.columns:
-            df_deals['lmb_name'] = (
-                df_deals['Last Name'].astype(str).str.strip() + ", " +
-                df_deals['First Name'].astype(str).str.strip()
-            )
-        elif "last_name" in df_deals.columns and "first_name" in df_deals.columns:
-            df_deals['lmb_name'] = (
-                df_deals['last_name'].astype(str).str.strip() + ", " +
-                df_deals['first_name'].astype(str).str.strip()
-            )
-        else:
-            # Fallback: Can't match, return empty
-            return pd.DataFrame()
-
-    # --- Standardize case/space for matching
-    mask = df_deals['lmb_name'].astype(str).str.strip().str.lower() == agent_lmb
+    # Defensive: check agent_id exists
+    if "agent_id" not in df_deals.columns:
+        st.warning("No agent_id column in deals export.")
+        return pd.DataFrame()
+    mask = df_deals['agent_id'].astype(str).str.strip() == agent_id
     return df_deals[mask].copy()
 
 
@@ -200,7 +184,10 @@ if st.session_state.user_role.lower() == "agent":
     )
 
     agent_deals = fetch_deals_for_agent(st.session_state.user_email)
-    agent_deals['date_sold'] = pd.to_datetime(agent_deals['date_sold'], errors='coerce')
+    if not agent_deals.empty and 'date_sold' in agent_deals.columns:
+        agent_deals['date_sold'] = pd.to_datetime(agent_deals['date_sold'], errors='coerce')
+    else:
+        agent_deals['date_sold'] = pd.NaT
 
     today = pd.Timestamp.now(tz='US/Eastern').date()
     mtd = today.replace(day=1)
