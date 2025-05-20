@@ -126,6 +126,40 @@ if not st.session_state.logged_in:
     st.stop()
 st.sidebar.button("Log out", on_click=do_logout)
 
+# DATABASE HELPERS
+def init_db():
+    conn = sqlite3.connect(DB)
+    conn.execute("""
+      CREATE TABLE IF NOT EXISTS reports (
+        upload_date TEXT PRIMARY KEY,
+        total_deals INTEGER,
+        agent_payout REAL,
+        owner_revenue REAL,
+        owner_profit REAL
+      )
+    """)
+    conn.commit()
+    conn.close()
+
+def insert_report(dt, totals):
+    conn = sqlite3.connect(DB)
+    conn.execute("""
+      INSERT OR REPLACE INTO reports
+      (upload_date, total_deals, agent_payout, owner_revenue, owner_profit)
+      VALUES (?, ?, ?, ?, ?)
+    """, (dt, totals["deals"], totals["agent"], totals["owner_rev"], totals["owner_prof"]))
+    conn.commit()
+    conn.close()
+
+@st.cache_data
+def load_history():
+    conn = sqlite3.connect(DB)
+    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn, parse_dates=["upload_date"])
+    conn.close()
+    for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    return df
+
 # --- Fetch All Deals (for agent dashboards, live counts, etc)
 def fetch_all_today(limit=5000):
     """Fetch all deals for today using TQL query language."""
@@ -327,43 +361,90 @@ def fetch_deals_for_agent_date_range(username, start_date, end_date):
     
     return df
 
-        total_deals INTEGER,
-        agent_payout REAL,
-        owner_revenue REAL,
-        owner_profit REAL
-      )
-    """)
-    conn.commit()
-    conn.close()
+# --- PDF GENERATORS
+def generate_agent_pdf(df_agent, agent_name):
+    def fix(s):
+        return str(s).encode('latin1', errors='replace').decode('latin1')
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,10,fix("Health Connect Solutions"), ln=True, align="C")
+    pdf.ln(5)
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,10,fix(f"Commission Statement - {agent_name}"), ln=True)
+    pdf.ln(5)
+    total_deals = len(df_agent)
+    paid_count  = (df_agent["Paid Status"]=="Paid").sum()
+    unpaid_count= total_deals - paid_count
+    pct_paid = (paid_count / total_deals * 100) if total_deals else 0
+    if paid_count >= 200: rate = 25
+    elif paid_count >= 150: rate = 22.5
+    elif paid_count >= 120: rate = 17.5
+    else: rate = 15
+    bonus  = 1200 if paid_count >= 70 else 0
+    payout = paid_count * rate + bonus
+    pdf.set_font("Arial","",12)
+    pdf.cell(0,8,fix(f"Total Deals Submitted: {total_deals}"), ln=True)
+    pdf.cell(0,8,fix(f"Paid Deals: {paid_count}"), ln=True)
+    pdf.cell(0,8,fix(f"Unpaid Deals: {unpaid_count}"), ln=True)
+    pdf.cell(0,8,fix(f"Paid Percentage: {pct_paid:.1f}%"), ln=True)
+    pdf.cell(0,8,fix(f"Rate: ${rate:.2f}"), ln=True)
+    pdf.cell(0,8,fix(f"Bonus: ${bonus}"), ln=True)
+    pdf.set_text_color(0,150,0)
+    pdf.cell(0,10,fix(f"Payout: ${payout:,.2f}"), ln=True)
+    pdf.set_text_color(0,0,0)
+    pdf.ln(5)
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,8,fix("Paid Clients:"), ln=True)
+    pdf.set_font("Arial","",10)
+    for _, row in df_agent[df_agent["Paid Status"]=="Paid"].iterrows():
+        eff = row.get("Effective Date")
+        eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
+        pdf.multi_cell(0,6,fix(f"- {row['Client']} | Eff: {eff_str}"))
+    pdf.ln(3)
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,8,fix("Unpaid Clients & Reasons:"), ln=True)
+    pdf.set_font("Arial","",10)
+    for _, row in df_agent[df_agent["Paid Status"]!="Paid"].iterrows():
+        eff = row.get("Effective Date")
+        eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
+        reason  = row.get("Reason","")
+        pdf.multi_cell(0,6,fix(f"- {row['Client']} | Eff: {eff_str} | {reason}"))
+    return pdf.output(dest="S").encode("latin1")
 
-def insert_report(dt, totals):
-    conn = sqlite3.connect(DB)
-    conn.execute("""
-      INSERT OR REPLACE INTO reports
-      (upload_date, total_deals, agent_payout, owner_revenue, owner_profit)
-      VALUES (?, ?, ?, ?, ?)
-    """, (dt, totals["deals"], totals["agent"], totals["owner_rev"], totals["owner_prof"]))
-    conn.commit()
-    conn.close()
+def vendor_pdf(paid, unpaid, vendor, rate):
+    def fix(s):
+        return str(s).encode('latin1', errors='replace').decode('latin1')
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
+    pdf.set_font("Arial", "", 10)
+    for _, row in paid.iterrows():
+        pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
+    pdf.ln(3)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
+    pdf.set_font("Arial", "", 10)
+    for _, row in unpaid.iterrows():
+        reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
+        pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
+    return pdf.output(dest="S").encode("latin1")
 
-@st.cache_data
-def load_history():
-    conn = sqlite3.connect(DB)
-    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn, parse_dates=["upload_date"])
-    conn.close()
-    for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    return df
-
+# Initialize the database and load history
 init_db()
-history_df    = load_history()
-summary       = []
+history_df = load_history()
+summary = []
 uploaded_file = None
-threshold     = 10
+threshold = 10
 
 # --- ROLE-BASED DASHBOARD ---
-# ... (imports, login, fetch functions etc.)
-
 if st.session_state.user_role.lower() == "agent":
     st.markdown(
         f"""
@@ -521,9 +602,6 @@ if st.session_state.user_role.lower() == "agent":
 
     st.stop()
 
-
-
-
 elif st.session_state.user_role.lower() == "admin":
     st.markdown(
         """
@@ -535,8 +613,14 @@ elif st.session_state.user_role.lower() == "admin":
         """, unsafe_allow_html=True,
     )
 
+    # Create the tabs for the admin interface
+    tabs = st.tabs([
+        "🏆 Overview", "📋 Leaderboard", "📈 History",
+        "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay"
+    ])
+
     # --- Smartly determine totals (if just uploaded, else pull last) ---
-    if uploaded_file:
+    if uploaded_file is not None:
         _deals = int(totals["deals"])
         _agent_payout = totals["agent"]
         _owner_rev = totals["owner_rev"]
@@ -584,7 +668,6 @@ elif st.session_state.user_role.lower() == "admin":
         monthly_mask = df_api["date_sold"].dt.month == today.month
 
         lc1, lc2, lc3 = st.columns(3)
-        # Use real-time API data for all metrics
         lc1.metric("Today's Deals", len(df_api[daily_mask]))
         lc2.metric("This Week", len(df_api[weekly_mask]))
         lc3.metric("This Month", len(df_api[monthly_mask]))
@@ -613,142 +696,6 @@ elif st.session_state.user_role.lower() == "admin":
         )
     else:
         st.info("No payroll history yet.")
-
-# (The rest of your code — settings, leaderboards, history, live counts, vendor pay, etc. — stays as in your current app below this point!)
-
-
-
-
-# ... and the rest of your app logic continues as usual!
-
-
-# --- Fetch deals for AGENT dashboard
-
-
-# DATABASE HELPERS
-def init_db():
-    conn = sqlite3.connect(DB)
-    conn.execute("""
-      CREATE TABLE IF NOT EXISTS reports (
-        upload_date TEXT PRIMARY KEY,
-        total_deals INTEGER,
-        agent_payout REAL,
-        owner_revenue REAL,
-        owner_profit REAL
-      )
-    """)
-    conn.commit()
-    conn.close()
-
-def insert_report(dt, totals):
-    conn = sqlite3.connect(DB)
-    conn.execute("""
-      INSERT OR REPLACE INTO reports
-      (upload_date, total_deals, agent_payout, owner_revenue, owner_profit)
-      VALUES (?, ?, ?, ?, ?)
-    """, (dt, totals["deals"], totals["agent"], totals["owner_rev"], totals["owner_prof"]))
-    conn.commit()
-    conn.close()
-
-@st.cache_data
-def load_():
-    conn = sqlite3.connect(DB)
-    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn, parse_dates=["upload_date"])
-    conn.close()
-    for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    return df
-
-# PDF GENERATORS
-def generate_agent_pdf(df_agent, agent_name):
-    def fix(s):
-        return str(s).encode('latin1', errors='replace').decode('latin1')
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial","B",16)
-    pdf.cell(0,10,fix("Health Connect Solutions"), ln=True, align="C")
-    pdf.ln(5)
-    pdf.set_font("Arial","B",12)
-    pdf.cell(0,10,fix(f"Commission Statement - {agent_name}"), ln=True)
-    pdf.ln(5)
-    total_deals = len(df_agent)
-    paid_count  = (df_agent["Paid Status"]=="Paid").sum()
-    unpaid_count= total_deals - paid_count
-    pct_paid = (paid_count / total_deals * 100) if total_deals else 0
-    if paid_count >= 200: rate = 25
-    elif paid_count >= 150: rate = 22.5
-    elif paid_count >= 120: rate = 17.5
-    else: rate = 15
-    bonus  = 1200 if paid_count >= 70 else 0
-    payout = paid_count * rate + bonus
-    pdf.set_font("Arial","",12)
-    pdf.cell(0,8,fix(f"Total Deals Submitted: {total_deals}"), ln=True)
-    pdf.cell(0,8,fix(f"Paid Deals: {paid_count}"), ln=True)
-    pdf.cell(0,8,fix(f"Unpaid Deals: {unpaid_count}"), ln=True)
-    pdf.cell(0,8,fix(f"Paid Percentage: {pct_paid:.1f}%"), ln=True)
-    pdf.cell(0,8,fix(f"Rate: ${rate:.2f}"), ln=True)
-    pdf.cell(0,8,fix(f"Bonus: ${bonus}"), ln=True)
-    pdf.set_text_color(0,150,0)
-    pdf.cell(0,10,fix(f"Payout: ${payout:,.2f}"), ln=True)
-    pdf.set_text_color(0,0,0)
-    pdf.ln(5)
-    pdf.set_font("Arial","B",12)
-    pdf.cell(0,8,fix("Paid Clients:"), ln=True)
-    pdf.set_font("Arial","",10)
-    for _, row in df_agent[df_agent["Paid Status"]=="Paid"].iterrows():
-        eff = row.get("Effective Date")
-        eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
-        pdf.multi_cell(0,6,fix(f"- {row['Client']} | Eff: {eff_str}"))
-    pdf.ln(3)
-    pdf.set_font("Arial","B",12)
-    pdf.cell(0,8,fix("Unpaid Clients & Reasons:"), ln=True)
-    pdf.set_font("Arial","",10)
-    for _, row in df_agent[df_agent["Paid Status"]!="Paid"].iterrows():
-        eff = row.get("Effective Date")
-        eff_str = eff.strftime("%Y-%m-%d") if pd.notna(eff) else "N/A"
-        reason  = row.get("Reason","")
-        pdf.multi_cell(0,6,fix(f"- {row['Client']} | Eff: {eff_str} | {reason}"))
-    return pdf.output(dest="S").encode("latin1")
-
-def vendor_pdf(paid, unpaid, vendor, rate):
-    def fix(s):
-        return str(s).encode('latin1', errors='replace').decode('latin1')
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, fix(f"Vendor Pay Summary – {vendor}"), ln=True, align="C")
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
-    pdf.set_font("Arial", "", 10)
-    for _, row in paid.iterrows():
-        pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
-    pdf.ln(3)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
-    pdf.set_font("Arial", "", 10)
-    for _, row in unpaid.iterrows():
-        reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
-        pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
-    return pdf.output(dest="S").encode("latin1")
-
-# Use the updated fetch_all_today function from above
-
-# INITIALIZATION
-init_db()
-_df    = load_()
-summary       = []
-uploaded_file = None
-threshold     = 10
-
-tabs = st.tabs([
-    "🏆 Overview", "📋 Leaderboard", "📈 ",
-    "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay"
-])
-
 
 # SETTINGS TAB
 with tabs[4]:
@@ -815,10 +762,10 @@ with tabs[0]:
         c3.metric("Owner Revenue",   f"${totals['owner_rev']:,.2f}")
         c4.metric("Owner Profit",    f"${totals['owner_prof']:,.2f}")
     else:
-        if _df.empty:
+        if history_df.empty:
             st.info("Upload a statement to see metrics.")
         else:
-            latest = _df.iloc[-1]
+            latest = history_df.iloc[-1]
             deals = int(latest.total_deals)
             c1, c2, c3, c4 = st.columns(4, gap="large")
             c1.metric("Total Paid Deals", f"{deals:,}")
@@ -827,7 +774,7 @@ with tabs[0]:
             c4.metric("Owner Profit",    f"${latest.owner_profit:,.2f}")
     st.markdown("---")
     rev = (totals["owner_rev"] if uploaded_file else
-           (_df.iloc[-1].owner_revenue if not _df.empty else 0))
+           (latest.owner_revenue if not history_df.empty else 0))
     s1, s2, s3 = st.columns(3, gap="large")
     s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
     s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
@@ -850,21 +797,21 @@ with tabs[1]:
     else:
         st.info("No data—upload in Settings first.")
 
-#  TAB
+# HISTORY TAB
 with tabs[2]:
     st.header("Historical Reports")
-    if _df.empty:
-        st.info("No  yet.")
+    if history_df.empty:
+        st.info("No history data yet.")
     else:
-        dates = _df["upload_date"].dt.strftime("%Y-%m-%d").tolist()
+        dates = history_df["upload_date"].dt.strftime("%Y-%m-%d").tolist()
         sel   = st.selectbox("View report:", dates)
-        rec   = _df.loc[_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
+        rec   = history_df.loc[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Deals",        f"{int(rec.total_deals):,}")
         c2.metric("Agent Payout", f"${rec.agent_payout:,.2f}")
         c3.metric("Owner Revenue",f"${rec.owner_revenue:,.2f}")
         c4.metric("Owner Profit", f"${rec.owner_profit:,.2f}")
-        st.line_chart(_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
+        st.line_chart(history_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
 
 # LIVE COUNTS TAB
 with tabs[3]:
