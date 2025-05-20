@@ -243,30 +243,23 @@ if st.session_state.user_role.lower() == "agent":
         st.warning("No deals found for this agent.")
         st.stop()
 
-    # --- CYCLE COMMISSION LOGIC ---
     today = pd.Timestamp.now(tz='US/Eastern').date()
-    week_start = today - timedelta(days=today.weekday())
-    mtd = today.replace(day=1)
-    ytd = today.replace(month=1, day=1)
-
-    # Find the active commission cycle
-    cycle_df = commission_cycles[
-        (today >= commission_cycles['start']) & (today <= commission_cycles['end'])
+    # Find the current cycle
+    cycle_row = commission_cycles[
+        (today >= commission_cycles["start"]) & (today <= commission_cycles["end"])
     ]
-    if cycle_df.empty:
+    if not cycle_row.empty:
+        cycle_start = cycle_row["start"].iloc[0].date()
+        cycle_end = cycle_row["end"].iloc[0].date()
+        pay_date = cycle_row["pay"].iloc[0].date()
+        # Filter deals by cycle dates
+        in_cycle = (agent_deals["date_sold"].dt.date >= cycle_start) & (agent_deals["date_sold"].dt.date <= cycle_end)
+        cycle_deals = agent_deals[in_cycle].copy()
+    else:
         cycle_start = cycle_end = pay_date = None
         cycle_deals = agent_deals.iloc[0:0]
-    else:
-        cycle_start = cycle_df['start'].iloc[0]
-        cycle_end = cycle_df['end'].iloc[0]
-        pay_date = cycle_df['pay'].iloc[0]
-        cycle_mask = (
-            (agent_deals['date_sold'].dt.date >= cycle_start.date()) &
-            (agent_deals['date_sold'].dt.date <= cycle_end.date())
-        )
-        cycle_deals = agent_deals[cycle_mask]
 
-    # --- COMMISSION MATH FOR CYCLE ONLY ---
+    # --- COMMISSION LOGIC (cycle-based only)
     paid_count = len(cycle_deals)
     if paid_count >= 200:
         rate = 25
@@ -279,37 +272,30 @@ if st.session_state.user_role.lower() == "agent":
     bonus = 1200 if paid_count >= 70 else 0
     payout = paid_count * rate + bonus
 
-    # --- METRICS: Current cycle only ---
+    # --- Display
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Deals (Current Cycle)", paid_count)
+    c1.metric("Deals (Cycle)", paid_count)
     c2.metric("Cycle Payout", f"${payout:,.2f}")
     if cycle_start is not None:
-        c3.metric("Cycle", f"{cycle_start.strftime('%m/%d/%y')} - {cycle_end.strftime('%m/%d/%y')}")
-        c4.metric("Pay Date", pay_date.strftime("%m/%d/%y"))
+        c3.metric("Cycle", f"{cycle_start:%m/%d/%y} - {cycle_end:%m/%d/%y}")
+        c4.metric("Pay Date", f"{pay_date:%m/%d/%y}")
     else:
         c3.metric("Cycle", "-")
         c4.metric("Pay Date", "-")
 
     st.markdown("---")
-    st.markdown("#### 📆 Deals This Week / Month / Year (for reference only)")
-    st.write(
-        f"- **This Week:** {len(agent_deals[agent_deals['date_sold'].dt.date >= week_start])}  \n"
-        f"- **This Month:** {len(agent_deals[agent_deals['date_sold'].dt.date >= mtd])}  \n"
-        f"- **This Year:** {len(agent_deals[agent_deals['date_sold'].dt.date >= ytd])}"
-    )
-
-    st.markdown("----")
-    st.markdown("#### Deals in Current Cycle")
+    st.markdown("#### All Deals in This Cycle")
     if not cycle_deals.empty:
         st.dataframe(
             cycle_deals[['date_sold', 'carrier', 'product', 'policy_id']],
             use_container_width=True,
-            hide_index=True,
+            hide_index=True
         )
     else:
-        st.info("No deals in this cycle yet.")
+        st.info("No deals found in this commission cycle.")
 
     st.stop()
+
 
 
 elif st.session_state.user_role.lower() == "admin":
