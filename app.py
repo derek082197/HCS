@@ -162,33 +162,9 @@ def load_history():
 
 # --- Fetch All Deals (for agent dashboards, live counts, etc)
 def fetch_all_today(limit=5000):
-    """Fetch all deals for today using TQL query language."""
-    headers = {
-        "tld-api-id": CRM_API_ID, 
-        "tld-api-key": CRM_API_KEY,
-        "content-type": "application/json"
-    }
-    
-    # Use TQL query language for more efficient API calls
-    params = {
-        "date_sold": "Today",  # TQL relative date format
-        "limit": limit,
-        "columns": [
-            "policy_id", 
-            "lead_first_name", 
-            "lead_last_name", 
-            "lead_state",
-            "date_sold", 
-            "carrier", 
-            "product",
-            "premium",
-            "lead_vendor_name",
-            "lead_id"
-        ],
-        "order_by": "date_sold",
-        "sort": "DESC"
-    }
-    
+    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
+    today_str = date.today().strftime("%Y-%m-%d")
+    params = {"date_from": today_str, "limit": limit}
     all_results, url, seen = [], CRM_API_URL, set()
     
     while url and url not in seen:
@@ -198,24 +174,17 @@ def fetch_all_today(limit=5000):
             r.raise_for_status()
             js = r.json().get("response", {})
             chunk = js.get("results", [])
-            
             if not chunk:
                 break
-                
             all_results.extend(chunk)
-            
-            # Check for next page
             nxt = js.get("navigate", {}).get("next")
             if not nxt or nxt in seen:
                 break
-                
-            # For pagination, we don't need params on subsequent requests
             url = nxt
-            params = {}
-            
+            params = {}  # For pagination, we don't need params on subsequent requests
         except Exception as e:
             st.error(f"API Error: {str(e)}")
-            # Create mock data for demonstration with more comprehensive fields
+            # Create mock data for demonstration
             all_results = [{
                 'date_sold': pd.Timestamp.now(tz='US/Eastern').strftime('%Y-%m-%d %H:%M:%S'),
                 'lead_first_name': name,
@@ -237,48 +206,45 @@ def fetch_all_today(limit=5000):
     return pd.DataFrame(all_results)
 
 def fetch_deals_for_agent(username, day="Today"):
-    """Fetch deals for an agent for a specific day using TQL query language."""
     agent_row = df_agents[df_agents['username'] == username]
     if agent_row.empty or 'user_id' not in agent_row.columns:
         st.warning("No agent_id for this user in TLD API.")
         return pd.DataFrame()
     
     user_id = str(agent_row['user_id'].iloc[0]).strip()
-    url = CRM_API_URL
+    
+    # Convert relative day to specific date if needed
+    if day.lower() == "today":
+        date_param = date.today().strftime("%Y-%m-%d")
+    else:
+        date_param = day
+    
+    # Fetch deals for this agent on this date
     headers = {
         "tld-api-id": CRM_API_ID,
-        "tld-api-key": CRM_API_KEY,
-        "content-type": "application/json"
+        "tld-api-key": CRM_API_KEY
     }
     
-    # Use TQL query language for more efficient API calls
     params = {
-        "agent_id": user_id,
-        "date_sold": day,  # TQL relative date format
-        "limit": 1000,
-        "columns": [
-            "policy_id", 
-            "lead_first_name", 
-            "lead_last_name", 
-            "date_sold", 
-            "carrier", 
-            "product",
-            "premium"
-        ],
-        "order_by": "date_sold",
-        "sort": "DESC"
+        "agent_id": [user_id],
+        "date_from": date_param,
+        "date_to": date_param,
+        "limit": 1000
     }
     
     try:
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
+        resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
         resp.raise_for_status()
         js = resp.json().get("response", {})
         deals = js.get("results", [])
         
+        if not deals:
+            return pd.DataFrame()
+            
         df = pd.DataFrame(deals)
-        if "date_sold" in df.columns and not df.empty:
+        if "date_sold" in df.columns:
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
-        
+            
         return df
         
     except Exception as e:
@@ -286,19 +252,12 @@ def fetch_deals_for_agent(username, day="Today"):
         return pd.DataFrame()
 
 def fetch_deals_for_agent_date_range(username, start_date, end_date):
-    """Fetch all deals for an agent within a specific date range using TQL query language."""
     agent_row = df_agents[df_agents['username'] == username]
     if agent_row.empty or 'user_id' not in agent_row.columns:
         st.warning("No agent_id for this user in TLD API.")
         return pd.DataFrame()
     
     user_id = str(agent_row['user_id'].iloc[0]).strip()
-    url = CRM_API_URL
-    headers = {
-        "tld-api-id": CRM_API_ID,
-        "tld-api-key": CRM_API_KEY,
-        "content-type": "application/json"
-    }
     
     # Convert dates to strings if they're not already
     if isinstance(start_date, (datetime, date)):
@@ -306,29 +265,23 @@ def fetch_deals_for_agent_date_range(username, start_date, end_date):
     if isinstance(end_date, (datetime, date)):
         end_date = end_date.strftime("%Y-%m-%d")
     
-    # Use TQL query language for more efficient API calls
-    # We're using date_sold_between to get deals between start and end dates
+    # Fetch deals for this agent within date range
+    headers = {
+        "tld-api-id": CRM_API_ID,
+        "tld-api-key": CRM_API_KEY
+    }
+    
     params = {
-        "agent_id": user_id,
-        "date_sold_between": [start_date, end_date],
-        "limit": 1000,
-        "columns": [
-            "policy_id", 
-            "lead_first_name", 
-            "lead_last_name", 
-            "date_sold", 
-            "carrier", 
-            "product",
-            "premium"
-        ],
-        "order_by": "date_sold",
-        "sort": "DESC"
+        "agent_id": [user_id],
+        "date_from": start_date,
+        "date_to": end_date,
+        "limit": 1000
     }
     
     all_results = []
+    url = CRM_API_URL
     seen_urls = set()
     
-    # Initial request
     while url and url not in seen_urls:
         seen_urls.add(url)
         try:
@@ -446,30 +399,62 @@ threshold = 10
 
 # --- ROLE-BASED DASHBOARD ---
 if st.session_state.user_role.lower() == "agent":
-    agent_id = str(df_agents.loc[df_agents['username'] == st.session_state.user_email, 'user_id'].iloc[0])
-    tql_columns = [
-        "policy_id", "lead_first_name", "lead_last_name", "date_sold", "carrier", "product", "premium"
+    st.markdown(
+        f"""
+        <div style="padding:1.5em 1em 0.2em 1em; background: linear-gradient(90deg,#eef5ff,#f5fff0 80%); border-radius:16px;">
+            <h1 style='font-size:2.4em; margin-bottom:0; color:#223969;'>
+                👤 Agent Dashboard — <span style="color:#208b26;">{st.session_state.user_name}</span>
+            </h1>
+        </div>
+        """, unsafe_allow_html=True,
+    )
+    
+    agent = df_agents[df_agents['username'] == st.session_state.user_email]
+    if agent.empty:
+        st.error("Agent not found.")
+        st.stop()
+    user_id = str(agent['user_id'].iloc[0]).strip()
+
+    # --- Find current commission cycle for today
+    today = pd.Timestamp.now(tz='US/Eastern').date()
+    today_cycle = commission_cycles[
+        (today >= commission_cycles["start"].dt.date) & (today <= commission_cycles["end"].dt.date)
     ]
+    if today_cycle.empty:
+        st.error("No active commission cycle found for today.")
+        st.stop()
+    cycle_start = today_cycle["start"].iloc[0].date()
+    cycle_end = today_cycle["end"].iloc[0].date()
+    pay_date = today_cycle["pay"].iloc[0].date()
 
-    today = pd.Timestamp.now(tz="US/Eastern").date()
+    # Today's Deals
     today_str = today.strftime("%Y-%m-%d")
-    week_ago = (today - timedelta(days=6)).strftime("%Y-%m-%d")
-    month_start = today.replace(day=1).strftime("%Y-%m-%d")
+    deals_today = fetch_deals_for_agent(st.session_state.user_email, today_str)
+    daily_count = len(deals_today)
 
-    cycle_row = commission_cycles[(today >= commission_cycles["start"].dt.date) & (today <= commission_cycles["end"].dt.date)]
-    if not cycle_row.empty:
-        cycle_start = cycle_row["start"].iloc[0].strftime("%Y-%m-%d")
-        cycle_end = cycle_row["end"].iloc[0].strftime("%Y-%m-%d")
-        cycle_pay = cycle_row["pay"].iloc[0].strftime("%m/%d/%y")
-    else:
-        cycle_start = cycle_end = cycle_pay = today_str
+    # Last 7 days
+    week_start = today - timedelta(days=6)
+    deals_7d = fetch_deals_for_agent_date_range(st.session_state.user_email, week_start, today)
+    weekly_count = len(deals_7d)
 
-    df_today = fetch_deals_tql(agent_id=agent_id, date_from=today_str, date_to=today_str, columns=tql_columns)
-    df_week = fetch_deals_tql(agent_id=agent_id, date_from=week_ago, date_to=today_str, columns=tql_columns)
-    df_month = fetch_deals_tql(agent_id=agent_id, date_from=month_start, date_to=today_str, columns=tql_columns)
-    df_cycle = fetch_deals_tql(agent_id=agent_id, date_from=cycle_start, date_to=cycle_end, columns=tql_columns)
+    # This month
+    month_start = today.replace(day=1)
+    deals_month = fetch_deals_for_agent_date_range(st.session_state.user_email, month_start, today)
+    monthly_count = len(deals_month)
 
-    paid_count = len(df_cycle)
+    # This year
+    year_start = today.replace(month=1, day=1)
+    deals_year = fetch_deals_for_agent_date_range(st.session_state.user_email, year_start, today)
+    yearly_count = len(deals_year)
+
+    # Current Cycle
+    deals_cycle = fetch_deals_for_agent_date_range(
+        st.session_state.user_email, 
+        cycle_start, 
+        cycle_end
+    )
+    paid_count = len(deals_cycle)
+    # Commission logic for cycle only
     if paid_count >= 200:
         rate = 25
     elif paid_count >= 150:
@@ -481,40 +466,66 @@ if st.session_state.user_role.lower() == "agent":
     bonus = 1200 if paid_count >= 70 else 0
     payout = paid_count * rate + bonus
 
-    st.markdown(
-        f"""
-        <div style="padding:1.5em 1em 0.2em 1em; background: linear-gradient(90deg,#eef5ff,#f5fff0 80%); border-radius:16px;">
-            <h1 style='font-size:2.4em; margin-bottom:0; color:#223969;'>
-                👤 Agent Dashboard — <span style="color:#208b26;">{st.session_state.user_name}</span>
-            </h1>
-        </div>
-        """, unsafe_allow_html=True,
-    )
+    # --- Previous completed cycle
+    prev_cycle = commission_cycles[commission_cycles["end"] < today_cycle["start"].iloc[0]].tail(1)
+    if not prev_cycle.empty:
+        prev_start = prev_cycle["start"].iloc[0].date()
+        prev_end = prev_cycle["end"].iloc[0].date()
+        prev_pay = prev_cycle["pay"].iloc[0].date()
+        deals_prev_cycle = fetch_deals_for_agent_date_range(
+            st.session_state.user_email,
+            prev_start,
+            prev_end
+        )
+        prev_count = len(deals_prev_cycle)
+        if prev_count >= 200:
+            prev_rate = 25
+        elif prev_count >= 150:
+            prev_rate = 22.5
+        elif prev_count >= 120:
+            prev_rate = 17.5
+        else:
+            prev_rate = 15
+        prev_bonus = 1200 if prev_count >= 70 else 0
+        prev_payout = prev_count * prev_rate + prev_bonus
+    else:
+        prev_count = prev_payout = prev_start = prev_end = prev_pay = None
+
+    # --- Display
+    st.subheader("Current Commission Cycle")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Deals (Cycle)", paid_count)
     c2.metric("Projected Payout", f"${payout:,.2f}")
-    c3.metric("Cycle", f"{cycle_start} — {cycle_end}")
-    c4.metric("Pay Date", cycle_pay)
-    st.markdown("---")
-
-    t1, t2, t3 = st.columns(3)
-    t1.metric("Today's Deals", len(df_today))
-    t2.metric("Last 7 Days", len(df_week))
-    t3.metric("This Month", len(df_month))
+    c3.metric("Cycle", f"{cycle_start:%m/%d/%y} - {cycle_end:%m/%d/%y}")
+    c4.metric("Pay Date", f"{pay_date:%m/%d/%y}")
 
     st.markdown("---")
-    st.subheader("Deals in Current Cycle")
-    if not df_cycle.empty:
-        st.dataframe(df_cycle, use_container_width=True)
+    st.subheader("Recent Performance")
+    t1, t2, t3, t4 = st.columns(4)
+    t1.metric("Today's Deals", daily_count)
+    t2.metric("Last 7 Days", weekly_count)
+    t3.metric("This Month", monthly_count)
+    t4.metric("This Year", yearly_count)
+
+    if prev_count is not None:
+        st.markdown("---")
+        st.subheader("Previous Completed Cycle")
+        p1, p2, p3, p4 = st.columns(4)
+        p1.metric("Deals", prev_count)
+        p2.metric("Final Payout", f"${prev_payout:,.2f}")
+        p3.metric("Cycle", f"{prev_start:%m/%d/%y} - {prev_end:%m/%d/%y}")
+        p4.metric("Pay Date", f"{prev_pay:%m/%d/%y}")
+
+    st.markdown("---")
+    st.markdown("#### All Deals in Current Cycle")
+    if not deals_cycle.empty:
+        st.dataframe(
+            deals_cycle[['date_sold', 'carrier', 'product', 'policy_id']],
+            use_container_width=True,
+            hide_index=True
+        )
     else:
-        st.info("No deals found in this cycle.")
-
-    st.markdown("---")
-    st.subheader("Today's Deals Table")
-    if not df_today.empty:
-        st.dataframe(df_today, use_container_width=True)
-    else:
-        st.info("No deals today yet!")
+        st.info("No deals found in this commission cycle.")
 
     st.stop()
 
@@ -1010,6 +1021,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
