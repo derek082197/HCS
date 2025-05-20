@@ -387,7 +387,7 @@ if st.session_state.user_role.lower() == "agent":
     today_ts = pd.Timestamp(today)
     # Convert today to datetime for proper comparison
     cycle_row = commission_cycles[
-        (commission_cycles["start"].dt.date <= today) & (commission_cycles["end"].dt.date >= today)
+        (today >= commission_cycles["start"].dt.date) & (today <= commission_cycles["end"].dt.date)
     ]
     
     if not cycle_row.empty:
@@ -420,7 +420,7 @@ if st.session_state.user_role.lower() == "agent":
     with debug_expander:
         st.write("Fetching all deals for agent...")
     
-    # Use our mock data function to get the correct counts
+    # Get date ranges for API queries
     today_str = today.strftime("%Y-%m-%d")
     week_start = today - timedelta(days=7)
     week_start_str = week_start.strftime("%Y-%m-%d")
@@ -498,9 +498,11 @@ if st.session_state.user_role.lower() == "agent":
     t3.metric("This Month", monthly_count)
     
     # --- Find Previous Completed Cycle (04/19/25-05/02/25)
+    prev_start_date = pd.Timestamp("2025-04-19").date()
+    prev_end_date = pd.Timestamp("2025-05-02").date()
     previous_cycle = commission_cycles[
-        (commission_cycles["start"] <= pd.Timestamp("2025-05-02")) & 
-        (commission_cycles["end"] >= pd.Timestamp("2025-04-19"))
+        (prev_start_date >= commission_cycles["start"].dt.date) & 
+        (prev_end_date <= commission_cycles["end"].dt.date)
     ]
     
     if not previous_cycle.empty:
@@ -764,28 +766,7 @@ def vendor_pdf(paid, unpaid, vendor, rate):
     pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
     return pdf.output(dest="S").encode("latin1")
 
-def fetch_all_today(limit=5000):
-    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
-    params = {
-        "date_from": date.today().strftime("%Y-%m-%d"),
-        "limit": limit
-    }
-    all_results, url, seen = [], CRM_API_URL, set()
-    while url and url not in seen:
-        seen.add(url)
-        r = requests.get(url, headers=headers, params=params, timeout=10)
-        r.raise_for_status()
-        js = r.json().get("response", {})
-        chunk = js.get("results", [])
-        if not chunk:
-            break
-        all_results.extend(chunk)
-        nxt = js.get("navigate", {}).get("next")
-        if not nxt or nxt in seen:
-            break
-        url = nxt
-        params = {}
-    return pd.DataFrame(all_results)
+# Use the updated fetch_all_today function from above
 
 # INITIALIZATION
 init_db()
@@ -1197,6 +1178,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
