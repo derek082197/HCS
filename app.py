@@ -172,6 +172,8 @@ uploaded_file = None
 threshold     = 10
 
 # --- ROLE-BASED DASHBOARD ---
+# ... (imports, login, fetch functions etc.)
+
 if st.session_state.user_role.lower() == "agent":
     st.markdown(
         f"""
@@ -184,53 +186,61 @@ if st.session_state.user_role.lower() == "agent":
     )
 
     agent_deals = fetch_deals_for_agent(st.session_state.user_email)
-    if not agent_deals.empty and 'date_sold' in agent_deals.columns:
-        agent_deals['date_sold'] = pd.to_datetime(agent_deals['date_sold'], errors='coerce')
-    else:
-        agent_deals['date_sold'] = pd.NaT
 
-    today = pd.Timestamp.now(tz='US/Eastern').date()
-    mtd = today.replace(day=1)
-    ytd = today.replace(month=1, day=1)
-
-    today_mask = agent_deals['date_sold'].dt.date == today
-    mtd_mask = agent_deals['date_sold'].dt.date >= mtd
-    ytd_mask = agent_deals['date_sold'].dt.date >= ytd
-
-    # --- COMMISSION LOGIC ---
-    month_deals = agent_deals[mtd_mask]
-    paid_count = len(month_deals)
-    if paid_count >= 200:
-        rate = 25
-    elif paid_count >= 150:
-        rate = 22.5
-    elif paid_count >= 120:
-        rate = 17.5
-    else:
+    # Defensive: If empty, set all to 0
+    if agent_deals.empty or 'date_sold' not in agent_deals.columns:
+        today_deals = 0
+        mtd_deals = 0
+        ytd_deals = 0
         rate = 15
-    bonus = 1200 if paid_count >= 70 else 0
-    payout = paid_count * rate + bonus
+        bonus = 0
+        payout = 0
+        deals_today_df = pd.DataFrame()
+    else:
+        agent_deals['date_sold'] = pd.to_datetime(agent_deals['date_sold'], errors='coerce')
+        today = pd.Timestamp.now(tz='US/Eastern').date()
+        mtd = today.replace(day=1)
+        ytd = today.replace(month=1, day=1)
+        today_mask = agent_deals['date_sold'].dt.date == today
+        mtd_mask = agent_deals['date_sold'].dt.date >= mtd
+        ytd_mask = agent_deals['date_sold'].dt.date >= ytd
+
+        today_deals = agent_deals[today_mask].shape[0]
+        mtd_deals = agent_deals[mtd_mask].shape[0]
+        ytd_deals = agent_deals[ytd_mask].shape[0]
+
+        paid_count = mtd_deals  # or however you define paid
+        if paid_count >= 200:
+            rate = 25
+        elif paid_count >= 150:
+            rate = 22.5
+        elif paid_count >= 120:
+            rate = 17.5
+        else:
+            rate = 15
+        bonus = 1200 if paid_count >= 70 else 0
+        payout = paid_count * rate + bonus
+        deals_today_df = agent_deals[today_mask]
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.metric("🔄 Today's Deals", len(agent_deals[today_mask]))
-        st.metric("📅 Month-to-Date", len(agent_deals[mtd_mask]))
+        st.metric("🔄 Today's Deals", today_deals)
+        st.metric("📅 Month-to-Date", mtd_deals)
     with c2:
-        st.metric("📆 Year-to-Date", len(agent_deals[ytd_mask]))
+        st.metric("📆 Year-to-Date", ytd_deals)
         st.metric("💵 Commission Rate", f"${rate:,.2f} per deal")
     with c3:
         st.metric("🎁 Bonus", f"${bonus:,.2f}")
         st.metric("🏆 Total MTD Payout", f"${payout:,.2f}")
 
-    if paid_count >= 120:
+    if mtd_deals >= 120:
         st.success("🔥 **You're on a commission tier! Keep it up for even higher bonuses!**")
 
     st.markdown("---")
     st.markdown("<h3 style='margin-bottom:0.3em;'>📊 Today's Deals Table</h3>", unsafe_allow_html=True)
-    deals_today = agent_deals[today_mask]
-    if not deals_today.empty:
+    if not deals_today_df.empty:
         st.dataframe(
-            deals_today[['date_sold', 'carrier', 'product', 'policy_id']],
+            deals_today_df[['date_sold', 'carrier', 'product', 'policy_id']],
             use_container_width=True,
             hide_index=True
         )
@@ -244,6 +254,7 @@ if st.session_state.user_role.lower() == "agent":
             """, unsafe_allow_html=True
         )
     st.stop()
+
 
 elif st.session_state.user_role.lower() == "admin":
     st.markdown(
