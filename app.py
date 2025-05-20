@@ -323,6 +323,32 @@ if st.session_state.user_role.lower() == "agent":
         cycle_start = cycle_end = pay_date = None
         cycle_deals = pd.DataFrame()  # Empty DataFrame if no cycle found
 
+    # --- Get daily, weekly, and monthly counts
+    today = pd.Timestamp.now(tz='US/Eastern').date()
+    
+    # Get all deals for this agent (for time-based metrics)
+    all_agent_deals = fetch_deals_for_agent(st.session_state.user_email, "All")
+    
+    if not all_agent_deals.empty and "date_sold" in all_agent_deals.columns:
+        all_agent_deals["date_sold"] = pd.to_datetime(all_agent_deals["date_sold"], errors="coerce")
+        
+        # Calculate time-based metrics
+        daily_deals = all_agent_deals[all_agent_deals["date_sold"].dt.date == today]
+        
+        # Weekly (last 7 days)
+        week_start = today - timedelta(days=7)
+        weekly_deals = all_agent_deals[all_agent_deals["date_sold"].dt.date >= week_start]
+        
+        # Monthly (current month)
+        month_start = today.replace(day=1)
+        monthly_deals = all_agent_deals[all_agent_deals["date_sold"].dt.date >= month_start]
+        
+        daily_count = len(daily_deals)
+        weekly_count = len(weekly_deals)
+        monthly_count = len(monthly_deals)
+    else:
+        daily_count = weekly_count = monthly_count = 0
+    
     # --- COMMISSION LOGIC (cycle-based only)
     paid_count = len(cycle_deals)
     if paid_count >= 200:
@@ -336,19 +362,68 @@ if st.session_state.user_role.lower() == "agent":
     bonus = 1200 if paid_count >= 70 else 0
     payout = paid_count * rate + bonus
 
-    # --- Display
+    # --- Display Current Cycle
+    st.subheader("Current Commission Cycle")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Deals (Cycle)", paid_count)
-    c2.metric("Cycle Payout", f"${payout:,.2f}")
+    c2.metric("Projected Payout", f"${payout:,.2f}")
     if cycle_start is not None:
         c3.metric("Cycle", f"{cycle_start:%m/%d/%y} - {cycle_end:%m/%d/%y}")
         c4.metric("Pay Date", f"{pay_date:%m/%d/%y}")
     else:
         c3.metric("Cycle", "-")
         c4.metric("Pay Date", "-")
-
+    
+    # --- Display Time-Based Metrics
     st.markdown("---")
-    st.markdown("#### All Deals in This Cycle")
+    st.subheader("Recent Performance")
+    t1, t2, t3 = st.columns(3)
+    t1.metric("Today's Deals", daily_count)
+    t2.metric("Last 7 Days", weekly_count)
+    t3.metric("This Month", monthly_count)
+    
+    # --- Find Previous Completed Cycle (04/19/25-05/02/25)
+    previous_cycle = commission_cycles[
+        (commission_cycles["start"] <= pd.Timestamp("2025-05-02")) & 
+        (commission_cycles["end"] >= pd.Timestamp("2025-04-19"))
+    ]
+    
+    if not previous_cycle.empty:
+        prev_start = previous_cycle["start"].iloc[0].date()
+        prev_end = previous_cycle["end"].iloc[0].date()
+        prev_pay = previous_cycle["pay"].iloc[0].date()
+        
+        # Fetch deals for previous cycle
+        prev_cycle_deals = fetch_deals_for_agent_date_range(
+            st.session_state.user_email,
+            prev_start,
+            prev_end
+        )
+        
+        prev_count = len(prev_cycle_deals)
+        if prev_count >= 200:
+            prev_rate = 25
+        elif prev_count >= 150:
+            prev_rate = 22.5
+        elif prev_count >= 120:
+            prev_rate = 17.5
+        else:
+            prev_rate = 15
+        prev_bonus = 1200 if prev_count >= 70 else 0
+        prev_payout = prev_count * prev_rate + prev_bonus
+        
+        # Display Previous Cycle
+        st.markdown("---")
+        st.subheader("Previous Completed Cycle")
+        p1, p2, p3, p4 = st.columns(4)
+        p1.metric("Deals", prev_count)
+        p2.metric("Final Payout", f"${prev_payout:,.2f}")
+        p3.metric("Cycle", f"{prev_start:%m/%d/%y} - {prev_end:%m/%d/%y}")
+        p4.metric("Pay Date", f"{prev_pay:%m/%d/%y}")
+    
+    # --- Display All Deals in Current Cycle
+    st.markdown("---")
+    st.markdown("#### All Deals in Current Cycle")
     if not cycle_deals.empty:
         st.dataframe(
             cycle_deals[['date_sold', 'carrier', 'product', 'policy_id']],
@@ -1004,6 +1079,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
