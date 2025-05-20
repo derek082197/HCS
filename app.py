@@ -164,7 +164,21 @@ def load_history():
 def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
     today_str = date.today().strftime("%Y-%m-%d")
-    params = {"date_from": today_str, "limit": limit}
+    
+    # Explicitly list all columns we need based on owner's feedback
+    columns = [
+        'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
+        'carrier', 'product', 'duration', 'premium', 'policy_number',
+        'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
+        'agent_id', 'agent_name'
+    ]
+    
+    params = {
+        "date_from": today_str, 
+        "limit": limit,
+        "columns": ",".join(columns)
+    }
+    
     all_results, url, seen = [], CRM_API_URL, set()
     
     while url and url not in seen:
@@ -219,6 +233,14 @@ def fetch_deals_for_agent(username, day="Today"):
     else:
         date_param = day
     
+    # Explicitly list all columns we need based on owner's feedback
+    columns = [
+        'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
+        'carrier', 'product', 'duration', 'premium', 'policy_number',
+        'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
+        'agent_id', 'agent_name'
+    ]
+    
     # Fetch deals for this agent on this date
     headers = {
         "tld-api-id": CRM_API_ID,
@@ -226,10 +248,11 @@ def fetch_deals_for_agent(username, day="Today"):
     }
     
     params = {
-        "agent_id": [user_id],
+        "agent_id": user_id,  # Don't wrap in list, just send as string
         "date_from": date_param,
         "date_to": date_param,
-        "limit": 1000
+        "limit": 1000,
+        "columns": ",".join(columns)
     }
     
     try:
@@ -265,6 +288,14 @@ def fetch_deals_for_agent_date_range(username, start_date, end_date):
     if isinstance(end_date, (datetime, date)):
         end_date = end_date.strftime("%Y-%m-%d")
     
+    # Explicitly list all columns we need based on owner's feedback
+    columns = [
+        'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
+        'carrier', 'product', 'duration', 'premium', 'policy_number',
+        'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
+        'agent_id', 'agent_name'
+    ]
+    
     # Fetch deals for this agent within date range
     headers = {
         "tld-api-id": CRM_API_ID,
@@ -272,10 +303,11 @@ def fetch_deals_for_agent_date_range(username, start_date, end_date):
     }
     
     params = {
-        "agent_id": [user_id],
+        "agent_id": user_id,  # Don't wrap in list, just send as string
         "date_from": start_date,
         "date_to": end_date,
-        "limit": 1000
+        "limit": 1000,
+        "columns": ",".join(columns)
     }
     
     all_results = []
@@ -1021,6 +1053,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
