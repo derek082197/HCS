@@ -176,6 +176,62 @@ def fetch_deals_for_agent(username, day="Today"):
         df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
     return df
 
+def fetch_deals_for_agent_date_range(username, start_date, end_date):
+    """Fetch all deals for an agent within a specific date range by making multiple API calls."""
+    agent_row = df_agents[df_agents['username'] == username]
+    if agent_row.empty or 'user_id' not in agent_row.columns:
+        st.warning("No agent_id for this user in TLD API.")
+        return pd.DataFrame()
+    
+    user_id = str(agent_row['user_id'].iloc[0]).strip()
+    url = CRM_API_URL
+    headers = {
+        "tld-api-id": CRM_API_ID,
+        "tld-api-key": CRM_API_KEY,
+        "content-type": "application/json"
+    }
+    
+    # Convert dates to strings if they're not already
+    if isinstance(start_date, (datetime, date)):
+        start_date = start_date.strftime("%Y-%m-%d")
+    if isinstance(end_date, (datetime, date)):
+        end_date = end_date.strftime("%Y-%m-%d")
+    
+    # We'll collect all deals by making a separate API call for each day in the range
+    all_deals = []
+    current_date = pd.to_datetime(start_date)
+    end = pd.to_datetime(end_date)
+    
+    with st.spinner(f"Fetching deals from {start_date} to {end_date}..."):
+        while current_date <= end:
+            day_str = current_date.strftime("%Y-%m-%d")
+            params = {
+                "agent_id": [user_id],
+                "date_sold": day_str,
+                "limit": 1000
+            }
+            
+            try:
+                resp = requests.get(url, headers=headers, params=params, timeout=10)
+                js = resp.json().get("response", {})
+                deals = js.get("results", [])
+                if deals:
+                    all_deals.extend(deals)
+            except Exception as e:
+                st.error(f"Error fetching deals for {day_str}: {str(e)}")
+            
+            # Move to next day
+            current_date += pd.Timedelta(days=1)
+    
+    if not all_deals:
+        return pd.DataFrame()
+    
+    df = pd.DataFrame(all_deals)
+    if "date_sold" in df.columns:
+        df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+    
+    return df
+
 
 
 
@@ -256,43 +312,13 @@ if st.session_state.user_role.lower() == "agent":
         cycle_end = cycle_row["end"].iloc[0].date()
         pay_date = cycle_row["pay"].iloc[0].date()
         
-        # Now fetch ALL deals for the entire cycle date range
-        # We need to use a custom date range instead of "Today"
-        cycle_start_str = cycle_start.strftime("%Y-%m-%d")
-        cycle_end_str = cycle_end.strftime("%Y-%m-%d")
-        
-        # Use a custom date range parameter
-        agent_row = df_agents[df_agents['username'] == st.session_state.user_email]
-        if not agent_row.empty and 'user_id' in agent_row.columns:
-            user_id = str(agent_row['user_id'].iloc[0]).strip()
-            
-            # Custom API call to get all deals in the cycle date range
-            params = {
-                "agent_id": [user_id],
-                "date_from": cycle_start_str,
-                "date_to": cycle_end_str,
-                "limit": 1000
-            }
-            url = CRM_API_URL
-            headers = {
-                "tld-api-id": CRM_API_ID,
-                "tld-api-key": CRM_API_KEY,
-                "content-type": "application/json"
-            }
-            
-            with st.spinner(f"Loading all deals from {cycle_start_str} to {cycle_end_str}..."):
-                resp = requests.get(url, headers=headers, params=params, timeout=10)
-                js = resp.json().get("response", {})
-                cycle_deals_data = js.get("results", [])
-                
-                if cycle_deals_data:
-                    cycle_deals = pd.DataFrame(cycle_deals_data)
-                    if "date_sold" in cycle_deals.columns:
-                        cycle_deals["date_sold"] = pd.to_datetime(cycle_deals["date_sold"], errors="coerce")
-                else:
-                    cycle_deals = pd.DataFrame()  # Empty DataFrame if no deals found
-        else:
-            cycle_deals = pd.DataFrame()  # Empty DataFrame if agent not found
+        # Now fetch ALL deals for the entire cycle date range using our day-by-day function
+        # This is more reliable than trying to use date_from/date_to parameters
+        cycle_deals = fetch_deals_for_agent_date_range(
+            st.session_state.user_email, 
+            cycle_start, 
+            cycle_end
+        )
     else:
         cycle_start = cycle_end = pay_date = None
         cycle_deals = pd.DataFrame()  # Empty DataFrame if no cycle found
@@ -978,6 +1004,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
