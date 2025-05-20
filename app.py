@@ -22,11 +22,13 @@ CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
 DB              = "crm_history.db"
 
-# --- USERS CSV (Admins)
+# --- Load Admins (users.csv)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
 USERS = dict(zip(df_users.username.str.strip(), df_users.password))
+ADMIN_NAMES = dict(zip(df_users.username, [f"{r['first_name']} {r['last_name']}" for _, r in df_users.iterrows()]))
+ADMIN_ROLES = dict(zip(df_users.username, df_users.role))
 
-# --- AGENTS FROM API
+# --- Load Agents from TLD API
 @st.cache_data(ttl=600)
 def fetch_agents():
     url = "https://hcs.tldcrm.com/api/egress/users"
@@ -41,42 +43,45 @@ def fetch_agents():
         all_users.extend(js['results'])
         url = js.get('navigate', {}).get('next')
     return pd.DataFrame(all_users)
+
 df_agents = fetch_agents()
 AGENT_USERNAMES = df_agents['username'].tolist()
-AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
+AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}  # Use API user, password="password"
 AGENT_NAMES = dict(zip(df_agents['username'], [f"{row['first_name']} {row['last_name']}" for _, row in df_agents.iterrows()]))
 AGENT_ROLES = dict(zip(df_agents['username'], df_agents['role_descriptions']))
 
-# --- LOGIN LOGIC
+# --- SESSION STATE SETUP ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-    st.session_state.user_role = "Admin"
+    st.session_state.user_role = ""
     st.session_state.user_email = ""
     st.session_state.user_name = ""
 
 def do_login():
     u = st.session_state.user.strip()
     p = st.session_state.pwd
-    # AGENT login via API (default password = 'password')
+    # AGENT (API user)
     if u in AGENT_CREDENTIALS and p == AGENT_CREDENTIALS[u]:
         st.session_state.logged_in = True
         st.session_state.user_email = u
         st.session_state.user_name = AGENT_NAMES[u]
-        st.session_state.user_role = AGENT_ROLES[u]
+        st.session_state.user_role = AGENT_ROLES[u] if AGENT_ROLES.get(u) else "Agent"
         st.success(f"✅ Welcome, {AGENT_NAMES[u]}!")
-    # ADMIN login via users.csv
+    # ADMIN (users.csv)
     elif u in USERS and p == USERS[u]:
         st.session_state.logged_in = True
         st.session_state.user_email = u
-        st.session_state.user_name = u
-        st.session_state.user_role = "Admin"
-        st.success(f"✅ Welcome, {u}! (Admin)")
+        st.session_state.user_name = ADMIN_NAMES.get(u, u)
+        st.session_state.user_role = ADMIN_ROLES.get(u, "Admin")
+        st.success(f"✅ Welcome, {st.session_state.user_name}! (Admin)")
     else:
         st.error("❌ Incorrect credentials")
 
 def do_logout():
     st.session_state.logged_in = False
     st.session_state.user_role = ""
+    st.session_state.user_email = ""
+    st.session_state.user_name = ""
     st.experimental_rerun()
 
 if not st.session_state.logged_in:
@@ -86,18 +91,28 @@ if not st.session_state.logged_in:
     st.sidebar.button("Log in", on_click=do_login)
     st.stop()
 st.sidebar.button("Log out", on_click=do_logout)
+
+# --- FETCH DEALS FOR AGENT ---
+def fetch_deals_for_agent(username):
+    df_deals = fetch_all_today(limit=5000)
+    if "lead_vendor_name" in df_deals.columns:
+        mask = df_deals['lead_vendor_name'].astype(str).str.lower() == username.lower()
+        return df_deals[mask].copy()
+    return df_deals.iloc[0:0]  # Empty
+
 # --- ROLE-BASED DASHBOARD ---
 if st.session_state.user_role.lower() == "agent":
     st.header(f"Agent Dashboard – {st.session_state.user_name}")
     agent_deals = fetch_deals_for_agent(st.session_state.user_email)
     today = pd.Timestamp.now(tz='US/Eastern').date()
     agent_deals['date_sold'] = pd.to_datetime(agent_deals['date_sold'], errors='coerce')
-    today_deals = agent_deals[agent_deals['date_sold'].dt.date == today]
-    st.metric("Today's Deals", len(today_deals))
-    st.metric("Month-to-Date Deals", len(agent_deals[
-        agent_deals['date_sold'].dt.month == today.month]))
-    st.dataframe(today_deals, use_container_width=True)
-    st.stop()  # Only show agent dashboard
+    # Metrics: Today/MTD/YTD
+    st.metric("Today's Deals", len(agent_deals[agent_deals['date_sold'].dt.date == today]))
+    st.metric("Month-to-Date Deals", len(agent_deals[agent_deals['date_sold'].dt.month == today.month]))
+    st.metric("Year-to-Date Deals", len(agent_deals[agent_deals['date_sold'].dt.year == today.year]))
+    st.markdown("#### Today's Deals")
+    st.dataframe(agent_deals[agent_deals['date_sold'].dt.date == today], use_container_width=True)
+    st.stop()
 
 elif st.session_state.user_role.lower() == "admin":
     st.header("Admin Dashboard")
