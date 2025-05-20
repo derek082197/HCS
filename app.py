@@ -94,12 +94,34 @@ if not st.session_state.logged_in:
 st.sidebar.button("Log out", on_click=do_logout)
 
 # --- FETCH DEALS FOR AGENT ---
+# --- Fetch All Deals (define this first!) ---
+def fetch_all_today(limit=5000):
+    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
+    params = {"date_from": date.today().strftime("%Y-%m-%d"), "limit": limit}
+    all_results, url, seen = [], CRM_API_URL, set()
+    while url and url not in seen:
+        seen.add(url)
+        r = requests.get(url, headers=headers, params=params, timeout=10)
+        r.raise_for_status()
+        js = r.json().get("response", {})
+        chunk = js.get("results", [])
+        if not chunk:
+            break
+        all_results.extend(chunk)
+        nxt = js.get("navigate", {}).get("next")
+        if not nxt or nxt in seen:
+            break
+        url = nxt
+        params = {}
+    return pd.DataFrame(all_results)
+
+# --- Fetch Deals for Agent (define this right after fetch_all_today) ---
 def fetch_deals_for_agent(username):
     df_deals = fetch_all_today(limit=5000)
     if "lead_vendor_name" in df_deals.columns:
         mask = df_deals['lead_vendor_name'].astype(str).str.lower() == username.lower()
         return df_deals[mask].copy()
-    return df_deals.iloc[0:0]  # Empty
+    return df_deals.iloc[0:0]
 
 # --- ROLE-BASED DASHBOARD ---
 if st.session_state.user_role.lower() == "agent":
@@ -156,12 +178,7 @@ elif st.session_state.user_role.lower() == "admin":
 
 
 # --- Fetch deals for AGENT dashboard
-def fetch_deals_for_agent(username):
-    df_deals = fetch_all_today(limit=5000)
-    # Assuming TLD lead_vendor_name is username for agents
-    if "lead_vendor_name" in df_deals.columns:
-        df_deals = df_deals[df_deals['lead_vendor_name'].str.lower() == username.lower()]
-    return df_deals
+
 
 # DATABASE HELPERS
 def init_db():
