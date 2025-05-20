@@ -16,6 +16,43 @@ except ImportError:
     def st_autorefresh(*args, **kwargs): pass
 
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
+import pandas as pd
+
+# --- COMMISSION CYCLE SCHEDULE (copy/paste your full schedule here) ---
+commission_cycles = pd.DataFrame([
+    {"start": "12/14/24", "end": "12/27/24", "pay": "1/3/25"},
+    {"start": "12/28/24", "end": "1/10/25", "pay": "1/17/25"},
+    {"start": "1/11/25", "end": "1/24/25", "pay": "1/31/25"},
+    {"start": "1/25/25", "end": "2/7/25", "pay": "2/14/25"},
+    {"start": "2/8/25", "end": "2/21/25", "pay": "2/28/25"},
+    {"start": "2/22/25", "end": "3/7/25", "pay": "3/14/25"},
+    {"start": "3/8/25", "end": "3/21/25", "pay": "3/28/25"},
+    {"start": "3/22/25", "end": "4/4/25", "pay": "4/11/25"},
+    {"start": "4/5/25", "end": "4/18/25", "pay": "4/25/25"},
+    {"start": "4/19/25", "end": "5/2/25", "pay": "5/9/25"},
+    {"start": "5/3/25", "end": "5/16/25", "pay": "5/23/25"},
+    {"start": "5/17/25", "end": "5/30/25", "pay": "6/6/25"},
+    {"start": "5/31/25", "end": "6/13/25", "pay": "6/20/25"},
+    {"start": "6/14/25", "end": "6/27/25", "pay": "7/4/25"},
+    {"start": "6/28/25", "end": "7/11/25", "pay": "7/18/25"},
+    {"start": "7/12/25", "end": "7/25/25", "pay": "8/1/25"},
+    {"start": "7/26/25", "end": "8/8/25", "pay": "8/15/25"},
+    {"start": "8/9/25", "end": "8/22/25", "pay": "8/29/25"},
+    {"start": "8/23/25", "end": "9/5/25", "pay": "9/12/25"},
+    {"start": "9/6/25", "end": "9/19/25", "pay": "9/26/25"},
+    {"start": "9/20/25", "end": "10/3/25", "pay": "10/10/25"},
+    {"start": "10/4/25", "end": "10/17/25", "pay": "10/24/25"},
+    {"start": "10/18/25", "end": "10/31/25", "pay": "11/7/25"},
+    {"start": "11/1/25", "end": "11/14/25", "pay": "11/21/25"},
+    {"start": "11/15/25", "end": "11/28/25", "pay": "12/5/25"},
+    {"start": "11/29/25", "end": "12/12/25", "pay": "12/19/25"},
+    {"start": "12/13/25", "end": "12/26/25", "pay": "1/2/26"},
+    {"start": "12/27/25", "end": "1/9/26", "pay": "1/16/26"},
+])
+commission_cycles['start'] = pd.to_datetime(commission_cycles['start'])
+commission_cycles['end'] = pd.to_datetime(commission_cycles['end'])
+commission_cycles['pay'] = pd.to_datetime(commission_cycles['pay'])
+
 
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
@@ -206,17 +243,31 @@ if st.session_state.user_role.lower() == "agent":
         st.warning("No deals found for this agent.")
         st.stop()
 
+    # --- CYCLE COMMISSION LOGIC ---
     today = pd.Timestamp.now(tz='US/Eastern').date()
+    week_start = today - timedelta(days=today.weekday())
     mtd = today.replace(day=1)
     ytd = today.replace(month=1, day=1)
 
-    today_mask = agent_deals['date_sold'].dt.date == today
-    mtd_mask = agent_deals['date_sold'].dt.date >= mtd
-    ytd_mask = agent_deals['date_sold'].dt.date >= ytd
+    # Find the active commission cycle
+    cycle_df = commission_cycles[
+        (today >= commission_cycles['start']) & (today <= commission_cycles['end'])
+    ]
+    if cycle_df.empty:
+        cycle_start = cycle_end = pay_date = None
+        cycle_deals = agent_deals.iloc[0:0]
+    else:
+        cycle_start = cycle_df['start'].iloc[0]
+        cycle_end = cycle_df['end'].iloc[0]
+        pay_date = cycle_df['pay'].iloc[0]
+        cycle_mask = (
+            (agent_deals['date_sold'].dt.date >= cycle_start.date()) &
+            (agent_deals['date_sold'].dt.date <= cycle_end.date())
+        )
+        cycle_deals = agent_deals[cycle_mask]
 
-    # --- COMMISSION LOGIC (by Month-to-Date count)
-    month_deals = agent_deals[mtd_mask]
-    paid_count = len(month_deals)
+    # --- COMMISSION MATH FOR CYCLE ONLY ---
+    paid_count = len(cycle_deals)
     if paid_count >= 200:
         rate = 25
     elif paid_count >= 150:
@@ -228,38 +279,36 @@ if st.session_state.user_role.lower() == "agent":
     bonus = 1200 if paid_count >= 70 else 0
     payout = paid_count * rate + bonus
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("🔄 Today's Deals", len(agent_deals[today_mask]))
-        st.metric("📅 Month-to-Date", len(agent_deals[mtd_mask]))
-    with c2:
-        st.metric("📆 Year-to-Date", len(agent_deals[ytd_mask]))
-        st.metric("💵 Commission Rate", f"${rate:,.2f} per deal")
-    with c3:
-        st.metric("🎁 Bonus", f"${bonus:,.2f}")
-        st.metric("🏆 Total MTD Payout", f"${payout:,.2f}")
-
-    if paid_count >= 120:
-        st.success("🔥 **You're on a commission tier! Keep it up for even higher bonuses!**")
+    # --- METRICS: Current cycle only ---
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Deals (Current Cycle)", paid_count)
+    c2.metric("Cycle Payout", f"${payout:,.2f}")
+    if cycle_start is not None:
+        c3.metric("Cycle", f"{cycle_start.strftime('%m/%d/%y')} - {cycle_end.strftime('%m/%d/%y')}")
+        c4.metric("Pay Date", pay_date.strftime("%m/%d/%y"))
+    else:
+        c3.metric("Cycle", "-")
+        c4.metric("Pay Date", "-")
 
     st.markdown("---")
-    st.markdown("<h3 style='margin-bottom:0.3em;'>📊 Today's Deals Table</h3>", unsafe_allow_html=True)
-    deals_today = agent_deals[today_mask]
-    if not deals_today.empty:
+    st.markdown("#### 📆 Deals This Week / Month / Year (for reference only)")
+    st.write(
+        f"- **This Week:** {len(agent_deals[agent_deals['date_sold'].dt.date >= week_start])}  \n"
+        f"- **This Month:** {len(agent_deals[agent_deals['date_sold'].dt.date >= mtd])}  \n"
+        f"- **This Year:** {len(agent_deals[agent_deals['date_sold'].dt.date >= ytd])}"
+    )
+
+    st.markdown("----")
+    st.markdown("#### Deals in Current Cycle")
+    if not cycle_deals.empty:
         st.dataframe(
-            deals_today[['date_sold', 'carrier', 'product', 'policy_id']],
+            cycle_deals[['date_sold', 'carrier', 'product', 'policy_id']],
             use_container_width=True,
-            hide_index=True
+            hide_index=True,
         )
     else:
-        st.markdown(
-            """
-            <div style="padding:2em 0; text-align:center; color:#888; background:#f6fafd;border-radius:12px;">
-            <span style="font-size:2em;">🦉</span><br>
-            <span style="font-size:1.2em;">No deals submitted yet today.<br>Let's make it happen! 💪</span>
-            </div>
-            """, unsafe_allow_html=True
-        )
+        st.info("No deals in this cycle yet.")
+
     st.stop()
 
 
