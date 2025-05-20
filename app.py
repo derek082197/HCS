@@ -104,15 +104,47 @@ def fetch_deals_for_agent(username):
 if st.session_state.user_role.lower() == "agent":
     st.header(f"Agent Dashboard – {st.session_state.user_name}")
     agent_deals = fetch_deals_for_agent(st.session_state.user_email)
-    today = pd.Timestamp.now(tz='US/Eastern').date()
     agent_deals['date_sold'] = pd.to_datetime(agent_deals['date_sold'], errors='coerce')
-    # Metrics: Today/MTD/YTD
-    st.metric("Today's Deals", len(agent_deals[agent_deals['date_sold'].dt.date == today]))
-    st.metric("Month-to-Date Deals", len(agent_deals[agent_deals['date_sold'].dt.month == today.month]))
-    st.metric("Year-to-Date Deals", len(agent_deals[agent_deals['date_sold'].dt.year == today.year]))
-    st.markdown("#### Today's Deals")
-    st.dataframe(agent_deals[agent_deals['date_sold'].dt.date == today], use_container_width=True)
-    st.stop()
+
+    today = pd.Timestamp.now(tz='US/Eastern').date()
+    mtd = today.replace(day=1)
+    ytd = today.replace(month=1, day=1)
+
+    today_mask = agent_deals['date_sold'].dt.date == today
+    mtd_mask = agent_deals['date_sold'].dt.date >= mtd
+    ytd_mask = agent_deals['date_sold'].dt.date >= ytd
+
+    # --- COMMISSION LOGIC
+    # Use all deals this month for paid status calculation
+    month_deals = agent_deals[mtd_mask]
+    paid_count = len(month_deals)  # You can adjust to just "paid" if you have that column
+    # Tier logic (customize as needed)
+    if paid_count >= 200:
+        rate = 25
+    elif paid_count >= 150:
+        rate = 22.5
+    elif paid_count >= 120:
+        rate = 17.5
+    else:
+        rate = 15
+    bonus = 1200 if paid_count >= 70 else 0
+    payout = paid_count * rate + bonus
+
+    # --- METRICS
+    st.metric("Today's Deals", len(agent_deals[today_mask]))
+    st.metric("Month-to-Date Deals", len(agent_deals[mtd_mask]))
+    st.metric("Year-to-Date Deals", len(agent_deals[ytd_mask]))
+    st.metric("Commission Rate", f"${rate:.2f} per deal")
+    st.metric("Bonus", f"${bonus:,.2f}")
+    st.metric("Total Estimated Payout (MTD)", f"${payout:,.2f}")
+
+    st.markdown("#### Today's Deals Table")
+    if not agent_deals[today_mask].empty:
+        st.dataframe(agent_deals[today_mask], use_container_width=True)
+    else:
+        st.info("No deals today yet!")
+
+    st.stop() 
 
 elif st.session_state.user_role.lower() == "admin":
     st.header("Admin Dashboard")
