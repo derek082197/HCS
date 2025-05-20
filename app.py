@@ -109,17 +109,39 @@ def fetch_all_today(limit=5000):
     return pd.DataFrame(all_results)
 
 def fetch_deals_for_agent(username):
-    # Find agent row
+    # --- Build agent lmb_name ("Last, First")
     agent = df_agents[df_agents['username'] == username]
     if agent.empty:
         return pd.DataFrame()
-    agent_lmb = agent['lmb_name'].iloc[0].lower().strip()
+    # If lmb_name is missing, build it on-the-fly for agent df
+    if "lmb_name" not in agent.columns:
+        agent_lmb = agent['last_name'].str.strip() + ", " + agent['first_name'].str.strip()
+    else:
+        agent_lmb = agent['lmb_name']
+    agent_lmb = agent_lmb.iloc[0].strip().lower()
+
+    # --- Load today's deals
     df_deals = fetch_all_today(limit=5000)
-    # You may need to create "lmb_name" column in deals too, if not already present
-    if "lmb_name" in df_deals.columns:
-        mask = df_deals['lmb_name'].astype(str).str.strip().str.lower() == agent_lmb
-        return df_deals[mask].copy()
-    return df_deals.iloc[0:0]
+    # If "lmb_name" not in deals df, build it from Last Name, First Name
+    if "lmb_name" not in df_deals.columns:
+        if "Last Name" in df_deals.columns and "First Name" in df_deals.columns:
+            df_deals['lmb_name'] = (
+                df_deals['Last Name'].astype(str).str.strip() + ", " +
+                df_deals['First Name'].astype(str).str.strip()
+            )
+        elif "last_name" in df_deals.columns and "first_name" in df_deals.columns:
+            df_deals['lmb_name'] = (
+                df_deals['last_name'].astype(str).str.strip() + ", " +
+                df_deals['first_name'].astype(str).str.strip()
+            )
+        else:
+            # Fallback: Can't match, return empty
+            return pd.DataFrame()
+
+    # --- Standardize case/space for matching
+    mask = df_deals['lmb_name'].astype(str).str.strip().str.lower() == agent_lmb
+    return df_deals[mask].copy()
+
 
 
 # ...rest of your Streamlit app
