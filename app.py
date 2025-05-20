@@ -177,7 +177,6 @@ if st.session_state.user_role.lower() == "agent":
         st.success("🔥 **You're on a commission tier! Keep it up for even higher bonuses!**")
 
     st.markdown("---")
-
     st.markdown(
         f"<h3 style='margin-bottom:0.3em;'>📊 Today's Deals Table</h3>", unsafe_allow_html=True
     )
@@ -200,6 +199,7 @@ if st.session_state.user_role.lower() == "agent":
             """, unsafe_allow_html=True
         )
     st.stop()
+
 
 
 elif st.session_state.user_role.lower() == "admin":
