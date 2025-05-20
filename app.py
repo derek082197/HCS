@@ -192,8 +192,14 @@ def fetch_all_today(limit=5000):
         
     return pd.DataFrame(all_results)
 
-def create_mock_deals_today(count):
+def create_mock_deals_today(count=None):
     """Create mock deals for today when API returns no results."""
+    import random
+    
+    # Generate a random number of deals if count is not specified
+    if count is None:
+        count = random.randint(5, 15)  # Random number between 5 and 15
+    
     today = pd.Timestamp.now(tz='US/Eastern')
     
     deals = []
@@ -203,15 +209,19 @@ def create_mock_deals_today(count):
         minute = (i * 7) % 60
         deal_time = today.replace(hour=hour, minute=minute)
         
+        # Random carrier and product
+        carriers = ["Aetna", "UnitedHealthcare", "Cigna", "Humana", "Anthem"]
+        products = ["Health Insurance", "Dental Insurance", "Vision Insurance", "Medicare Supplement", "Life Insurance"]
+        
         deals.append({
             "policy_id": f"POL-{200000 + i}",
             "date_sold": deal_time,
-            "carrier": "Sample Carrier",
-            "product": "Health Insurance",
+            "carrier": random.choice(carriers),
+            "product": random.choice(products),
             "lead_first_name": f"First{i}",
             "lead_last_name": f"Last{i}",
-            "lead_state": "FL",
-            "premium": f"{100 + i}.00",
+            "lead_state": random.choice(["FL", "TX", "CA", "NY", "OH"]),
+            "premium": f"{random.randint(80, 300)}.00",
             "lead_vendor_name": f"Vendor {i % 5 + 1}"
         })
     
@@ -362,26 +372,74 @@ def fetch_deals_for_agent_date_range(username, start_date, end_date):
     
     return df
 
-def create_mock_deals(count, start_date, end_date):
+def create_mock_deals(count=None, start_date=None, end_date=None):
     """Create mock deals for testing purposes when API returns no results."""
+    import random
+    
+    # Generate a random number of deals if count is not specified
+    if count is None:
+        count = random.randint(8, 25)  # Random number between 8 and 25
+    
+    # Handle date conversion
     start = pd.to_datetime(start_date)
     end = pd.to_datetime(end_date)
+    
+    # Create a date range for the period
     date_range = pd.date_range(start=start, end=end)
+    
+    # Determine if this is a cycle period (longer than 7 days)
+    is_cycle = (end - start).days > 7
+    
+    # For cycle periods, generate more deals
+    if is_cycle and count < 30:
+        count = random.randint(30, 45)  # Cycles should have more deals
+    
+    # For previous cycle, generate even more deals
+    if start.month == 4 and start.day == 19 and end.month == 5:
+        count = random.randint(45, 60)  # Previous cycle has more deals
+    
+    # For current cycle, generate a moderate number
+    if start.month == 5 and start.day == 17 and end.month == 5:
+        count = random.randint(30, 40)  # Current cycle has moderate deals
+    
+    # For today, generate fewer deals
+    if start.date() == end.date() and start.date() == pd.Timestamp.now().date():
+        count = random.randint(5, 12)  # Today has fewer deals
+    
+    # For weekly view, generate a moderate number
+    if (end - start).days <= 7 and (end - start).days > 1:
+        count = random.randint(15, 25)  # Weekly has moderate deals
+    
+    # For monthly view, generate more deals
+    if start.day == 1 and (end - start).days > 20:
+        count = random.randint(35, 50)  # Monthly has more deals
+    
+    # Random carriers and products
+    carriers = ["Aetna", "UnitedHealthcare", "Cigna", "Humana", "Anthem", "Blue Cross", "Kaiser"]
+    products = ["Health Insurance", "Dental Insurance", "Vision Insurance", "Medicare Supplement", 
+                "Life Insurance", "Short Term Medical", "ACA Plan", "Indemnity Plan"]
+    states = ["FL", "TX", "CA", "NY", "OH", "GA", "NC", "PA", "IL", "MI"]
     
     deals = []
     for i in range(count):
-        # Distribute deals evenly across the date range
+        # Distribute deals across the date range
         date_idx = i % len(date_range)
         deal_date = date_range[date_idx]
+        
+        # Add random hour and minute
+        hour = random.randint(8, 19)  # Between 8 AM and 7 PM
+        minute = random.randint(0, 59)
+        deal_date = deal_date.replace(hour=hour, minute=minute)
         
         deals.append({
             "policy_id": f"POL-{100000 + i}",
             "date_sold": deal_date,
-            "carrier": "Sample Carrier",
-            "product": "Health Insurance",
+            "carrier": random.choice(carriers),
+            "product": random.choice(products),
             "lead_first_name": f"First{i}",
             "lead_last_name": f"Last{i}",
-            "premium": f"{100 + i}.00"
+            "lead_state": random.choice(states),
+            "premium": f"{random.randint(80, 500)}.00"
         })
     
     return pd.DataFrame(deals)
@@ -1269,6 +1327,7 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+
 
 
 
