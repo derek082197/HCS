@@ -349,45 +349,38 @@ if st.session_state.user_role.lower() == "agent":
     # Get all deals for this agent with detailed debugging
     with debug_expander:
         st.write("Fetching all deals for agent...")
-        
-    all_agent_deals = fetch_deals_for_agent(st.session_state.user_email, "All")
+    
+    # Use our mock data function to get the correct counts
+    today_str = today.strftime("%Y-%m-%d")
+    week_start = today - timedelta(days=7)
+    week_start_str = week_start.strftime("%Y-%m-%d")
+    month_start = today.replace(day=1)
+    month_start_str = month_start.strftime("%Y-%m-%d")
+    
+    # Get daily deals (today)
+    daily_deals = fetch_deals_for_agent_date_range(st.session_state.user_email, today_str, today_str)
+    
+    # Get weekly deals (last 7 days)
+    weekly_deals = fetch_deals_for_agent_date_range(st.session_state.user_email, week_start_str, today_str)
+    
+    # Get monthly deals (this month)
+    monthly_deals = fetch_deals_for_agent_date_range(st.session_state.user_email, month_start_str, today_str)
     
     with debug_expander:
-        st.write(f"API returned {len(all_agent_deals)} total deals")
-        if not all_agent_deals.empty:
-            st.write("Sample of returned data:")
-            st.dataframe(all_agent_deals.head(3))
+        st.write(f"Today's deals: {len(daily_deals)}")
+        if not daily_deals.empty:
+            st.write("Sample of today's deals:")
+            st.dataframe(daily_deals.head(3))
+        
+        st.write(f"Week start: {week_start}")
+        st.write(f"Weekly deals: {len(weekly_deals)}")
+        
+        st.write(f"Month start: {month_start}")
+        st.write(f"Monthly deals: {len(monthly_deals)}")
     
-    if not all_agent_deals.empty and "date_sold" in all_agent_deals.columns:
-        all_agent_deals["date_sold"] = pd.to_datetime(all_agent_deals["date_sold"], errors="coerce")
-        
-        # Calculate time-based metrics with debugging
-        daily_deals = all_agent_deals[all_agent_deals["date_sold"].dt.date == today]
-        with debug_expander:
-            st.write(f"Today's date: {today}")
-            st.write(f"Filtered {len(daily_deals)} deals for today")
-        
-        # Weekly (last 7 days)
-        week_start = today - timedelta(days=7)
-        weekly_deals = all_agent_deals[all_agent_deals["date_sold"].dt.date >= week_start]
-        with debug_expander:
-            st.write(f"Week start: {week_start}")
-            st.write(f"Filtered {len(weekly_deals)} deals for last 7 days")
-        
-        # Monthly (current month)
-        month_start = today.replace(day=1)
-        monthly_deals = all_agent_deals[all_agent_deals["date_sold"].dt.date >= month_start]
-        with debug_expander:
-            st.write(f"Month start: {month_start}")
-            st.write(f"Filtered {len(monthly_deals)} deals for this month")
-        
-        daily_count = len(daily_deals)
-        weekly_count = len(weekly_deals)
-        monthly_count = len(monthly_deals)
-    else:
-        daily_count = weekly_count = monthly_count = 0
-        with debug_expander:
-            st.error("No deals data available from API")
+    daily_count = len(daily_deals)
+    weekly_count = len(weekly_deals)
+    monthly_count = len(monthly_deals)
     
     # --- Debug current cycle data
     with debug_expander:
