@@ -203,8 +203,95 @@ if st.session_state.user_role.lower() == "agent":
 
 
 elif st.session_state.user_role.lower() == "admin":
-    st.header("Admin Dashboard")
-    # ... (rest of your admin tabs as normal)
+    st.markdown(
+        """
+        <div style="padding:1.5em 1em 0.2em 1em; background: linear-gradient(90deg,#f5fff0,#eef5ff 80%); border-radius:16px;">
+            <h1 style='font-size:2.3em; margin-bottom:0; color:#223969;'>
+                🏆 HCS Commission <span style="color:#208b26;">Admin Dashboard</span>
+            </h1>
+        </div>
+        """, unsafe_allow_html=True,
+    )
+
+    # --- Upload summary for today or pull last from history ---
+    if 'uploaded_file' in locals() and uploaded_file:
+        deals = int(totals["deals"])
+        agent_payout = totals["agent"]
+        owner_rev = totals["owner_rev"]
+        owner_profit = totals["owner_prof"]
+    elif not history_df.empty:
+        latest = history_df.iloc[-1]
+        deals = int(latest.total_deals)
+        agent_payout = latest.agent_payout
+        owner_rev = latest.owner_revenue
+        owner_profit = latest.owner_profit
+    else:
+        deals = agent_payout = owner_rev = owner_profit = 0
+
+    # --- Overview Cards ---
+    st.markdown("<div style='margin-top:1.5em;'></div>", unsafe_allow_html=True)
+    o1, o2, o3, o4 = st.columns(4)
+    o1.metric("Total Paid Deals", f"{deals:,}")
+    o2.metric("Agent Payout", f"${agent_payout:,.2f}")
+    o3.metric("Owner Revenue", f"${owner_rev:,.2f}")
+    o4.metric("Owner Profit", f"${owner_profit:,.2f}")
+
+    st.markdown("---")
+
+    # --- Top Agents Leaderboard ---
+    st.markdown("#### 🥇 Top Agents This Month")
+    if summary:
+        df_led = pd.DataFrame(summary).sort_values("Paid Deals", ascending=False).head(6)
+        st.dataframe(df_led.style.format({
+            "Agent Payout": "${:,.2f}",
+            "Owner Profit": "${:,.2f}"
+        }), hide_index=True, use_container_width=True)
+    else:
+        st.info("Upload a statement to see leaderboard.")
+
+    st.markdown("---")
+
+    # --- Live Counts (Cards) ---
+    st.markdown(
+        "<h4 style='margin-bottom:0.3em;'>📈 Live Deal Counts</h4>", unsafe_allow_html=True
+    )
+    try:
+        df_api = fetch_all_today(limit=5000)
+        df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
+        today = pd.Timestamp.now(tz='US/Eastern').date()
+        daily_mask = df_api["date_sold"].dt.date == today
+        weekly_mask = df_api["date_sold"].dt.isocalendar().week == pd.Timestamp.now(tz='US/Eastern').isocalendar().week
+        monthly_mask = df_api["date_sold"].dt.month == today.month
+
+        lc1, lc2, lc3 = st.columns(3)
+        lc1.metric("Today's Deals", len(df_api[daily_mask]))
+        lc2.metric("This Week", len(df_api[weekly_mask]))
+        lc3.metric("This Month", len(df_api[monthly_mask]))
+    except Exception as e:
+        st.warning("Live count data not available.")
+
+    st.markdown("---")
+
+    # --- History quickview (last 6 periods) ---
+    st.markdown("#### 📅 Recent History")
+    if not history_df.empty:
+        st.dataframe(
+            history_df.tail(6)[
+                ["upload_date", "total_deals", "agent_payout", "owner_revenue", "owner_profit"]
+            ].rename(columns={
+                "upload_date": "Date",
+                "total_deals": "Deals",
+                "agent_payout": "Agent Pay",
+                "owner_revenue": "Owner Rev",
+                "owner_profit": "Owner Profit"
+            }).style.format({
+                "Agent Pay": "${:,.2f}",
+                "Owner Rev": "${:,.2f}",
+                "Owner Profit": "${:,.2f}",
+            }), use_container_width=True, hide_index=True
+        )
+    else:
+        st.info("No history yet.")
 
 
 # ... and the rest of your app logic continues as usual!
