@@ -112,19 +112,21 @@ def fetch_all_today(limit=5000):
     return pd.DataFrame(all_results)
 
 def fetch_deals_for_agent(username):
-    # Find user_id for this username from agents table
-    user_row = df_agents[df_agents['username'] == username]
-    if user_row.empty:
-        return pd.DataFrame()  # no user found
-    agent_id = str(user_row['user_id'].iloc[0]).strip()
-    # Load all deals, filter for this agent's agent_id (not LMB)
-    df_deals = fetch_all_today(limit=5000)
-    # Defensive: check agent_id exists
-    if "agent_id" not in df_deals.columns:
-        st.warning("No agent_id column in deals export.")
+    # Get the agent's user_id from TLD agent list
+    agent = df_agents[df_agents['username'] == username]
+    if agent.empty or 'user_id' not in agent.columns:
         return pd.DataFrame()
-    mask = df_deals['agent_id'].astype(str).str.strip() == agent_id
-    return df_deals[mask].copy()
+    user_id = str(agent['user_id'].iloc[0]).strip()
+    # Load today's deals (policies) from API
+    df_deals = fetch_all_today(limit=5000)
+    # Defensive: Ensure 'agent_id' column exists
+    if 'agent_id' not in df_deals.columns:
+        st.warning("No agent_id column in deals export/API.")
+        return pd.DataFrame()
+    # Only show deals where agent_id matches user_id
+    deals = df_deals[df_deals['agent_id'].astype(str) == user_id]
+    return deals
+
 
 
 
