@@ -40,7 +40,6 @@ def fetch_agents():
     r = requests.get(url, headers=headers, params=params, timeout=10)
     js = r.json().get('response', {})
     users = js.get('results', [])
-    # No need for a loop since all results are returned at once.
     return pd.DataFrame(users)
 
 
