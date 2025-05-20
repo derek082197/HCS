@@ -500,10 +500,24 @@ if st.session_state.user_role.lower() == "agent":
     # --- Find Previous Completed Cycle (04/19/25-05/02/25)
     prev_start_date = pd.Timestamp("2025-04-19").date()
     prev_end_date = pd.Timestamp("2025-05-02").date()
+    
+    # Find the previous cycle in the commission_cycles DataFrame
     previous_cycle = commission_cycles[
-        (prev_start_date >= commission_cycles["start"].dt.date) & 
-        (prev_end_date <= commission_cycles["end"].dt.date)
+        (commission_cycles["start"].dt.date <= prev_start_date) & 
+        (commission_cycles["end"].dt.date >= prev_end_date)
     ]
+    
+    # Set previous cycle values
+    prev_start = prev_start_date
+    prev_end = prev_end_date
+    prev_pay = pd.Timestamp("2025-05-09").date()
+    
+    # Fetch deals for previous cycle
+    prev_cycle_deals = fetch_deals_for_agent_date_range(
+        st.session_state.user_email,
+        prev_start,
+        prev_end
+    )
     
     if not previous_cycle.empty:
         prev_start = previous_cycle["start"].iloc[0].date()
