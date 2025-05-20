@@ -573,7 +573,7 @@ elif st.session_state.user_role.lower() == "admin":
     ])
 
     # --- Smartly determine totals (if just uploaded, else pull last) ---
-    if uploaded_file is not None:
+    if uploaded_file is not None and 'totals' in locals():
         _deals = int(totals["deals"])
         _agent_payout = totals["agent"]
         _owner_rev = totals["owner_rev"]
@@ -649,6 +649,7 @@ elif st.session_state.user_role.lower() == "admin":
         )
     else:
         st.info("No payroll history yet.")
+
 
 # SETTINGS TAB
 with tabs[4]:
