@@ -1,3 +1,5 @@
+# --- (PASTE AUTOMATION BLOCK HERE!) ---
+
 import streamlit as st
 import pandas as pd
 import sqlite3
@@ -112,6 +114,9 @@ def fetch_deals_for_agent(username):
         mask = df_deals['lead_vendor_name'].astype(str).str.lower() == username.lower()
         return df_deals[mask].copy()
     return df_deals.iloc[0:0]
+
+# ...rest of your Streamlit app
+
 
 # --- DATABASE HELPERS
 def init_db():
