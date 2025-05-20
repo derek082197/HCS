@@ -309,6 +309,7 @@ tabs = st.tabs([
     "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay"
 ])
 
+
 # SETTINGS TAB
 with tabs[4]:
     st.header("⚙️ Settings & Upload")
