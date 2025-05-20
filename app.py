@@ -151,23 +151,18 @@ threshold = 10
 def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
     today_str = date.today().strftime("%Y-%m-%d")
-    
-    # Explicitly list all columns we need based on owner's feedback
     columns = [
         'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
         'carrier', 'product', 'duration', 'premium', 'policy_number',
         'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
         'agent_id', 'agent_name'
     ]
-    
     params = {
         "date_from": today_str, 
         "limit": limit,
         "columns": ",".join(columns)
     }
-    
     all_results, url, seen = [], CRM_API_URL, set()
-    
     while url and url not in seen:
         seen.add(url)
         try:
@@ -182,75 +177,42 @@ def fetch_all_today(limit=5000):
             if not nxt or nxt in seen:
                 break
             url = nxt
-            params = {}  # For pagination, we don't need params on subsequent requests
+            params = {}
         except Exception as e:
             st.error(f"API Error: {str(e)}")
-            # Create mock data for demonstration
-            all_results = [{
-                'date_sold': pd.Timestamp.now(tz='US/Eastern').strftime('%Y-%m-%d %H:%M:%S'),
-                'lead_first_name': name,
-                'lead_last_name': surname,
-                'lead_state': state,
-                'carrier': carrier,
-                'product': product,
-                'policy_id': f'1502{i:04d}',
-                'lead_vendor_name': vendor
-            } for i, (name, surname, state, carrier, product, vendor) in enumerate([
-                ('John', 'Smith', 'FL', 'ANTHEM', 'SIL', 'francalls'),
-                ('Jane', 'Doe', 'TX', 'UHC', 'ACA', 'hcsmedia'),
-                ('Robert', 'Johnson', 'CA', 'MOLINA', 'ACA', 'buffercall'),
-                ('Emily', 'Williams', 'GA', 'AMBETTER', 'SIL', 'acaking'),
-                ('Michael', 'Brown', 'NY', 'ANTHEM', 'ACA', 'raycalls')
-            ], 1)]
             break
-    
     return pd.DataFrame(all_results)
-
-        
-    except Exception as e:
-        st.error(f"API Error: {str(e)}")
-        return pd.DataFrame()
 
 def fetch_deals_for_agent_date_range(username, start_date, end_date):
     agent_row = df_agents[df_agents['username'] == username]
     if agent_row.empty or 'user_id' not in agent_row.columns:
         st.warning("No agent_id for this user in TLD API.")
         return pd.DataFrame()
-    
     user_id = str(agent_row['user_id'].iloc[0]).strip()
-    
-    # Convert dates to strings if they're not already
     if isinstance(start_date, (datetime, date)):
         start_date = start_date.strftime("%Y-%m-%d")
     if isinstance(end_date, (datetime, date)):
         end_date = end_date.strftime("%Y-%m-%d")
-    
-    # Explicitly list all columns we need based on owner's feedback
     columns = [
         'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
         'carrier', 'product', 'duration', 'premium', 'policy_number',
         'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
         'agent_id', 'agent_name'
     ]
-    
-    # Fetch deals for this agent within date range
     headers = {
         "tld-api-id": CRM_API_ID,
         "tld-api-key": CRM_API_KEY
     }
-    
     params = {
-        "agent_id": user_id,  # Don't wrap in list, just send as string
+        "agent_id": user_id,
         "date_from": start_date,
         "date_to": end_date,
         "limit": 1000,
         "columns": ",".join(columns)
     }
-    
     all_results = []
     url = CRM_API_URL
     seen_urls = set()
-    
     while url and url not in seen_urls:
         seen_urls.add(url)
         try:
@@ -258,30 +220,20 @@ def fetch_deals_for_agent_date_range(username, start_date, end_date):
             resp.raise_for_status()
             js = resp.json().get("response", {})
             chunk = js.get("results", [])
-            
-            if not chunk:
-                break
-                
+            if not chunk: break
             all_results.extend(chunk)
-            
-            # Check for next page
             next_url = js.get("navigate", {}).get("next")
-            if not next_url or next_url in seen_urls:
-                break
-                
-            # For pagination, we don't need params on subsequent requests
+            if not next_url or next_url in seen_urls: break
             url = next_url
             params = {}
-            
         except Exception as e:
             st.error(f"API Error: {str(e)}")
             break
-    
     df = pd.DataFrame(all_results)
     if "date_sold" in df.columns and not df.empty:
         df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
-    
     return df
+
 
 # --- PDF GENERATORS
 def generate_agent_pdf(df_agent, agent_name):
