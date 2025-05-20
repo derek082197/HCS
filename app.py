@@ -4,7 +4,6 @@ import sqlite3
 import io
 import zipfile
 import csv
-import json
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
@@ -15,39 +14,23 @@ except ImportError:
 
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# --- Hardcode commission cycle schedule
 commission_cycles = pd.DataFrame([
     # ("Cycle Start", "Cycle End", "Pay Date")
-    ("12/14/24", "12/27/24", "1/3/25"),
-    ("12/28/24", "1/10/25", "1/17/25"),
-    ("1/11/25", "1/24/25", "1/31/25"),
-    ("1/25/25", "2/7/25", "2/14/25"),
-    ("2/8/25", "2/21/25", "2/28/25"),
-    ("2/22/25", "3/7/25", "3/14/25"),
-    ("3/8/25", "3/21/25", "3/28/25"),
-    ("3/22/25", "4/4/25", "4/11/25"),
-    ("4/5/25", "4/18/25", "4/25/25"),
-    ("4/19/25", "5/2/25", "5/9/25"),
-    ("5/3/25", "5/16/25", "5/23/25"),
-    ("5/17/25", "5/30/25", "6/6/25"),
-    ("5/31/25", "6/13/25", "6/20/25"),
-    ("6/14/25", "6/27/25", "7/3/25"),
-    ("6/28/25", "7/11/25", "7/18/25"),
-    ("7/12/25", "7/25/25", "8/1/25"),
-    ("7/26/25", "8/8/25", "8/15/25"),
-    ("8/9/25", "8/22/25", "8/29/25"),
-    ("8/23/25", "9/5/25", "9/12/25"),
-    ("9/6/25", "9/19/25", "9/26/25"),
-    ("9/20/25", "10/3/25", "10/10/25"),
-    ("10/4/25", "10/17/25", "10/24/25"),
-    ("10/18/25", "10/31/25", "11/7/25"),
-    ("11/1/25", "11/14/25", "11/21/25"),
-    ("11/15/25", "11/28/25", "12/5/25"),
-    ("11/29/25", "12/12/25", "12/19/25"),
-    ("12/13/25", "12/26/25", "1/2/26"),
-    ("12/27/25", "1/9/26", "1/16/26"),
+    ("12/14/24", "12/27/24", "1/3/25"),   ("12/28/24", "1/10/25", "1/17/25"),
+    ("1/11/25", "1/24/25", "1/31/25"),    ("1/25/25", "2/7/25", "2/14/25"),
+    ("2/8/25", "2/21/25", "2/28/25"),     ("2/22/25", "3/7/25", "3/14/25"),
+    ("3/8/25", "3/21/25", "3/28/25"),     ("3/22/25", "4/4/25", "4/11/25"),
+    ("4/5/25", "4/18/25", "4/25/25"),     ("4/19/25", "5/2/25", "5/9/25"),
+    ("5/3/25", "5/16/25", "5/23/25"),     ("5/17/25", "5/30/25", "6/6/25"),
+    ("5/31/25", "6/13/25", "6/20/25"),    ("6/14/25", "6/27/25", "7/3/25"),
+    ("6/28/25", "7/11/25", "7/18/25"),    ("7/12/25", "7/25/25", "8/1/25"),
+    ("7/26/25", "8/8/25", "8/15/25"),     ("8/9/25", "8/22/25", "8/29/25"),
+    ("8/23/25", "9/5/25", "9/12/25"),     ("9/6/25", "9/19/25", "9/26/25"),
+    ("9/20/25", "10/3/25", "10/10/25"),   ("10/4/25", "10/17/25", "10/24/25"),
+    ("10/18/25", "10/31/25", "11/7/25"),  ("11/1/25", "11/14/25", "11/21/25"),
+    ("11/15/25", "11/28/25", "12/5/25"),  ("11/29/25", "12/12/25", "12/19/25"),
+    ("12/13/25", "12/26/25", "1/2/26"),   ("12/27/25", "1/9/26", "1/16/26"),
 ], columns=["start", "end", "pay"])
-
 commission_cycles["start"] = pd.to_datetime(commission_cycles["start"])
 commission_cycles["end"] = pd.to_datetime(commission_cycles["end"])
 commission_cycles["pay"] = pd.to_datetime(commission_cycles["pay"])
@@ -58,13 +41,11 @@ CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
 DB              = "crm_history.db"
 
-# --- Load Admins (users.csv)
 df_users = pd.read_csv("users.csv", dtype=str).dropna()
 USERS = dict(zip(df_users.username.str.strip(), df_users.password))
 ADMIN_NAMES = dict(zip(df_users.username, [f"{r['first_name']} {r['last_name']}" for _, r in df_users.iterrows()]))
 ADMIN_ROLES = dict(zip(df_users.username, df_users.role))
 
-# --- Load Agents from TLD API
 @st.cache_data(ttl=600)
 def fetch_agents():
     url = "https://hcs.tldcrm.com/api/egress/users"
@@ -79,8 +60,6 @@ def fetch_agents():
     return pd.DataFrame(users)
 
 df_agents = fetch_agents()
-
-# --- Logins setup (no change)
 AGENT_USERNAMES = df_agents['username'].tolist()
 AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
 AGENT_NAMES = dict(zip(df_agents['username'], [f"{row['first_name']} {row['last_name']}" for _, row in df_agents.iterrows()]))
@@ -126,6 +105,7 @@ if not st.session_state.logged_in:
     st.stop()
 st.sidebar.button("Log out", on_click=do_logout)
 
+
 # DATABASE HELPERS
 def init_db():
     conn = sqlite3.connect(DB)
@@ -159,6 +139,13 @@ def load_history():
     for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
+
+init_db()
+history_df = load_history()
+summary = []
+uploaded_file = None
+threshold = 10
+
 
 # --- Fetch All Deals (for agent dashboards, live counts, etc)
 def fetch_all_today(limit=5000):
@@ -219,56 +206,55 @@ def fetch_all_today(limit=5000):
     
     return pd.DataFrame(all_results)
 
-def fetch_deals_for_agent(username, day="Today"):
+def fetch_deals_for_agent_date_range(username, start_date, end_date, resolve_agent=False):
     agent_row = df_agents[df_agents['username'] == username]
     if agent_row.empty or 'user_id' not in agent_row.columns:
         st.warning("No agent_id for this user in TLD API.")
         return pd.DataFrame()
-    
     user_id = str(agent_row['user_id'].iloc[0]).strip()
-    
-    # Convert relative day to specific date if needed
-    if day.lower() == "today":
-        date_param = date.today().strftime("%Y-%m-%d")
-    else:
-        date_param = day
-    
-    # Explicitly list all columns we need based on owner's feedback
     columns = [
         'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
         'carrier', 'product', 'duration', 'premium', 'policy_number',
         'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
         'agent_id', 'agent_name'
     ]
-    
-    # Fetch deals for this agent on this date
+    params = {
+        "agent_id": user_id,
+        "date_from": start_date,
+        "date_to": end_date,
+        "limit": 1000,
+        "columns": ",".join(columns)
+    }
+    if resolve_agent:
+        params["resolve"] = "agent"
     headers = {
         "tld-api-id": CRM_API_ID,
         "tld-api-key": CRM_API_KEY
     }
-    
-    params = {
-        "agent_id": user_id,  # Don't wrap in list, just send as string
-        "date_from": date_param,
-        "date_to": date_param,
-        "limit": 1000,
-        "columns": ",".join(columns)
-    }
-    
-    try:
-        resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
-        resp.raise_for_status()
-        js = resp.json().get("response", {})
-        deals = js.get("results", [])
-        
-        if not deals:
-            return pd.DataFrame()
-            
-        df = pd.DataFrame(deals)
-        if "date_sold" in df.columns:
-            df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
-            
-        return df
+    all_results = []
+    url = CRM_API_URL
+    seen_urls = set()
+    while url and url not in seen_urls:
+        seen_urls.add(url)
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            resp.raise_for_status()
+            js = resp.json().get("response", {})
+            chunk = js.get("results", [])
+            if not chunk: break
+            all_results.extend(chunk)
+            next_url = js.get("navigate", {}).get("next")
+            if not next_url or next_url in seen_urls: break
+            url = next_url
+            params = {}
+        except Exception as e:
+            st.error(f"API Error: {str(e)}")
+            break
+    df = pd.DataFrame(all_results)
+    if "date_sold" in df.columns and not df.empty:
+        df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+    return df
+
         
     except Exception as e:
         st.error(f"API Error: {str(e)}")
