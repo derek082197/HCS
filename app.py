@@ -377,17 +377,35 @@ if st.session_state.user_role.lower() == "agent":
     bonus = 1200 if cycle_count >= 70 else 0
     payout = cycle_count * rate + bonus
 
-    # --- Previous cycle
-    prev_count = prev_payout = prev_rate = prev_bonus = 0
-    if prev_start and prev_end:
-        deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
-        prev_count = len(deals_prev_cycle)
-        if prev_count >= 200: prev_rate = 25
-        elif prev_count >= 150: prev_rate = 22.5
-        elif prev_count >= 120: prev_rate = 17.5
-        else: prev_rate = 15
-        prev_bonus = 1200 if prev_count >= 70 else 0
-        prev_payout = prev_count * prev_rate + prev_bonus
+   # --- Previous Completed Cycle (ENHANCED: Gross + Net Payouts) ---
+if prev_count > 0 and prev_start and prev_end:
+    st.markdown("---")
+    st.subheader("Previous Completed Cycle")
+    p1, p2, p3, p4 = st.columns(4)
+    p1.metric("Deals", prev_count)
+    p2.metric("Gross Payout", f"${prev_payout:,.2f}")  # ← Change label from Final to Gross Payout
+    p3.metric("Cycle", f"{prev_start} to {prev_end}")
+    p4.metric("Pay Date", f"{prev_pay}")
+
+    # --- NET PAYOUT (if FMO is uploaded) ---
+    # Only show Net Payout if user has uploaded FMO statement
+    # This code assumes you have `df` (the Excel FMO file) and it has columns 'Agent' and 'Advance'
+    if uploaded_file is not None:
+        try:
+            # Get the agent's net paid amount from the FMO upload
+            this_agent = st.session_state.user_name.strip().lower()
+            # Find agent row(s) in FMO (case-insensitive match)
+            matches = df[df["Agent"].str.strip().str.lower() == this_agent]
+            net_paid = matches["Advance"].astype(float).sum() if not matches.empty else 0.0
+            st.info(f"💰 **Net Payout (from FMO):** ${net_paid:,.2f}")
+        except Exception as e:
+            st.warning("Unable to show net payout from FMO statement.")
+
+    # --- Download paystub (already supported) ---
+    st.markdown("""
+    <span style='color:#3577f1;'>⬇️ You can download your paystub from the "Settings & Upload" tab if the admin has processed payroll.</span>
+    """, unsafe_allow_html=True)
+
 
     # ========== UI ==========
 
