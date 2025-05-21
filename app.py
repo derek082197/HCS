@@ -431,7 +431,6 @@ if not deals_cycle.empty:
     )
 else:
     st.info("No deals found in this commission cycle.")
-
 st.stop()
 
 
