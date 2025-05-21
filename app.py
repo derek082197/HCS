@@ -189,24 +189,25 @@ def fetch_agent_deals(user_id, date_from, date_to):
         'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
         'agent_id', 'agent_name'
     ]
-    headers = {
-        "tld-api-id": CRM_API_ID,
-        "tld-api-key": CRM_API_KEY
-    }
+    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
     params = {
         "agent_id": user_id,
-        "date_from": date_from,
-        "date_to": date_to,
+        "date_sold_greater_equal": date_from,
+        "date_sold_less_equal": date_to,
         "limit": 1000,
         "columns": ",".join(columns)
     }
     resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
     js = resp.json().get("response", {})
     deals = js.get("results", [])
+    # DEBUG: Print your deals for verification
+    print("API CALL PARAMS:", params)
+    print("API CALL DEALS:", deals[:2])
     df = pd.DataFrame(deals)
     if "date_sold" in df.columns:
         df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
     return df
+
 
 
 # --- PDF GENERATORS
