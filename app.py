@@ -595,16 +595,17 @@ with tabs[4]:
                     "Agent": agent,
                     "Paid Deals": paid_ct,
                     "Agent Payout": payout,
-                    "Owner Profit": owner_prof
+                    "Owner Profit": owner_prof,
+                    "Net Paid": sub["Advance"].astype(float).sum()  # Add Net Paid from FMO
                 })
                 pdf_bytes = generate_agent_pdf(sub, agent)
                 zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf_bytes)
             # Write admin summary CSV
             csv_buf = io.StringIO()
             w = csv.writer(csv_buf)
-            w.writerow(["Agent","Paid Deals","Agent Payout","Owner Profit"])
+            w.writerow(["Agent","Paid Deals","Agent Payout","Owner Profit", "Net Paid"])
             for r in summary:
-                w.writerow([r["Agent"], r["Paid Deals"], r["Agent Payout"], r["Owner Profit"]])
+                w.writerow([r["Agent"], r["Paid Deals"], r["Agent Payout"], r["Owner Profit"], r["Net Paid"]])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
         default_dt = (df["Effective Date"].max().date()
                       if "Effective Date" in df else date.today())
