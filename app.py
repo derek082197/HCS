@@ -293,36 +293,75 @@ uploaded_file = None
 threshold = 10
 
 # === AGENT DASHBOARD ===
-if st.session_state.user_role.lower() == "agent":
-    st.markdown(
-        f"""
-        <div style="padding:1.5em 1em 0.2em 1em; background: linear-gradient(90deg,#eef5ff,#f5fff0 80%); border-radius:16px;">
-            <h1 style='font-size:2.4em; margin-bottom:0; color:#223969;'>
-                👤 Agent Dashboard — <span style="color:#208b26;">{st.session_state.user_name}</span>
-            </h1>
-        </div>
-        """, unsafe_allow_html=True,
-    )
+# --- AGENT LIVE COUNTS (DAY/WEEK/MONTH/YEAR, MATCHING ADMIN LOGIC) ---
 
-    agent = df_agents[df_agents['username'] == st.session_state.user_email]
-    if agent.empty:
-        st.error("Agent not found."); st.stop()
-    user_id = str(agent['user_id'].iloc[0])
+def fetch_agent_deals_for_period(user_id, date_from, date_to):
+    columns = [
+        'policy_id', 'date_sold', 'carrier', 'product', 'premium',
+        'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
+        'agent_id', 'agent_name'
+    ]
+    headers = {
+        "tld-api-id": CRM_API_ID,
+        "tld-api-key": CRM_API_KEY
+    }
+    params = {
+        "agent_id": user_id,
+        "date_from": date_from,
+        "date_to": date_to,
+        "limit": 1000,
+        "columns": ",".join(columns)
+    }
+    resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
+    js = resp.json().get("response", {})
+    deals = js.get("results", [])
+    df = pd.DataFrame(deals)
+    if "date_sold" in df.columns:
+        df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+    return df
 
-    today = pd.Timestamp.now(tz='US/Eastern').date()
-    today_str = today.strftime("%Y-%m-%d")
-    week_start = (today - timedelta(days=6)).strftime("%Y-%m-%d")
-    month_start = today.replace(day=1).strftime("%Y-%m-%d")
-    year_start = today.replace(month=1, day=1).strftime("%Y-%m-%d")
+# --- AGENT ID ---
+agent = df_agents[df_agents['username'] == st.session_state.user_email]
+if agent.empty:
+    st.error("Agent not found."); st.stop()
+user_id = str(agent['user_id'].iloc[0])
 
-    # Current cycle
-    cycle_row = commission_cycles[(today >= commission_cycles["start"].dt.date) & (today <= commission_cycles["end"].dt.date)]
-    if not cycle_row.empty:
-        cycle_start = cycle_row["start"].iloc[0].strftime("%Y-%m-%d")
-        cycle_end = cycle_row["end"].iloc[0].strftime("%Y-%m-%d")
-        pay_date = cycle_row["pay"].iloc[0].strftime("%m/%d/%y")
-    else:
-        st.error("No active commission cycle for today."); st.stop()
+today = pd.Timestamp.now(tz='US/Eastern').date()
+today_str = today.strftime("%Y-%m-%d")
+week_start = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")
+month_start = today.replace(day=1).strftime("%Y-%m-%d")
+year_start = today.replace(month=1, day=1).strftime("%Y-%m-%d")
+
+# --- GET AGENT'S DEALS FOR EACH PERIOD ---
+deals_today  = fetch_agent_deals_for_period(user_id, today_str, today_str)
+deals_week   = fetch_agent_deals_for_period(user_id, week_start, today_str)
+deals_month  = fetch_agent_deals_for_period(user_id, month_start, today_str)
+deals_year   = fetch_agent_deals_for_period(user_id, year_start, today_str)
+
+d_tot = len(deals_today)
+w_tot = len(deals_week)
+m_tot = len(deals_month)
+y_tot = len(deals_year)
+
+c1, c2, c3, c4 = st.columns(4, gap="large")
+c1.metric("Today's Deals", f"{d_tot:,}")
+c1.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${d_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
+c2.metric("This Week's Deals", f"{w_tot:,}")
+c2.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${w_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
+c3.metric("This Month's Deals", f"{m_tot:,}")
+c3.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${m_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
+c4.metric("This Year's Deals", f"{y_tot:,}")
+c4.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${y_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
+
+st.markdown("---")
+st.subheader("Today's Deals Table (Agent Only)")
+if not deals_today.empty:
+    st.dataframe(deals_today, use_container_width=True)
+else:
+    st.info("No deals found for today.")
+
+st.stop()
+
 
     # Fetch deals for this agent only (no more global bugs)
     deals_today  = fetch_agent_deals(user_id, today_str, today_str)
