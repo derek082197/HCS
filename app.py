@@ -298,106 +298,9 @@ threshold = 10
 # --- AGENT DASHBOARD LOGIC, CLEAN REPLACEMENT BLOCK ---
 
 # === AGENT DASHBOARD ===
+# ========== AGENT DASHBOARD ==========
+
 if st.session_state.user_role.lower() == "agent":
-    agent = df_agents[df_agents['username'] == st.session_state.user_email]
-    if agent.empty:
-        st.error("Agent not found."); st.stop()
-    user_id = str(agent['user_id'].iloc[0])
-
-    columns = [
-        'policy_id', 'date_sold', 'carrier', 'product', 'premium',
-        'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
-        'agent_id', 'agent_name'
-    ]
-    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
-
-    # --- Helper: make API calls by period using correct TQL param ---
-    def fetch_agent_deals(user_id, tql_period):
-        params = {
-            "agent_id": user_id,
-            "date_sold": tql_period,    # TQL param: "Today", "This Week", etc.
-            "limit": 1000,
-            "columns": ",".join(columns)
-        }
-        resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
-        js = resp.json().get("response", {})
-        deals = js.get("results", [])
-        df = pd.DataFrame(deals)
-        if "date_sold" in df.columns:
-            df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
-        return df
-
-    # --- Get the periods using TQL/relative date language ---
-    deals_today  = fetch_agent_deals(user_id, "Today")
-    deals_week   = fetch_agent_deals(user_id, "This Week")
-    deals_month  = fetch_agent_deals(user_id, "This Month")
-    deals_year   = fetch_agent_deals(user_id, "This Year")
-
-    daily_count   = len(deals_today)
-    weekly_count  = len(deals_week)
-    monthly_count = len(deals_month)
-    yearly_count  = len(deals_year)
-
-    # === Find current commission cycle for today
-    today = pd.Timestamp.now(tz='US/Eastern').date()
-    cycle_row = commission_cycles[
-        (today >= commission_cycles["start"].dt.date) & (today <= commission_cycles["end"].dt.date)
-    ]
-    if not cycle_row.empty:
-        cycle_start = cycle_row["start"].iloc[0].strftime("%Y-%m-%d")
-        cycle_end = cycle_row["end"].iloc[0].strftime("%Y-%m-%d")
-        pay_date = cycle_row["pay"].iloc[0].strftime("%m/%d/%y")
-    else:
-        st.error("No active commission cycle for today."); st.stop()
-
-    # --- Fetch all deals for agent in current cycle (using date_from/date_to) ---
-    def fetch_agent_deals_cycle(user_id, cycle_start, cycle_end):
-        params = {
-            "agent_id": user_id,
-            "date_from": cycle_start,
-            "date_to": cycle_end,
-            "limit": 1000,
-            "columns": ",".join(columns)
-        }
-        resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
-        js = resp.json().get("response", {})
-        deals = js.get("results", [])
-        df = pd.DataFrame(deals)
-        if "date_sold" in df.columns:
-            df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
-        return df
-
-    deals_cycle = fetch_agent_deals_cycle(user_id, cycle_start, cycle_end)
-    cycle_count = len(deals_cycle)
-
-    # --- Commission calculation ---
-    rate = 15
-    bonus = 0
-    if cycle_count >= 200: rate = 25
-    elif cycle_count >= 150: rate = 22.5
-    elif cycle_count >= 120: rate = 17.5
-    if cycle_count >= 70: bonus = 1200
-    payout = cycle_count * rate + bonus
-
-    # --- Previous completed cycle
-    prev_count = prev_payout = prev_rate = prev_bonus = 0
-    prev_start = prev_end = prev_pay = ""
-    prev_cycle = commission_cycles[commission_cycles["end"] < pd.to_datetime(cycle_start)].tail(1)
-    if not prev_cycle.empty:
-        prev_start = prev_cycle["start"].iloc[0].strftime("%Y-%m-%d")
-        prev_end = prev_cycle["end"].iloc[0].strftime("%Y-%m-%d")
-        prev_pay = prev_cycle["pay"].iloc[0].strftime("%m/%d/%y")
-        deals_prev_cycle = fetch_agent_deals_cycle(user_id, prev_start, prev_end)
-        prev_count = len(deals_prev_cycle)
-        prev_rate = 15
-        prev_bonus = 0
-        if prev_count >= 200: prev_rate = 25
-        elif prev_count >= 150: prev_rate = 22.5
-        elif prev_count >= 120: prev_rate = 17.5
-        if prev_count >= 70: prev_bonus = 1200
-        prev_payout = prev_count * prev_rate + prev_bonus
-
-    # === DISPLAY DASHBOARD ===
     st.markdown(
         f"""
         <div style="padding:1.5em 1em 0.2em 1em; background: linear-gradient(90deg,#eef5ff,#f5fff0 80%); border-radius:16px;">
@@ -407,6 +310,87 @@ if st.session_state.user_role.lower() == "agent":
         </div>
         """, unsafe_allow_html=True,
     )
+
+    # --- Find agent user_id ---
+    agent = df_agents[df_agents['username'] == st.session_state.user_email]
+    if agent.empty:
+        st.error("Agent not found."); st.stop()
+    user_id = str(agent['user_id'].iloc[0])
+
+    # === Find commission cycles
+    cycles = commission_cycles.sort_values("start").reset_index(drop=True)
+    today = pd.Timestamp.now(tz='US/Eastern').date()
+
+    current_idx = None
+    for idx, row in cycles.iterrows():
+        if row["start"].date() <= today <= row["end"].date():
+            current_idx = idx
+            break
+
+    if current_idx is None:
+        st.error("No active commission cycle for today."); st.stop()
+
+    prev_idx = current_idx - 1 if current_idx > 0 else None
+
+    current_row = cycles.loc[current_idx]
+    cycle_start = current_row["start"].strftime("%Y-%m-%d")
+    cycle_end   = current_row["end"].strftime("%Y-%m-%d")
+    pay_date    = current_row["pay"].strftime("%m/%d/%y")
+
+    if prev_idx is not None:
+        prev_row = cycles.loc[prev_idx]
+        prev_start = prev_row["start"].strftime("%Y-%m-%d")
+        prev_end   = prev_row["end"].strftime("%Y-%m-%d")
+        prev_pay   = prev_row["pay"].strftime("%m/%d/%y")
+    else:
+        prev_start = prev_end = prev_pay = ""
+
+    # --- Date periods for metrics
+    today_str    = today.strftime("%Y-%m-%d")
+    week_start   = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")  # Monday
+    month_start  = today.replace(day=1).strftime("%Y-%m-%d")
+    year_start   = today.replace(month=1, day=1).strftime("%Y-%m-%d")
+
+    # --- Fetch deals for agent for each window
+    deals_today  = fetch_agent_deals(user_id, today_str, today_str)
+    deals_week   = fetch_agent_deals(user_id, week_start, today_str)
+    deals_month  = fetch_agent_deals(user_id, month_start, today_str)
+    deals_year   = fetch_agent_deals(user_id, year_start, today_str)
+    deals_cycle  = fetch_agent_deals(user_id, cycle_start, cycle_end)
+
+    daily_count   = len(deals_today)
+    weekly_count  = len(deals_week)
+    monthly_count = len(deals_month)
+    yearly_count  = len(deals_year)
+    cycle_count   = len(deals_cycle)
+
+    # --- Commission logic for CURRENT CYCLE
+    if cycle_count >= 200:
+        rate = 25
+    elif cycle_count >= 150:
+        rate = 22.5
+    elif cycle_count >= 120:
+        rate = 17.5
+    else:
+        rate = 15
+    bonus = 1200 if cycle_count >= 70 else 0
+    payout = cycle_count * rate + bonus
+
+    # --- Previous cycle
+    prev_count = prev_payout = prev_rate = prev_bonus = 0
+    if prev_start and prev_end:
+        deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
+        prev_count = len(deals_prev_cycle)
+        if prev_count >= 200: prev_rate = 25
+        elif prev_count >= 150: prev_rate = 22.5
+        elif prev_count >= 120: prev_rate = 17.5
+        else: prev_rate = 15
+        prev_bonus = 1200 if prev_count >= 70 else 0
+        prev_payout = prev_count * prev_rate + prev_bonus
+
+    # ========== UI ==========
+
+    # --- Current Cycle
     st.subheader("Current Commission Cycle")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Deals (Cycle)", cycle_count)
@@ -414,6 +398,21 @@ if st.session_state.user_role.lower() == "agent":
     c3.metric("Cycle", f"{cycle_start} to {cycle_end}")
     c4.metric("Pay Date", f"{pay_date}")
 
+    # --- Tier & Bonus Encouragement
+    st.markdown("<div style='margin-top:-1em'></div>", unsafe_allow_html=True)
+    if cycle_count >= 200:
+        st.success("🎯 **Top Tier! $25 per deal. Massive bonus ahead.**")
+    elif cycle_count >= 150:
+        st.info("🚀 Almost at top tier ($22.50 per deal). Keep pushing!")
+    elif cycle_count >= 120:
+        st.info("🔥 Hit 120 deals for $17.50 per deal! Next stop: $22.50.")
+    else:
+        st.info("💡 15 per deal. Hit 120 for your first big bonus tier!")
+
+    if cycle_count >= 70:
+        st.markdown(f"<span style='color:#1a790a; font-size:1.12em;'>🎁 <b>Bonus:</b> ${bonus:,.0f}</span>", unsafe_allow_html=True)
+
+    # --- Recent Performance
     st.markdown("---")
     st.subheader("Recent Performance")
     t1, t2, t3, t4 = st.columns(4)
@@ -422,7 +421,8 @@ if st.session_state.user_role.lower() == "agent":
     t3.metric("This Month", monthly_count)
     t4.metric("This Year", yearly_count)
 
-    if prev_count > 0:
+    # --- Previous Completed Cycle
+    if prev_count > 0 and prev_start and prev_end:
         st.markdown("---")
         st.subheader("Previous Completed Cycle")
         p1, p2, p3, p4 = st.columns(4)
@@ -431,6 +431,7 @@ if st.session_state.user_role.lower() == "agent":
         p3.metric("Cycle", f"{prev_start} to {prev_end}")
         p4.metric("Pay Date", f"{prev_pay}")
 
+    # --- All deals in current cycle
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
     if not deals_cycle.empty:
@@ -443,6 +444,7 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
+
 
 
 # =================== ADMIN DASHBOARD ===================
