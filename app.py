@@ -1095,7 +1095,7 @@ with tabs[7]:
             # Count paid deals per agent
             summary = paid_deals.groupby(agent_col).size().reset_index(name="Net Paid Deals")
 
-            # Your commission model (apply tier logic for each agent)
+            # Commission model (apply tier logic for each agent)
             def calc_agent_payout(num_deals):
                 if num_deals >= 200:
                     rate = 25
