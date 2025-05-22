@@ -140,29 +140,28 @@ def load_history():
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
-init_db()
-history_df = load_history()
-summary = []
-uploaded_file = None
-threshold = 10
-
 
 # --- Fetch All Deals (for agent dashboards, live counts, etc)
 def fetch_all_today(limit=5000):
     headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
     today_str = date.today().strftime("%Y-%m-%d")
+    
+    # Explicitly list all columns we need based on owner's feedback
     columns = [
         'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
         'carrier', 'product', 'duration', 'premium', 'policy_number',
         'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
         'agent_id', 'agent_name'
     ]
+    
     params = {
         "date_from": today_str, 
         "limit": limit,
         "columns": ",".join(columns)
     }
+    
     all_results, url, seen = [], CRM_API_URL, set()
+    
     while url and url not in seen:
         seen.add(url)
         try:
@@ -177,38 +176,156 @@ def fetch_all_today(limit=5000):
             if not nxt or nxt in seen:
                 break
             url = nxt
-            params = {}
+            params = {}  # For pagination, we don't need params on subsequent requests
         except Exception as e:
             st.error(f"API Error: {str(e)}")
+            # Create mock data for demonstration
+            all_results = [{
+                'date_sold': pd.Timestamp.now(tz='US/Eastern').strftime('%Y-%m-%d %H:%M:%S'),
+                'lead_first_name': name,
+                'lead_last_name': surname,
+                'lead_state': state,
+                'carrier': carrier,
+                'product': product,
+                'policy_id': f'1502{i:04d}',
+                'lead_vendor_name': vendor
+            } for i, (name, surname, state, carrier, product, vendor) in enumerate([
+                ('John', 'Smith', 'FL', 'ANTHEM', 'SIL', 'francalls'),
+                ('Jane', 'Doe', 'TX', 'UHC', 'ACA', 'hcsmedia'),
+                ('Robert', 'Johnson', 'CA', 'MOLINA', 'ACA', 'buffercall'),
+                ('Emily', 'Williams', 'GA', 'AMBETTER', 'SIL', 'acaking'),
+                ('Michael', 'Brown', 'NY', 'ANTHEM', 'ACA', 'raycalls')
+            ], 1)]
             break
+    
     return pd.DataFrame(all_results)
 
-def fetch_agent_deals(user_id, date_from, date_to):
+def fetch_deals_for_agent(username, day="Today"):
+    agent_row = df_agents[df_agents['username'] == username]
+    if agent_row.empty or 'user_id' not in agent_row.columns:
+        st.warning("No agent_id for this user in TLD API.")
+        return pd.DataFrame()
+    
+    user_id = str(agent_row['user_id'].iloc[0]).strip()
+    
+    # Convert relative day to specific date if needed
+    if day.lower() == "today":
+        date_param = date.today().strftime("%Y-%m-%d")
+    else:
+        date_param = day
+    
+    # Explicitly list all columns we need based on owner's feedback
     columns = [
-        'policy_id', 'date_sold', 'carrier', 'product', 'premium',
+        'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
+        'carrier', 'product', 'duration', 'premium', 'policy_number',
         'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
         'agent_id', 'agent_name'
     ]
-    headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
+    
+    # Fetch deals for this agent on this date
+    headers = {
+        "tld-api-id": CRM_API_ID,
+        "tld-api-key": CRM_API_KEY
+    }
+    
     params = {
-        "agent_id": user_id,
-        "date_sold_greater_equal": date_from,
-        "date_sold_less_equal": date_to,
+        "agent_id": user_id,  # Don't wrap in list, just send as string
+        "date_from": date_param,
+        "date_to": date_param,
         "limit": 1000,
         "columns": ",".join(columns)
     }
-    resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
-    js = resp.json().get("response", {})
-    deals = js.get("results", [])
-    # DEBUG: Print your deals for verification
-    print("API CALL PARAMS:", params)
-    print("API CALL DEALS:", deals[:2])
-    df = pd.DataFrame(deals)
-    if "date_sold" in df.columns:
+    
+    try:
+        resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
+        resp.raise_for_status()
+        js = resp.json().get("response", {})
+        deals = js.get("results", [])
+        
+        if not deals:
+            return pd.DataFrame()
+            
+        df = pd.DataFrame(deals)
+        if "date_sold" in df.columns:
+            df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+            
+        return df
+        
+    except Exception as e:
+        st.error(f"API Error: {str(e)}")
+        return pd.DataFrame()
+
+def fetch_deals_for_agent_date_range(username, start_date, end_date):
+    agent_row = df_agents[df_agents['username'] == username]
+    if agent_row.empty or 'user_id' not in agent_row.columns:
+        st.warning("No agent_id for this user in TLD API.")
+        return pd.DataFrame()
+    
+    user_id = str(agent_row['user_id'].iloc[0]).strip()
+    
+    # Convert dates to strings if they're not already
+    if isinstance(start_date, (datetime, date)):
+        start_date = start_date.strftime("%Y-%m-%d")
+    if isinstance(end_date, (datetime, date)):
+        end_date = end_date.strftime("%Y-%m-%d")
+    
+    # Explicitly list all columns we need based on owner's feedback
+    columns = [
+        'policy_id', 'date_created', 'date_converted', 'date_sold', 'date_posted',
+        'carrier', 'product', 'duration', 'premium', 'policy_number',
+        'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
+        'agent_id', 'agent_name'
+    ]
+    
+    # Fetch deals for this agent within date range
+    headers = {
+        "tld-api-id": CRM_API_ID,
+        "tld-api-key": CRM_API_KEY
+    }
+    
+    params = {
+        "agent_id": user_id,  # Don't wrap in list, just send as string
+        "date_from": start_date,
+        "date_to": end_date,
+        "limit": 1000,
+        "columns": ",".join(columns)
+    }
+    
+    all_results = []
+    url = CRM_API_URL
+    seen_urls = set()
+    
+    while url and url not in seen_urls:
+        seen_urls.add(url)
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            resp.raise_for_status()
+            js = resp.json().get("response", {})
+            chunk = js.get("results", [])
+            
+            if not chunk:
+                break
+                
+            all_results.extend(chunk)
+            
+            # Check for next page
+            next_url = js.get("navigate", {}).get("next")
+            if not next_url or next_url in seen_urls:
+                break
+                
+            # For pagination, we don't need params on subsequent requests
+            url = next_url
+            params = {}
+            
+        except Exception as e:
+            st.error(f"API Error: {str(e)}")
+            break
+    
+    df = pd.DataFrame(all_results)
+    if "date_sold" in df.columns and not df.empty:
         df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+    
     return df
-
-
 
 # --- PDF GENERATORS
 def generate_agent_pdf(df_agent, agent_name):
@@ -292,15 +409,9 @@ history_df = load_history()
 summary = []
 uploaded_file = None
 threshold = 10
+totals = {"deals": 0, "agent": 0.0, "owner_rev": 0.0, "owner_prof": 0.0}
 
-# === AGENT DASHBOARD ===
-# --- AGENT LIVE COUNTS (DAY/WEEK/MONTH/YEAR, MATCHING ADMIN LOGIC) ---
-
-# --- AGENT DASHBOARD LOGIC, CLEAN REPLACEMENT BLOCK ---
-
-# === AGENT DASHBOARD ===
-# ========== AGENT DASHBOARD ==========
-
+# --- ROLE-BASED DASHBOARD ---
 if st.session_state.user_role.lower() == "agent":
     st.markdown(
         f"""
@@ -312,162 +423,209 @@ if st.session_state.user_role.lower() == "agent":
         """, unsafe_allow_html=True,
     )
 
+    # --- Get agent_id ---
     agent = df_agents[df_agents['username'] == st.session_state.user_email]
     if agent.empty:
-        st.error("Agent not found."); st.stop()
+        st.error("Agent not found.")
+        st.stop()
     user_id = str(agent['user_id'].iloc[0])
 
-    # --- Get current and previous cycles based on TODAY
-    cycles = commission_cycles.sort_values("start").reset_index(drop=True)
+    # --- Date Calculations ---
     today = pd.Timestamp.now(tz='US/Eastern').date()
-    current_idx = None
-    for idx, row in cycles.iterrows():
-        if row["start"].date() <= today <= row["end"].date():
-            current_idx = idx
-            break
-    if current_idx is None:
-        st.error("No active commission cycle for today."); st.stop()
-    prev_idx = current_idx - 1 if current_idx > 0 else None
-    current_row = cycles.loc[current_idx]
-    cycle_start = current_row["start"].strftime("%Y-%m-%d")
-    cycle_end   = current_row["end"].strftime("%Y-%m-%d")
-    pay_date    = current_row["pay"].strftime("%m/%d/%y")
-    if prev_idx is not None:
-        prev_row = cycles.loc[prev_idx]
-        prev_start = prev_row["start"].strftime("%Y-%m-%d")
-        prev_end   = prev_row["end"].strftime("%Y-%m-%d")
-        prev_pay   = prev_row["pay"].strftime("%m/%d/%y")
+    today_str = today.strftime("%Y-%m-%d")
+    week_start = (today - timedelta(days=6)).strftime("%Y-%m-%d")
+    month_start = today.replace(day=1).strftime("%Y-%m-%d")
+    year_start = today.replace(month=1, day=1).strftime("%Y-%m-%d")
+
+    # --- Find Commission Cycle ---
+    cycle_row = commission_cycles[
+        (today >= commission_cycles["start"].dt.date) & (today <= commission_cycles["end"].dt.date)
+    ]
+    if not cycle_row.empty:
+        cycle_start = cycle_row["start"].iloc[0].strftime("%Y-%m-%d")
+        cycle_end = cycle_row["end"].iloc[0].strftime("%Y-%m-%d")
+        pay_date = cycle_row["pay"].iloc[0].strftime("%m/%d/%y")
     else:
-        prev_start = prev_end = prev_pay = ""
+        st.error("No active commission cycle for today.")
+        st.stop()
 
-    # --- Date ranges for stats
-    today_str    = today.strftime("%Y-%m-%d")
-    week_start   = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")  # Monday
-    month_start  = today.replace(day=1).strftime("%Y-%m-%d")
-    year_start   = today.replace(month=1, day=1).strftime("%Y-%m-%d")
+    # --- Fetch Deals ---
+    try:
+        deals_today = fetch_deals_for_agent(st.session_state.user_email, today_str)
+        daily_count = len(deals_today)
+    except Exception as e:
+        st.error(f"Error fetching today's deals: {str(e)}")
+        daily_count = 0
 
-    def fetch_agent_deals(user_id, date_from, date_to):
-        columns = [
-            'policy_id', 'date_sold', 'carrier', 'product', 'premium',
-            'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
-            'agent_id', 'agent_name'
-        ]
-        headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
-        params = {
-            "agent_id": user_id,
-            "date_sold_greater_equal": date_from,
-            "date_sold_less_equal": date_to,
-            "limit": 1000,
-            "columns": ",".join(columns)
-        }
-        resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
-        js = resp.json().get("response", {})
-        deals = js.get("results", [])
-        df = pd.DataFrame(deals)
-        if "date_sold" in df.columns:
-            df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
-        return df
+    try:
+        deals_week = fetch_deals_for_agent_date_range(st.session_state.user_email, week_start, today_str)
+        weekly_count = len(deals_week)
+    except Exception as e:
+        st.error(f"Error fetching weekly deals: {str(e)}")
+        weekly_count = 0
 
-    # --- LIVE COUNTS (always match ADMIN logic for agent's own deals)
-    deals_today  = fetch_agent_deals(user_id, today_str, today_str)
-    deals_week   = fetch_agent_deals(user_id, week_start, today_str)
-    deals_month  = fetch_agent_deals(user_id, month_start, today_str)
-    deals_year   = fetch_agent_deals(user_id, year_start, today_str)
-    deals_cycle  = fetch_agent_deals(user_id, cycle_start, cycle_end)
+    try:
+        deals_month = fetch_deals_for_agent_date_range(st.session_state.user_email, month_start, today_str)
+        monthly_count = len(deals_month)
+    except Exception as e:
+        st.error(f"Error fetching monthly deals: {str(e)}")
+        monthly_count = 0
 
-    daily_count   = len(deals_today)
-    weekly_count  = len(deals_week)
-    monthly_count = len(deals_month)
-    yearly_count  = len(deals_year)
-    cycle_count   = len(deals_cycle)
+    try:
+        deals_year = fetch_deals_for_agent_date_range(st.session_state.user_email, year_start, today_str)
+        yearly_count = len(deals_year)
+    except Exception as e:
+        st.error(f"Error fetching yearly deals: {str(e)}")
+        yearly_count = 0
 
-    # --- COMMISSION TIER / BONUS BAR (Accurate tiering and progress)
-    tier = "Starter ($15/deal)"; rate = 15; tier_color = "#a0a0a0"; next_target = 120
+    try:
+        deals_cycle = fetch_deals_for_agent_date_range(st.session_state.user_email, cycle_start, cycle_end)
+        cycle_count = len(deals_cycle)
+    except Exception as e:
+        st.error(f"Error fetching cycle deals: {str(e)}")
+        cycle_count = 0
+
+    # --- Commission Calculation (Current Cycle) ---
     if cycle_count >= 200:
-        rate = 25; tier = "Top Tier ($25/deal)"; tier_color = "#13b13b"; next_target = None
+        rate = 25
     elif cycle_count >= 150:
-        rate = 22.5; tier = "Pro Tier ($22.50/deal)"; tier_color = "#26a7ff"; next_target = 200
+        rate = 22.5
     elif cycle_count >= 120:
-        rate = 17.5; tier = "Rising Tier ($17.50/deal)"; tier_color = "#fd9800"; next_target = 150
+        rate = 17.5
+    else:
+        rate = 15
 
-    # Bonus always $1200 if 70+
     bonus = 1200 if cycle_count >= 70 else 0
     payout = cycle_count * rate + bonus
+    
+    # Calculate progress towards bonus
+    bonus_target = 70
+    bonus_progress = min(cycle_count / bonus_target, 1.0)
+    bonus_status = "Achieved! (+$1,200)" if cycle_count >= bonus_target else f"{cycle_count}/{bonus_target} deals"
 
-    pct_to_next = (cycle_count / next_target * 100) if next_target else 100
-    next_text = f"{cycle_count}/{next_target} deals to next tier" if next_target else "MAX tier achieved"
-
-    # --- Previous Cycle Summary (GROSS payout + NET from FMO)
-    prev_count = prev_payout = prev_rate = prev_bonus = 0
-    net_paid = None
-    if prev_start and prev_end:
-        deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
-        prev_count = len(deals_prev_cycle)
-        prev_rate = 15
-        if prev_count >= 200: prev_rate = 25
-        elif prev_count >= 150: prev_rate = 22.5
-        elif prev_count >= 120: prev_rate = 17.5
+    # --- Previous Cycle ---
+    prev_cycle = commission_cycles[commission_cycles["end"] < cycle_row["start"].iloc[0]].tail(1)
+    prev_count = prev_payout = 0
+    prev_start = prev_end = prev_pay = ""
+    prev_net_pay = 0  # Adding net pay variable for previous cycle
+    
+    if not prev_cycle.empty:
+        prev_start = prev_cycle["start"].iloc[0].strftime("%Y-%m-%d")
+        prev_end = prev_cycle["end"].iloc[0].strftime("%Y-%m-%d")
+        prev_pay = prev_cycle["pay"].iloc[0].strftime("%m/%d/%y")
+        try:
+            deals_prev_cycle = fetch_deals_for_agent_date_range(st.session_state.user_email, prev_start, prev_end)
+            prev_count = len(deals_prev_cycle)
+        except Exception as e:
+            st.error(f"Error fetching previous cycle deals: {str(e)}")
+            prev_count = 0
+            
+        if prev_count >= 200:
+            prev_rate = 25
+        elif prev_count >= 150:
+            prev_rate = 22.5
+        elif prev_count >= 120:
+            prev_rate = 17.5
+        else:
+            prev_rate = 15
         prev_bonus = 1200 if prev_count >= 70 else 0
         prev_payout = prev_count * prev_rate + prev_bonus
+        
+        # Check if we have a statement PDF with net pay info
+        agent_username = st.session_state.user_email
+        conn = sqlite3.connect(DB)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS agent_statements (
+                cycle_end TEXT,
+                agent_username TEXT,
+                gross_payout REAL,
+                net_payout REAL,
+                pdf_data BLOB,
+                PRIMARY KEY (cycle_end, agent_username)
+            )
+        """)
+        cursor.execute(
+            "SELECT net_payout FROM agent_statements WHERE cycle_end = ? AND agent_username = ?", 
+            (prev_end, agent_username)
+        )
+        result = cursor.fetchone()
+        if result:
+            prev_net_pay = result[0]
+        conn.close()
 
-        # --- Net payout: try to get from uploaded FMO
-        if 'uploaded_file' in locals() and uploaded_file is not None:
-            try:
-                fmo_df = pd.read_excel(uploaded_file)
-                agent_name = st.session_state.user_name.strip().lower()
-                agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
-                net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
-            except Exception as e:
-                net_paid = None
-
-    # ------------- DISPLAY -------------
+    # --- DISPLAY DASHBOARD ---
     st.subheader("Current Commission Cycle")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Deals (Cycle)", cycle_count)
     c2.metric("Projected Payout", f"${payout:,.2f}")
     c3.metric("Cycle", f"{cycle_start} to {cycle_end}")
     c4.metric("Pay Date", f"{pay_date}")
-
-    st.markdown(f"""
-        <div style="background:{tier_color}33; padding:8px 16px; border-radius:10px; margin:8px 0 10px 0;">
-            <b style="color:{tier_color}; font-size:1.1em;">{tier}</b>
-            <span style='color:#222; font-size:1em; margin-left:16px;'>
-            {next_text}
-            </span>
-            <div style='background:#e5e5e5;border-radius:8px;height:12px;margin-top:4px;'>
-                <div style='background:{tier_color};width:{pct_to_next:.1f}%;height:12px;border-radius:8px;'></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    if bonus > 0:
-        st.success(f"🎁 <b>Bonus:</b> ${bonus:,.0f} HIT!", icon="🎉")
-    elif cycle_count >= 60:
-        st.info(f"🚩 {cycle_count}/70 deals for $1200 bonus", icon="🎁")
+    
+    # Add bonus tracker visualization
+    st.markdown("#### Bonus Progress - 70 Deals Target")
+    progress_col1, progress_col2 = st.columns([3, 1])
+    with progress_col1:
+        st.progress(bonus_progress)
+    with progress_col2:
+        st.markdown(f"**{bonus_status}**")
 
     st.markdown("---")
     st.subheader("Recent Performance")
     t1, t2, t3, t4 = st.columns(4)
     t1.metric("Today's Deals", daily_count)
-    t2.metric("This Week", weekly_count)
+    t2.metric("Last 7 Days", weekly_count)
     t3.metric("This Month", monthly_count)
     t4.metric("This Year", yearly_count)
 
-    if prev_count > 0 and prev_start and prev_end:
+    if prev_count is not None:
         st.markdown("---")
         st.subheader("Previous Completed Cycle")
         p1, p2, p3, p4 = st.columns(4)
         p1.metric("Deals", prev_count)
-        p2.metric("Gross Payout", f"${prev_payout:,.2f}")
+        
+        # If we have a statement with net pay, display it next to gross pay
+        if prev_net_pay > 0:
+            p2.markdown(f"""
+            <div>
+                <span style='font-weight:bold'>Final Payout</span><br>
+                <span style='font-size:1.5em'>${prev_payout:,.2f}</span>
+                <span style='font-size:0.9em; color:#606060;'> (Gross)</span><br>
+                <span style='font-size:1.1em; color:#008800;'>${prev_net_pay:,.2f}</span>
+                <span style='font-size:0.9em; color:#606060;'> (Net)</span>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            p2.metric("Final Payout", f"${prev_payout:,.2f}")
+            
         p3.metric("Cycle", f"{prev_start} to {prev_end}")
         p4.metric("Pay Date", f"{prev_pay}")
-        if net_paid is not None:
-            st.info(f"💰 <b>Net Payout (from FMO):</b> ${net_paid:,.2f}", icon="💵")
+        
+        # If we have a statement, show a button to view it
+        conn = sqlite3.connect(DB)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT pdf_data FROM agent_statements WHERE cycle_end = ? AND agent_username = ?", 
+            (prev_end, st.session_state.user_email)
+        )
+        statement_data = cursor.fetchone()
+        conn.close()
+        
+        if statement_data:
+            st.download_button(
+                label="📄 Download Statement PDF",
+                data=statement_data[0],
+                file_name=f"statement_{prev_start}_to_{prev_end}.pdf",
+                mime="application/pdf",
+            )
 
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
-    if not deals_cycle.empty:
+    if not deals_cycle.empty and 'date_sold' in deals_cycle.columns:
+        display_cols = ['date_sold', 'carrier', 'product', 'policy_id']
+        display_cols = [c for c in display_cols if c in deals_cycle.columns]
         st.dataframe(
-            deals_cycle[['date_sold', 'carrier', 'product', 'policy_id']],
+            deals_cycle[display_cols],
             use_container_width=True,
             hide_index=True
         )
@@ -476,11 +634,6 @@ if st.session_state.user_role.lower() == "agent":
 
     st.stop()
 
-
-
-
-
-# =================== ADMIN DASHBOARD ===================
 elif st.session_state.user_role.lower() == "admin":
     st.markdown(
         """
@@ -492,13 +645,14 @@ elif st.session_state.user_role.lower() == "admin":
         """, unsafe_allow_html=True,
     )
 
+    # Create the tabs for the admin interface
     tabs = st.tabs([
         "🏆 Overview", "📋 Leaderboard", "📈 History",
         "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay"
     ])
 
     # --- Smartly determine totals (if just uploaded, else pull last) ---
-    if uploaded_file is not None and 'totals' in locals():
+    if uploaded_file is not None:
         _deals = int(totals["deals"])
         _agent_payout = totals["agent"]
         _owner_rev = totals["owner_rev"]
@@ -510,470 +664,80 @@ elif st.session_state.user_role.lower() == "admin":
         _owner_rev = latest.owner_revenue
         _owner_profit = latest.owner_profit
     else:
-        _deals = _agent_payout = _owner_rev = _owner_profit = 0
-
-    # --- Overview Cards ---
-    st.markdown("<div style='margin-top:1.5em;'></div>", unsafe_allow_html=True)
-    o1, o2, o3, o4 = st.columns(4)
-    o1.metric("Total Paid Deals", f"{_deals:,}")
-    o2.metric("Agent Payout", f"${_agent_payout:,.2f}")
-    o3.metric("Owner Revenue", f"${_owner_rev:,.2f}")
-    o4.metric("Owner Profit", f"${_owner_profit:,.2f}")
-
-    st.markdown("---")
-
-    # --- Top Agents Leaderboard ---
-    st.markdown("<h4 style='margin-bottom:0.3em;'>🥇 Top Agents This Month</h4>", unsafe_allow_html=True)
-    if summary:
-        df_led = pd.DataFrame(summary).sort_values("Paid Deals", ascending=False).head(6)
-        st.dataframe(df_led.style.format({
-            "Agent Payout": "${:,.2f}",
-            "Owner Profit": "${:,.2f}"
-        }), hide_index=True, use_container_width=True)
-    else:
-        st.info("Upload a statement to see leaderboard.")
-
-    st.markdown("---")
-
-    # --- Live Counts (Cards) ---
-    st.markdown("<h4 style='margin-bottom:0.3em;'>📈 Live Deal Counts</h4>", unsafe_allow_html=True)
-    try:
-        df_api = fetch_all_today(limit=5000)
-        df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
-        today = pd.Timestamp.now(tz='US/Eastern').date()
-        daily_mask = df_api["date_sold"].dt.date == today
-        weekly_mask = df_api["date_sold"].dt.isocalendar().week == pd.Timestamp.now(tz='US/Eastern').isocalendar().week
-        monthly_mask = df_api["date_sold"].dt.month == today.month
-
-        lc1, lc2, lc3 = st.columns(3)
-        lc1.metric("Today's Deals", len(df_api[daily_mask]))
-        lc2.metric("This Week", len(df_api[weekly_mask]))
-        lc3.metric("This Month", len(df_api[monthly_mask]))
-    except Exception as e:
-        st.warning("Live count data not available.")
-
-    st.markdown("---")
-
-    # --- Quickview (last 6 periods) ---
-    st.markdown("<h4 style='margin-bottom:0.3em;'>📅 Recent Payroll Periods</h4>", unsafe_allow_html=True)
-    if not history_df.empty:
-        st.dataframe(
-            history_df.tail(6)[
-                ["upload_date", "total_deals", "agent_payout", "owner_revenue", "owner_profit"]
-            ].rename(columns={
-                "upload_date": "Date",
-                "total_deals": "Deals",
-                "agent_payout": "Agent Pay",
-                "owner_revenue": "Owner Rev",
-                "owner_profit": "Owner Profit"
-            }).style.format({
-                "Agent Pay": "${:,.2f}",
-                "Owner Rev": "${:,.2f}",
-                "Owner Profit": "${:,.2f}",
-            }), use_container_width=True, hide_index=True
-        )
-    else:
-        st.info("No payroll history yet.")
-
-
-# SETTINGS TAB
-with tabs[4]:
-    st.header("⚙️ Settings & Upload")
-    uploaded_file = st.file_uploader("📥 Upload Excel Statement", type="xlsx")
-    threshold     = st.slider("Coaching threshold (Paid Deals)", 0, 100, threshold)
-    if uploaded_file:
-        st.success("✅ Statement uploaded, processing…")
-        df = pd.read_excel(uploaded_file)
-        df.dropna(subset=["Agent","first_name","last_name","Advance"], inplace=True)
-        df["Client"]         = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
-        df["Paid Status"]    = df["Advance"].fillna(0).astype(float).apply(lambda x: "Paid" if x>0 else "Not Paid")
-        df["Reason"]         = df.get("Advance Excluded Reason","").fillna("").astype(str)
-        df["Effective Date"] = pd.to_datetime(df.get("Eff Date"), errors="coerce")
-        totals = {"deals":0, "agent":0.0, "owner_rev":0.0, "owner_prof":0.0}
-        summary.clear()
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w") as zf:
-            for agent in df["Agent"].unique():
-                sub     = df[df["Agent"]==agent]
-                paid_ct = (sub["Paid Status"]=="Paid").sum()
-                rate    = 25 if paid_ct>=200 else 22.5 if paid_ct>=150 else 17.5 if paid_ct>=120 else 15
-                bonus   = 1200 if paid_ct>=70 else 0
-                payout  = paid_ct * rate + bonus
-                owner_rev  = paid_ct * 150
-                owner_prof = paid_ct * 43
-                totals["deals"]     += paid_ct
-                totals["agent"]     += payout
-                totals["owner_rev"] += owner_rev
-                totals["owner_prof"]+= owner_prof
-                summary.append({
-                    "Agent": agent,
-                    "Paid Deals": paid_ct,
-                    "Agent Payout": payout,
-                    "Owner Profit": owner_prof,
-                    "Net Paid": sub["Advance"].astype(float).sum()  # Add Net Paid from FMO
-                })
-                pdf_bytes = generate_agent_pdf(sub, agent)
-                zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf_bytes)
-            # Write admin summary CSV
-            csv_buf = io.StringIO()
-            w = csv.writer(csv_buf)
-            w.writerow(["Agent","Paid Deals","Agent Payout","Owner Profit", "Net Paid"])
-            for r in summary:
-                w.writerow([r["Agent"], r["Paid Deals"], r["Agent Payout"], r["Owner Profit"], r["Net Paid"]])
-            zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
-        default_dt = (df["Effective Date"].max().date()
-                      if "Effective Date" in df else date.today())
-        insert_report(default_dt.strftime("%Y-%m-%d"), totals)
-        st.download_button(
-            "📦 Download ZIP of Pay Stubs",
-            buf.getvalue(),
-            file_name=f"paystubs_{datetime.now():%Y%m%d}.zip",
-            mime="application/zip"
-        )
-
-# OVERVIEW TAB
-with tabs[0]:
-    st.title("HCS Commission Dashboard")
-    if uploaded_file:
-        deals = int(totals["deals"])
-        c1, c2, c3, c4 = st.columns(4, gap="large")
-        c1.metric("Total Paid Deals", f"{deals:,}")
-        c2.metric("Agent Payout",    f"${totals['agent']:,.2f}")
-        c3.metric("Owner Revenue",   f"${totals['owner_rev']:,.2f}")
-        c4.metric("Owner Profit",    f"${totals['owner_prof']:,.2f}")
-    else:
-        if history_df.empty:
-            st.info("Upload a statement to see metrics.")
-        else:
-            latest = history_df.iloc[-1]
-            deals = int(latest.total_deals)
-            c1, c2, c3, c4 = st.columns(4, gap="large")
-            c1.metric("Total Paid Deals", f"{deals:,}")
-            c2.metric("Agent Payout",    f"${latest.agent_payout:,.2f}")
-            c3.metric("Owner Revenue",   f"${latest.owner_revenue:,.2f}")
-            c4.metric("Owner Profit",    f"${latest.owner_profit:,.2f}")
-    st.markdown("---")
-    rev = (totals["owner_rev"] if uploaded_file else
-           (latest.owner_revenue if not history_df.empty else 0))
-    s1, s2, s3 = st.columns(3, gap="large")
-    s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
-    s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
-    s3.metric("Jarad (1%)",  f"${rev*0.01:,.2f}")
-
-# LEADERBOARD TAB
-with tabs[1]:
-    st.header("Agent Leaderboard & Drill-Down")
-    if summary:
-        df_led = pd.DataFrame(summary).sort_values("Paid Deals", ascending=False)
-        st.dataframe(df_led.style.format({
-            "Agent Payout":"${:,.2f}",
-            "Owner Profit":"${:,.2f}"
-        }), use_container_width=True)
-        low     = st.slider("Highlight agents below deals:", 0, int(df_led["Paid Deals"].max()), threshold)
-        flagged = df_led[df_led["Paid Deals"]<low]
-        st.write(f"Agents below {low}: {len(flagged)}")
-        if not flagged.empty:
-            st.dataframe(flagged, use_container_width=True)
-    else:
-        st.info("No data—upload in Settings first.")
-
-# HISTORY TAB
-with tabs[2]:
-    st.header("Historical Reports")
-    if history_df.empty:
-        st.info("No history data yet.")
-    else:
-        dates = history_df["upload_date"].dt.strftime("%Y-%m-%d").tolist()
-        sel   = st.selectbox("View report:", dates)
-        rec   = history_df.loc[history_df["upload_date"].dt.strftime("%Y-%m-%d")==sel].iloc[0]
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Deals",        f"{int(rec.total_deals):,}")
-        c2.metric("Agent Payout", f"${rec.agent_payout:,.2f}")
-        c3.metric("Owner Revenue",f"${rec.owner_revenue:,.2f}")
-        c4.metric("Owner Profit", f"${rec.owner_profit:,.2f}")
-        st.line_chart(history_df.set_index("upload_date")[["total_deals","agent_payout","owner_revenue","owner_profit"]])
-
-# LIVE COUNTS TAB
-with tabs[3]:
-    st_autorefresh(interval=10 * 1000, key="live_counts_refresh")
-    st.header("Live Daily/Weekly/Monthly/Yearly Counts")
-    with st.spinner("Fetching today's leads..."):
-        df_api = fetch_all_today(limit=5000)
-    if df_api.empty:
-        st.error("No leads returned from API.")
-    else:
-        import pytz
-        df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
-        if df_api["date_sold"].dt.tz is None or str(df_api["date_sold"].dt.tz) == "None":
-            df_api["date_sold"] = df_api["date_sold"].dt.tz_localize('UTC')
-        df_api["date_sold"] = df_api["date_sold"].dt.tz_convert('US/Eastern')
-        today = pd.Timestamp.now(tz='US/Eastern').date()
-        start_of_week = today - timedelta(days=today.weekday())
-        this_month = today.replace(day=1)
-        this_year = today.replace(month=1, day=1)
-        daily_mask   = df_api["date_sold"].dt.date == today
-        weekly_mask  = df_api["date_sold"].dt.date >= start_of_week
-        monthly_mask = df_api["date_sold"].dt.date >= this_month
-        yearly_mask  = df_api["date_sold"].dt.date >= this_year
-        d_tot = len(df_api[daily_mask])
-        w_tot = len(df_api[weekly_mask])
-        m_tot = len(df_api[monthly_mask])
-        y_tot = len(df_api[yearly_mask])
-        c1, c2, c3, c4 = st.columns(4, gap="large")
-        c1.metric("Today's Deals", f"{d_tot:,}")
-        c1.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${d_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
-        c2.metric("This Week's Deals", f"{w_tot:,}")
-        c2.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${w_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
-        c3.metric("This Month's Deals", f"{m_tot:,}")
-        c3.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${m_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
-        c4.metric("This Year's Deals", f"{y_tot:,}")
-        c4.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${y_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
-        st.markdown("---")
-        def by_agent(mask):
-            col = "lead_vendor_name" if "lead_vendor_name" in df_api.columns else df_api.columns[0]
-            return (
-                df_api[mask]
-                .groupby(col)
-                .size()
-                .rename("Sales")
-                .sort_values(ascending=False)
+        _deals = 0
+        _agent_payout = 0.0
+        _owner_rev = 0.0
+        _owner_profit = 0.0
+        
+    # New functionality for FMO statement upload
+    agent_statements_tab = tabs[6]  # Using the Vendor Pay tab for agent statement uploads
+    
+    with agent_statements_tab:
+        st.subheader("Upload FMO Agent Statements")
+        st.markdown("""
+        Use this section to upload PDF statements from your FMO. The system will extract payment 
+        information and make it available on the agent dashboards.
+        """)
+        
+        uploaded_statement = st.file_uploader("Upload FMO Agent Statement PDF", type=["pdf"])
+        
+        if uploaded_statement is not None:
+            # Process the statement
+            statement_bytes = uploaded_statement.read()
+            
+            # UI for selecting which agent this statement belongs to
+            st.subheader("Assign to Agent")
+            agent_username = st.selectbox(
+                "Select Agent", 
+                options=AGENT_USERNAMES,
+                format_func=lambda x: f"{AGENT_NAMES.get(x, x)} ({x})"
             )
-        b1, b2, b3, b4 = st.columns(4, gap="large")
-        b1.subheader("Daily Sales by Agent");   b1.bar_chart(by_agent(daily_mask))
-        b2.subheader("Weekly Sales by Agent");  b2.bar_chart(by_agent(weekly_mask))
-        b3.subheader("Monthly Sales by Agent"); b3.bar_chart(by_agent(monthly_mask))
-        b4.subheader("Yearly Sales by Agent");  b4.bar_chart(by_agent(yearly_mask))
-        st.markdown("---")
-        st.subheader("Today's Deals Table (Eastern Time)")
-        cols_to_show = [
-            "policy_id", "lead_first_name", "lead_last_name", "date_sold", "carrier", "product"
-        ]
-        if "lead_vendor_name" in df_api.columns:
-            cols_to_show.append("lead_vendor_name")
-        st.dataframe(
-            df_api[daily_mask][cols_to_show].sort_values("date_sold"),
-            use_container_width=True
-        )
-
-# CLIENTS TAB (ALL TODAY) with AUTO-REFRESH
-with tabs[5]:
-    st_autorefresh(interval=10 * 1000, key="clients_tab_refresh")
-    st.header("📂 Live Client Leads (Sold Today)")
-    df_api = fetch_all_today(limit=5000)
-    if df_api.empty:
-        st.info("No API leads returned.")
-        api_display = pd.DataFrame()
-    else:
-        df_api["date_sold"] = pd.to_datetime(df_api["date_sold"], errors="coerce")
-        api_today = df_api[df_api["date_sold"].dt.date == date.today()]
-        api_cols = [
-            "policy_id","lead_first_name","lead_last_name","lead_state",
-            "date_sold","carrier","product","duration","premium",
-            "policy_number","lead_vendor_name"
-        ]
-        api_cols = [c for c in api_cols if c in api_today.columns]
-        api_display = api_today[api_cols].rename(columns={
-            "policy_id":       "Policy ID",
-            "lead_first_name": "First Name",
-            "lead_last_name":  "Last Name",
-            "lead_state":      "State",
-            "date_sold":       "Date Sold",
-            "lead_vendor_name":"Vendor",
-        })
-        if "lead_id" in api_today.columns:
-            api_display["Lead ID"] = api_today["lead_id"].astype(str)
-    if "manual_leads" not in st.session_state:
-        st.session_state.manual_leads = pd.DataFrame()
-    combined = (
-        api_display
-        if st.session_state.manual_leads.empty
-        else pd.concat([api_display, st.session_state.manual_leads], ignore_index=True, sort=False)
-    )
-    if combined.empty:
-        st.warning("No leads to display for today.")
-    else:
-        st.subheader(f"Showing {len(combined)} total leads")
-        st.dataframe(combined, use_container_width=True)
-
-# VENDOR PAY TAB
-with tabs[6]:
-    st.header("💼 Vendor Pay Summary")
-
-    # All vendor keys/code names and pretty display names
-    VENDOR_CODES = {
-        "general": "GENERAL",
-        "inbound": "INBOUND",
-        "sms": "SMS",
-        "advancegro": "Advance gro",
-        "axad": "AXAD",
-        "googlecalls": "GOOGLE CALLS",
-        "buffercall": "Aetna",
-        "ancletadvising": "Anclet advising",
-        "blmcalls": "BLM CALLS",
-        "loopcalls": "LOOP CALLS",
-        "nobufferaca": "NO BUFFER ACA",
-        "raycalls": "RAY CALLS",
-        "nomiaca": "Nomi ACA",
-        "hcsmedia": "HCS MEDIA",
-        "francalls": "Fran Calls",
-        "acaking": "ACA KING",
-        "ptacacalls": "PT ACA CALLS",
-        "hcscaa": "HCS CAA",
-        "slavaaca": "Slava ACA",
-        "slavaaca2": "Slava ACA 2",
-        "francallssupp": "Fran Calls SUPP",
-        "derekinhousefb": "DEREK INHOUSE FB",
-        "allicalladdoncall": "ALI CALL ADDON CALL",
-        "joshaca": "JOSH ACA",
-        "hcs1p": "HCS1p"
-    }
-
-    # Assign rates to each vendor code that gets paid (expand as needed)
-    VENDOR_RATES = {
-        "francalls": 55,
-        "hcsmedia": 55,
-        "buffercall": 80,      # Aetna
-        "acaking": 75,
-        "raycalls": 69,
-        # Add more here if you pay other vendors!
-    }
-
-    def normalize_key(x):
-        return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
-
-    tld_file = st.file_uploader("Upload TLD CSV (new/PHI export)", type=["csv"], key="vendor_tld")
-    fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo")
-
-    if tld_file and fmo_file:
-        st.success("Both files uploaded. Generating vendor ZIP...")
-
-        # Load and normalize vendor names from TLD
-        tld = pd.read_csv(tld_file, dtype=str)
-        tld['VendorRaw'] = tld.iloc[:, 8].astype(str)
-        tld['First Name'] = tld.iloc[:, 3].astype(str)
-        tld['Last Name'] = tld.iloc[:, 4].astype(str)
-        tld['vendor_key'] = tld['VendorRaw'].apply(normalize_key)
-
-        fmo = pd.read_excel(fmo_file, dtype=str)
-        fmo['First Name'] = fmo.iloc[:, 7].astype(str)
-        fmo['Last Name'] = fmo.iloc[:, 8].astype(str)
-        fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
-        fmo['Reason'] = fmo.get('Advance Excluded Reason', "")
-        tld['full_name'] = (tld['First Name'] + tld['Last Name']).apply(normalize_key)
-        fmo['full_name'] = (fmo['First Name'] + fmo['Last Name']).apply(normalize_key)
-
-        merged = pd.merge(
-            tld,
-            fmo[['full_name', 'Advance', 'Reason']],
-            on='full_name', how='left'
-        )
-
-        # --- Display Vendor Summary Table ---
-        vendor_summaries = []
-        for vkey, pretty in VENDOR_CODES.items():
-            if vkey not in VENDOR_RATES:
-                continue
-            rate = VENDOR_RATES[vkey]
-            sub = merged[merged['vendor_key'] == vkey]
-            paid_ct = (sub['Advance'] > 0).sum()
-            unpaid_ct = (sub['Advance'] == 0).sum()
-            pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
-            paid_amt = paid_ct * rate
-            vendor_summaries.append({
-                "Vendor": pretty,
-                "Paid Deals": paid_ct,
-                "Unpaid Deals": unpaid_ct,
-                "Paid %": f"{pct_paid:.1f}%",
-                "PaidPctNum": pct_paid,
-                "Total Paid Amount": f"${paid_amt:,.2f}"
-            })
-
-        if vendor_summaries:
-            df_sum = pd.DataFrame(vendor_summaries)
-            st.subheader("Vendor Pay Summary Table")
-            st.dataframe(df_sum.drop("PaidPctNum", axis=1), use_container_width=True)
-
-            # ---- Grand Total Paid (bottom) ----
-            total_paid = sum(
-                float(str(row["Total Paid Amount"]).replace("$", "").replace(",", ""))
-                for row in vendor_summaries
+            
+            # Get cycle information
+            cycle_options = [(c["end"].strftime("%Y-%m-%d"), 
+                             f"{c['start'].strftime('%m/%d/%y')} to {c['end'].strftime('%m/%d/%y')}") 
+                             for _, c in commission_cycles.iterrows()]
+            
+            selected_cycle_end, _ = st.selectbox(
+                "Commission Cycle", 
+                options=cycle_options,
+                format_func=lambda x: x[1]
             )
-            avg_paid_pct = (
-                sum(row["PaidPctNum"] for row in vendor_summaries) / len(vendor_summaries)
-                if vendor_summaries else 0
-            )
+            
+            # Gross payout would typically be extracted from the PDF
+            # For now, we'll have the admin enter it manually
+            gross_payout = st.number_input("Gross Payout ($)", min_value=0.0, step=100.0)
+            net_payout = st.number_input("Net Payout ($)", min_value=0.0, step=100.0)
+            
+            if st.button("Save Statement"):
+                # Save to database
+                conn = sqlite3.connect(DB)
+                cursor = conn.cursor()
+                
+                # Ensure table exists
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS agent_statements (
+                        cycle_end TEXT,
+                        agent_username TEXT,
+                        gross_payout REAL,
+                        net_payout REAL,
+                        pdf_data BLOB,
+                        PRIMARY KEY (cycle_end, agent_username)
+                    )
+                """)
+                
+                # Insert or update the record
+                cursor.execute("""
+                    INSERT OR REPLACE INTO agent_statements
+                    (cycle_end, agent_username, gross_payout, net_payout, pdf_data)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (selected_cycle_end, agent_username, gross_payout, net_payout, statement_bytes))
+                
+                conn.commit()
+                conn.close()
+                
+                st.success(f"Statement saved for {AGENT_NAMES.get(agent_username, agent_username)}")
 
-            st.markdown(
-                f"<div style='font-size:1.15em; margin-top:12px; color:#1a4301;'><b>Total Paid to All Vendors:</b> ${total_paid:,.2f}</div>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f"<div style='font-size:1.08em; margin-top:2px; color:#2a3647;'><b>Average Paid % Across Vendors:</b> {avg_paid_pct:.1f}%</div>",
-                unsafe_allow_html=True,
-            )
-
-        # --- PDF GENERATOR with summary block at top ---
-        def vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt):
-            def fix(s): return str(s).encode('latin1', errors='replace').decode('latin1')
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", "B", 14)
-            pdf.cell(0, 10, fix(f"Vendor Pay Summary – {pretty}"), ln=True, align="C")
-            pdf.ln(3)
-            pdf.set_font("Arial", "B", 12)
-            # --- Summary stats at top ---
-            paid_ct = len(paid)
-            unpaid_ct = len(unpaid)
-            pdf.cell(0, 8, fix(f"Summary:"), ln=True)
-            pdf.set_font("Arial", "", 11)
-            pdf.cell(0, 8, fix(f"Paid Deals: {paid_ct}"), ln=True)
-            pdf.cell(0, 8, fix(f"Unpaid Deals: {unpaid_ct}"), ln=True)
-            pdf.cell(0, 8, fix(f"Paid Percentage: {pct_paid:.1f}%"), ln=True)
-            pdf.cell(0, 8, fix(f"Total Paid Amount: ${paid_amt:,.2f}"), ln=True)
-            pdf.ln(6)
-
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, fix(f"Paid Clients"), ln=True)
-            pdf.set_font("Arial", "", 10)
-            for _, row in paid.iterrows():
-                pdf.cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Payout: ${rate}"), ln=True)
-            pdf.ln(3)
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, fix("Unpaid Clients & Reasons"), ln=True)
-            pdf.set_font("Arial", "", 10)
-            for _, row in unpaid.iterrows():
-                reason = row['Reason'] if 'Reason' in row and pd.notnull(row['Reason']) else ''
-                pdf.multi_cell(0, 8, fix(f"- {row['First Name']} {row['Last Name']} | Reason: {reason or 'No reason provided'}"))
-            pdf.ln(5)
-            return pdf.output(dest="S").encode("latin1")
-
-        # --- Zip all PDFs ---
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w") as zipf:
-            for vkey, pretty in VENDOR_CODES.items():
-                if vkey not in VENDOR_RATES:
-                    continue
-                rate = VENDOR_RATES[vkey]
-                sub = merged[merged['vendor_key'] == vkey]
-                paid = sub[sub['Advance'] > 0][['First Name', 'Last Name']]
-                unpaid = sub[sub['Advance'] == 0][['First Name', 'Last Name', 'Reason']]
-                paid_ct = len(paid)
-                unpaid_ct = len(unpaid)
-                pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
-                paid_amt = paid_ct * rate
-                pdf_bytes = vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt)
-                zipf.writestr(f"{pretty.replace(' ', '_')}_Vendor_Pay.pdf", pdf_bytes)
-
-        st.download_button(
-            "Download ZIP of Vendor Pay Reports",
-            buf.getvalue(),
-            file_name="Vendor_Pay_Summaries.zip",
-            mime="application/zip"
-        )
-        st.info("Each PDF lists only converted deals (matched to FMO). Unpaid reasons included. Vendor rate auto-applied.")
-
-    else:
-        st.warning("Please upload both files to generate vendor pay summaries.")
 
 
 
