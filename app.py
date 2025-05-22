@@ -317,11 +317,12 @@ if st.session_state.user_role.lower() == "agent":
         st.error("Agent not found."); st.stop()
     user_id = str(agent['user_id'].iloc[0])
 
-    # --- Get current and previous cycles based on TODAY
+    # --- Get CYCLES using actual dates ---
     cycles = commission_cycles.sort_values("start").reset_index(drop=True)
     today = pd.Timestamp.now(tz='US/Eastern').date()
     current_idx = None
     for idx, row in cycles.iterrows():
+        # Use ONLY start/end (not pay)
         if row["start"].date() <= today <= row["end"].date():
             current_idx = idx
             break
@@ -340,13 +341,13 @@ if st.session_state.user_role.lower() == "agent":
     else:
         prev_start = prev_end = prev_pay = ""
 
-    # --- Date ranges for stats
+    # --- Date ranges for stats (USE TQL correct way for all) ---
     today_str    = today.strftime("%Y-%m-%d")
-    week_start   = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")  # Monday
+    week_start   = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")
     month_start  = today.replace(day=1).strftime("%Y-%m-%d")
     year_start   = today.replace(month=1, day=1).strftime("%Y-%m-%d")
 
-    def fetch_agent_deals(user_id, date_from, date_to):
+    def fetch_agent_deals(user_id, start, end):
         columns = [
             'policy_id', 'date_sold', 'carrier', 'product', 'premium',
             'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
@@ -355,9 +356,9 @@ if st.session_state.user_role.lower() == "agent":
         headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
         params = {
             "agent_id": user_id,
-            "date_sold_greater_equal": date_from,
-            "date_sold_less_equal": date_to,
-            "limit": 1000,
+            "date_sold_greater_equal": start,
+            "date_sold_less_equal": end,
+            "limit": 2000,
             "columns": ",".join(columns)
         }
         resp = requests.get(CRM_API_URL, headers=headers, params=params, timeout=10)
@@ -368,7 +369,7 @@ if st.session_state.user_role.lower() == "agent":
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
         return df
 
-    # --- LIVE COUNTS (always match ADMIN logic for agent's own deals)
+    # --- ALL deal counts based on correct period ---
     deals_today  = fetch_agent_deals(user_id, today_str, today_str)
     deals_week   = fetch_agent_deals(user_id, week_start, today_str)
     deals_month  = fetch_agent_deals(user_id, month_start, today_str)
@@ -382,7 +383,6 @@ if st.session_state.user_role.lower() == "agent":
     cycle_count   = len(deals_cycle)
 
     # --- COMMISSION TIER / BONUS BAR
-    # Tier logic matches your backend
     if cycle_count >= 200:
         rate = 25
         tier = "Top Tier ($25/deal)"
@@ -403,7 +403,7 @@ if st.session_state.user_role.lower() == "agent":
     payout = cycle_count * rate + bonus
 
     # --- Next tier for progress bar
-    tier_targets = [(200, 25), (150, 22.5), (120, 17.5)]
+    tier_targets = [(200, 25), (150, 22.5), (120, 17.5), (70, "Bonus $1200")]
     next_target = None
     for th, v in tier_targets:
         if cycle_count < th:
@@ -411,22 +411,11 @@ if st.session_state.user_role.lower() == "agent":
             break
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
 
-    # --- BONUS PROGRESS BAR
-    bonus_target = 70
-    pct_to_bonus = min(cycle_count / bonus_target * 100, 100)
-    bonus_bar = f"""
-        <div style="background:#eaf6ff; padding:6px 16px; border-radius:10px; margin:6px 0 10px 0;">
-            <b style="color:#198754;">🎁 Bonus Progress:</b>
-            <span style='color:#222; font-size:1em; margin-left:16px;'>
-            {cycle_count}/{bonus_target} deals for $1200 bonus
-            </span>
-            <div style='background:#e5e5e5;border-radius:8px;height:12px;margin-top:4px;'>
-                <div style='background:#37c04b;width:{pct_to_bonus:.1f}%;height:12px;border-radius:8px;'></div>
-            </div>
-        </div>
-    """
+    # --- Bonus progress bar
+    bonus_pct = min((cycle_count / 70 * 100), 100)
+    bonus_progress = f"{min(cycle_count, 70)}/70 deals for $1200 bonus"
 
-    # --- Previous Cycle Summary (GROSS payout)
+    # --- Previous Cycle Summary (GROSS payout, always use *actual prev_start/prev_end*) ---
     prev_count = prev_payout = prev_rate = prev_bonus = 0
     net_paid = None
     if prev_start and prev_end:
@@ -438,7 +427,6 @@ if st.session_state.user_role.lower() == "agent":
         else: prev_rate = 15
         prev_bonus = 1200 if prev_count >= 70 else 0
         prev_payout = prev_count * prev_rate + prev_bonus
-
         # --- Net payout: try to get from uploaded FMO
         if 'uploaded_file' in locals() and uploaded_file is not None:
             try:
@@ -448,10 +436,8 @@ if st.session_state.user_role.lower() == "agent":
                 net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
             except Exception as e:
                 net_paid = None
-        else:
-            net_paid = 0.0
 
-    # ---------------- DISPLAY -------------------
+    # --------- UI DISPLAY --------------
     st.subheader("Current Commission Cycle")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Deals (Cycle)", cycle_count)
@@ -459,7 +445,6 @@ if st.session_state.user_role.lower() == "agent":
     c3.metric("Cycle", f"{cycle_start} to {cycle_end}")
     c4.metric("Pay Date", f"{pay_date}")
 
-    # TIER PROGRESS BAR
     st.markdown(f"""
         <div style="background:{tier_color}33; padding:8px 16px; border-radius:10px; margin:8px 0 10px 0;">
             <b style="color:{tier_color}; font-size:1.1em;">{tier}</b>
@@ -471,7 +456,20 @@ if st.session_state.user_role.lower() == "agent":
             </div>
         </div>
         """, unsafe_allow_html=True)
-    st.markdown(bonus_bar, unsafe_allow_html=True)
+    # Bonus progress bar
+    st.markdown(f"""
+        <div style="background:#eaf6ff; padding:7px 16px; border-radius:10px; margin:6px 0 18px 0;">
+            <span style="color:#22a620;font-weight:bold;">🎁 Bonus Progress:</span>
+            <span style="color:#222; font-size:1em; margin-left:8px;">{bonus_progress}</span>
+            <div style='background:#eee;border-radius:8px;height:12px;margin-top:4px;'>
+                <div style='background:#22a620;width:{bonus_pct:.1f}%;height:12px;border-radius:8px;'></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    if bonus > 0:
+        st.success(f"🎁 <b>Bonus:</b> ${bonus:,.0f} HIT!", icon="🎉")
+    elif cycle_count >= 60:
+        st.info(f"🚩 {cycle_count}/70 deals for $1200 bonus", icon="🎁")
 
     st.markdown("---")
     st.subheader("Recent Performance")
@@ -489,12 +487,8 @@ if st.session_state.user_role.lower() == "agent":
         p2.metric("Gross Payout", f"${prev_payout:,.2f}")
         p3.metric("Cycle", f"{prev_start} to {prev_end}")
         p4.metric("Pay Date", f"{prev_pay}")
-        # Net payout (from FMO statement if uploaded)
-        st.markdown(
-            f"<div style='color:#198754; margin-top:0.5em; font-size:1.04em;'>"
-            f"<b>Net Payout (from FMO):</b> ${net_paid:,.2f}</div>",
-            unsafe_allow_html=True,
-        )
+        if net_paid is not None:
+            st.info(f"💰 Net Payout (from FMO): ${net_paid:,.2f}", icon="💵")
 
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
