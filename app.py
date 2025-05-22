@@ -368,7 +368,7 @@ if st.session_state.user_role.lower() == "agent":
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
         return df
 
-    # --- LIVE COUNTS (always match ADMIN logic for agent's own deals)
+    # --- Fetch counts and deals for all periods, using the ACTUAL CYCLE DATES, not pay date!
     deals_today  = fetch_agent_deals(user_id, today_str, today_str)
     deals_week   = fetch_agent_deals(user_id, week_start, today_str)
     deals_month  = fetch_agent_deals(user_id, month_start, today_str)
@@ -382,7 +382,6 @@ if st.session_state.user_role.lower() == "agent":
     cycle_count   = len(deals_cycle)
 
     # --- COMMISSION TIER / BONUS BAR
-    # Tier logic matches your backend
     if cycle_count >= 200:
         rate = 25
         tier = "Top Tier ($25/deal)"
@@ -426,7 +425,7 @@ if st.session_state.user_role.lower() == "agent":
         </div>
     """
 
-    # --- Previous Cycle Summary (GROSS payout)
+    # --- Previous Cycle (ALWAYS use prev_start and prev_end, not pay date!)
     prev_count = prev_payout = prev_rate = prev_bonus = 0
     net_paid = None
     if prev_start and prev_end:
