@@ -542,7 +542,7 @@ elif st.session_state.user_role.lower() == "admin":
 
     tabs = st.tabs([
         "🏆 Overview", "📋 Leaderboard", "📈 History",
-        "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay"
+        "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay" "🧾 Agent Net Pay"
     ])
 
     # --- Smartly determine totals (if just uploaded, else pull last) ---
@@ -1022,6 +1022,40 @@ with tabs[6]:
 
     else:
         st.warning("Please upload both files to generate vendor pay summaries.")
+        
+        with tabs[7]:  # Make sure tabs[7] corresponds to "Agent Net Pay"
+    st.header("Agent Net Pay (FMO Statement Summary)")
+    fmo_file = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="agent_net_pay_fmo")
+
+    if fmo_file is not None:
+        try:
+            df_fmo = pd.read_excel(fmo_file, dtype=str)
+            agent_col = next((c for c in df_fmo.columns if "agent" in c.lower()), None)
+            adv_col = next((c for c in df_fmo.columns if "advance" in c.lower()), None)
+            eff_col = next((c for c in df_fmo.columns if "eff" in c.lower()), None)
+            # Filter paid rows
+            df_fmo[adv_col] = pd.to_numeric(df_fmo[adv_col], errors="coerce").fillna(0)
+            paid_rows = df_fmo[df_fmo[adv_col] > 0].copy()
+            # If you want to show only for previous cycle, filter effective date as well
+            if eff_col:
+                prev_cycle_row = commission_cycles[commission_cycles["end"] < pd.Timestamp.now(tz='US/Eastern')].tail(1)
+                if not prev_cycle_row.empty:
+                    prev_start = prev_cycle_row["start"].iloc[0]
+                    prev_end = prev_cycle_row["end"].iloc[0]
+                    mask = pd.to_datetime(paid_rows[eff_col], errors="coerce").between(prev_start, prev_end)
+                    paid_rows = paid_rows[mask]
+
+            # Summarize by agent
+            summary = paid_rows.groupby(agent_col)[adv_col].sum().reset_index()
+            summary = summary.rename(columns={agent_col: "Agent", adv_col: "Net Paid"})
+            summary["Net Paid"] = summary["Net Paid"].apply(lambda x: f"${x:,.2f}")
+            st.dataframe(summary, use_container_width=True)
+            st.success("Agent net payouts are calculated for all agents with Advance > 0 in the selected period.")
+        except Exception as e:
+            st.error(f"Error processing FMO statement: {e}")
+    else:
+        st.info("Upload an FMO statement to view agent net payouts.")
+
 
 
 
