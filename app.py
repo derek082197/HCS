@@ -542,7 +542,7 @@ elif st.session_state.user_role.lower() == "admin":
 
     tabs = st.tabs([
         "🏆 Overview", "📋 Leaderboard", "📈 History",
-        "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay" "🧾 Agent Net Pay"
+        "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay", "🧾 Agent Net Pay"
     ])
 
     # --- Smartly determine totals (if just uploaded, else pull last) ---
