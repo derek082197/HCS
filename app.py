@@ -515,6 +515,37 @@ if st.session_state.user_role.lower() == "agent":
         )
     else:
         st.info("No deals found in this commission cycle.")
+        agent_key = st.session_state.user_name.strip().lower()
+
+# Get FMO data/state from admin upload
+net_payouts = st.session_state.get("agent_net_payouts", {})
+fmo_df = st.session_state.get("agent_fmo_df", None)
+agent_net_payout = net_payouts.get(agent_key, None)
+
+agent_paid_df = pd.DataFrame()
+if fmo_df is not None and "Agent_clean" in fmo_df.columns:
+    agent_paid_df = fmo_df[
+        (fmo_df["Agent_clean"] == agent_key) & (fmo_df["Advance"] == 150)
+    ].copy()
+
+# --- UI block
+with st.container():
+    st.subheader("Net Payout (from FMO Statement)")
+    if agent_net_payout is not None:
+        st.success(
+            f"💰 <b>Net Paid (FMO):</b> <span style='font-size:1.3em;'>${float(agent_net_payout):,.2f}</span>",
+            icon="💵", unsafe_allow_html=True,
+        )
+    else:
+        st.info("Net payout not yet available. Please check back after next statement upload.")
+
+    if not agent_paid_df.empty:
+        st.markdown("#### Paid Policies (from FMO)")
+        display_cols = ["Eff Date", "first_name", "last_name", "issuer", "state", "policy_status", "Advance", "Post Date"]
+        display_cols = [c for c in display_cols if c in agent_paid_df.columns]
+        st.dataframe(agent_paid_df[display_cols], use_container_width=True)
+    else:
+        st.info("No paid policies found for this period.")
 
     st.stop()
 
