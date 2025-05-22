@@ -615,64 +615,7 @@ elif st.session_state.user_role.lower() == "admin":
         )
     else:
         st.info("No payroll history yet.")
-        with st.container():
-    st.header("Agent Net Pay (FMO Statement Summary)")
-    uploaded_fmo = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="fmo_upload_agent_net")
-    if uploaded_fmo is not None:
-        try:
-            fmo_df = pd.read_excel(uploaded_fmo, dtype=str)
-            # For robustness: fill any NaN
-            fmo_df = fmo_df.fillna("")
-            # Net paid deals: Advance == 150 (change if needed)
-            fmo_df["Advance"] = pd.to_numeric(fmo_df["Advance"], errors="coerce").fillna(0)
-            fmo_df["Agent_clean"] = fmo_df["Agent"].str.strip().str.lower()
-            agent_groups = fmo_df[fmo_df["Advance"] == 150].groupby("Agent_clean")
-
-            summary_rows = []
-            agent_net_payouts = {}
-            for agent, group in agent_groups:
-                paid_count = len(group)
-                # --- HCS Tier/Bonus model
-                if paid_count >= 200:
-                    rate = 25
-                elif paid_count >= 150:
-                    rate = 22.5
-                elif paid_count >= 120:
-                    rate = 17.5
-                else:
-                    rate = 15
-                bonus = 1200 if paid_count >= 70 else 0
-                payout = paid_count * rate + bonus
-                summary_rows.append({
-                    "Agent": agent.title(),
-                    "Net Paid Deals": paid_count,
-                    "Agent Net Payout": payout,
-                })
-                agent_net_payouts[agent] = payout
-
-            # For agent dashboards:
-            st.session_state["agent_net_payouts"] = agent_net_payouts
-            st.session_state["agent_fmo_df"] = fmo_df  # save entire FMO sheet
-
-            # Show summary table
-            if summary_rows:
-                st.dataframe(
-                    pd.DataFrame(summary_rows),
-                    use_container_width=True,
-                    hide_index=True,
-                )
-                st.success("Showing all agents with Net Paid Deals (Advance == 150) and HCS payout model.")
-                # Download as CSV
-                out_df = pd.DataFrame(summary_rows)
-                st.download_button(
-                    "⬇️ Download CSV", out_df.to_csv(index=False), file_name="agent_net_payouts.csv"
-                )
-            else:
-                st.warning("No net paid agents found in this statement.")
-        except Exception as e:
-            st.error(f"Error processing FMO statement: {e}")
-    else:
-        st.info("Upload the FMO Excel to see agent net pay.")
+        
 
 
 # SETTINGS TAB
