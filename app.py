@@ -368,20 +368,22 @@ if st.session_state.user_role.lower() == "agent":
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
         return df
 
-    # --- LIVE COUNTS (always match ADMIN logic for agent's own deals)
+    # --- LIVE COUNTS (MATCH ADMIN LOGIC!)
     deals_today  = fetch_agent_deals(user_id, today_str, today_str)
     deals_week   = fetch_agent_deals(user_id, week_start, today_str)
     deals_month  = fetch_agent_deals(user_id, month_start, today_str)
     deals_year   = fetch_agent_deals(user_id, year_start, today_str)
     deals_cycle  = fetch_agent_deals(user_id, cycle_start, cycle_end)
+    deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end) if prev_start and prev_end else pd.DataFrame()
 
     daily_count   = len(deals_today)
     weekly_count  = len(deals_week)
     monthly_count = len(deals_month)
     yearly_count  = len(deals_year)
     cycle_count   = len(deals_cycle)
+    prev_count    = len(deals_prev_cycle)
 
-    # --- COMMISSION TIER / BONUS BAR (Accurate tiering and progress)
+    # --- COMMISSION TIER / BONUS BAR
     tier = "Starter ($15/deal)"; rate = 15; tier_color = "#a0a0a0"; next_target = 120
     if cycle_count >= 200:
         rate = 25; tier = "Top Tier ($25/deal)"; tier_color = "#13b13b"; next_target = None
@@ -397,28 +399,28 @@ if st.session_state.user_role.lower() == "agent":
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
     next_text = f"{cycle_count}/{next_target} deals to next tier" if next_target else "MAX tier achieved"
 
-    # --- Previous Cycle Summary (GROSS payout + NET from FMO)
-    prev_count = prev_payout = prev_rate = prev_bonus = 0
-    net_paid = None
-    if prev_start and prev_end:
-        deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
-        prev_count = len(deals_prev_cycle)
-        prev_rate = 15
-        if prev_count >= 200: prev_rate = 25
-        elif prev_count >= 150: prev_rate = 22.5
-        elif prev_count >= 120: prev_rate = 17.5
-        prev_bonus = 1200 if prev_count >= 70 else 0
-        prev_payout = prev_count * prev_rate + prev_bonus
+    # --- Bonus progress and visibility
+    show_bonus_bar = True
+    bonus_pct = min(100, (cycle_count / 70) * 100)
+    bonus_text = f"{cycle_count}/70 deals for $1200 bonus"
 
-        # --- Net payout: try to get from uploaded FMO
-        if 'uploaded_file' in locals() and uploaded_file is not None:
-            try:
-                fmo_df = pd.read_excel(uploaded_file)
-                agent_name = st.session_state.user_name.strip().lower()
-                agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
-                net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
-            except Exception as e:
-                net_paid = None
+    # --- Previous Cycle payout (GROSS + NET from FMO)
+    prev_rate = 15
+    if prev_count >= 200: prev_rate = 25
+    elif prev_count >= 150: prev_rate = 22.5
+    elif prev_count >= 120: prev_rate = 17.5
+    prev_bonus = 1200 if prev_count >= 70 else 0
+    prev_payout = prev_count * prev_rate + prev_bonus
+
+    net_paid = None
+    if 'uploaded_file' in locals() and uploaded_file is not None:
+        try:
+            fmo_df = pd.read_excel(uploaded_file)
+            agent_name = st.session_state.user_name.strip().lower()
+            agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
+            net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
+        except Exception as e:
+            net_paid = None
 
     # ------------- DISPLAY -------------
     st.subheader("Current Commission Cycle")
@@ -439,10 +441,19 @@ if st.session_state.user_role.lower() == "agent":
             </div>
         </div>
         """, unsafe_allow_html=True)
-    if bonus > 0:
-        st.success(f"🎁 <b>Bonus:</b> ${bonus:,.0f} HIT!", icon="🎉")
-    elif cycle_count >= 60:
-        st.info(f"🚩 {cycle_count}/70 deals for $1200 bonus", icon="🎁")
+
+    # Always show the bonus bar (if under 70, as progress; if 70+, as "HIT!")
+    st.markdown(
+        f"""
+        <div style="background:#eaf6ff; padding:8px 16px; border-radius:10px; margin:10px 0 20px 0;">
+            <b style="color:#208b26; font-size:1em;">🎁 Bonus Progress:</b>
+            <span style='font-size:1em; margin-left:8px;'>{bonus_text}</span>
+            <div style='background:#e5e5e5;border-radius:8px;height:10px;margin-top:4px;width:50%;min-width:260px;'>
+                <div style='background:#208b26;width:{bonus_pct:.1f}%;height:10px;border-radius:8px;'></div>
+            </div>
+            {"<b style='color:#13b13b;'>BONUS HIT!</b>" if bonus > 0 else ""}
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
     st.subheader("Recent Performance")
@@ -475,6 +486,7 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
+
 
 
 
