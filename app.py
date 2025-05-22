@@ -335,7 +335,7 @@ if st.session_state.user_role.lower() == "agent":
     if prev_idx is not None:
         prev_row = cycles.loc[prev_idx]
         prev_start = prev_row["start"].strftime("%Y-%m-%d")
-        prev_end   = prev_row["end"].strftime("%Y-%m-%d")  # FIX: Only go up to end date, not pay date!
+        prev_end   = prev_row["end"].strftime("%Y-%m-%d")
         prev_pay   = prev_row["pay"].strftime("%m/%d/%y")
     else:
         prev_start = prev_end = prev_pay = ""
@@ -346,7 +346,7 @@ if st.session_state.user_role.lower() == "agent":
     month_start  = today.replace(day=1).strftime("%Y-%m-%d")
     year_start   = today.replace(month=1, day=1).strftime("%Y-%m-%d")
 
-    def fetch_agent_deals(user_id, date_from, date_to):
+    def fetch_agent_deals_strict(user_id, date_from, date_to):
         columns = [
             'policy_id', 'date_sold', 'carrier', 'product', 'premium',
             'lead_first_name', 'lead_last_name', 'lead_state', 'lead_vendor_name',
@@ -366,14 +366,16 @@ if st.session_state.user_role.lower() == "agent":
         df = pd.DataFrame(deals)
         if "date_sold" in df.columns:
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+            # Enforce exact filter just in case backend is loose
+            df = df[(df["date_sold"] >= pd.to_datetime(date_from)) & (df["date_sold"] <= pd.to_datetime(date_to))]
         return df
 
-    # --- LIVE COUNTS (for current agent)
-    deals_today  = fetch_agent_deals(user_id, today_str, today_str)
-    deals_week   = fetch_agent_deals(user_id, week_start, today_str)
-    deals_month  = fetch_agent_deals(user_id, month_start, today_str)
-    deals_year   = fetch_agent_deals(user_id, year_start, today_str)
-    deals_cycle  = fetch_agent_deals(user_id, cycle_start, cycle_end)
+    # --- LIVE COUNTS (ALWAYS match ADMIN logic for agent's own deals, with strict TQL date filter)
+    deals_today  = fetch_agent_deals_strict(user_id, today_str, today_str)
+    deals_week   = fetch_agent_deals_strict(user_id, week_start, today_str)
+    deals_month  = fetch_agent_deals_strict(user_id, month_start, today_str)
+    deals_year   = fetch_agent_deals_strict(user_id, year_start, today_str)
+    deals_cycle  = fetch_agent_deals_strict(user_id, cycle_start, cycle_end)
 
     daily_count   = len(deals_today)
     weekly_count  = len(deals_week)
@@ -382,6 +384,7 @@ if st.session_state.user_role.lower() == "agent":
     cycle_count   = len(deals_cycle)
 
     # --- COMMISSION TIER / BONUS BAR
+    # Tier logic matches your backend
     if cycle_count >= 200:
         rate = 25
         tier = "Top Tier ($25/deal)"
@@ -402,23 +405,24 @@ if st.session_state.user_role.lower() == "agent":
     payout = cycle_count * rate + bonus
 
     # --- Next tier for progress bar
-    if cycle_count < 70:
-        next_target = 70
-    elif cycle_count < 120:
+    if cycle_count < 120:
         next_target = 120
     elif cycle_count < 150:
         next_target = 150
     elif cycle_count < 200:
         next_target = 200
     else:
-        next_target = None  # Top tier!
+        next_target = None
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
 
-    # --- Previous Cycle Summary (GROSS payout)
+    # --- BONUS progress bar
+    bonus_pct = min((cycle_count / 70) * 100, 100)
+
+    # --- Previous Cycle Strictly on Previous Cycle Dates
     prev_count = prev_payout = prev_rate = prev_bonus = 0
     net_paid = 0  # Default net paid to zero
     if prev_start and prev_end:
-        deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
+        deals_prev_cycle = fetch_agent_deals_strict(user_id, prev_start, prev_end)
         prev_count = len(deals_prev_cycle)
         if prev_count >= 200: prev_rate = 25
         elif prev_count >= 150: prev_rate = 22.5
@@ -438,7 +442,7 @@ if st.session_state.user_role.lower() == "agent":
             except Exception:
                 net_paid = 0
 
-    # ----------- DISPLAY -----------
+    # ---------------- DISPLAY -------------------
     st.subheader("Current Commission Cycle")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Deals (Cycle)", cycle_count)
@@ -446,7 +450,7 @@ if st.session_state.user_role.lower() == "agent":
     c3.metric("Cycle", f"{cycle_start} to {cycle_end}")
     c4.metric("Pay Date", f"{pay_date}")
 
-    # --- Commission progress bar ---
+    # Tier progress bar
     st.markdown(f"""
         <div style="background:{tier_color}33; padding:8px 16px; border-radius:10px; margin:8px 0 10px 0;">
             <b style="color:{tier_color}; font-size:1.1em;">{tier}</b>
@@ -458,16 +462,14 @@ if st.session_state.user_role.lower() == "agent":
             </div>
         </div>
         """, unsafe_allow_html=True)
-    # --- Bonus progress bar ---
+    # Bonus progress bar
     st.markdown(f"""
-        <div style="background:#eaf5fd; padding:8px 16px; border-radius:10px; margin-bottom:16px;">
-            <span style="font-weight:bold; color:#149637;">🎁 Bonus Progress:</span>
-            <span style="color:#222; font-size:1em; margin-left:16px;">
-            {cycle_count}/70 deals for $1200 bonus
-            </span>
-            <div style='background:#e5e5e5;border-radius:8px;height:10px;margin-top:4px;'>
-                <div style='background:#13b13b;width:{min((cycle_count/70)*100,100):.1f}%;height:10px;border-radius:8px;'></div>
-            </div>
+        <div style="background:#e9f4ff; padding:8px 16px; border-radius:10px; margin:4px 0 16px 0;">
+        <b style='color:#0c962e;'>🎁 Bonus Progress:</b>
+        <span style='color:#222; font-size:1em; margin-left:10px;'>{cycle_count}/70 deals for $1200 bonus</span>
+        <div style='background:#d6eadd; border-radius:8px;height:12px;margin-top:4px;'>
+            <div style='background:#29b709;width:{bonus_pct:.1f}%;height:12px;border-radius:8px;'></div>
+        </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -482,12 +484,15 @@ if st.session_state.user_role.lower() == "agent":
     if prev_count > 0 and prev_start and prev_end:
         st.markdown("---")
         st.subheader("Previous Completed Cycle")
-        p1, p2, p3, p4, p5 = st.columns(5)
+        p1, p2, p3, p4 = st.columns(4)
         p1.metric("Deals", prev_count)
         p2.metric("Gross Payout", f"${prev_payout:,.2f}")
-        p3.metric("Net Payout", f"${net_paid:,.2f}")
-        p4.metric("Cycle", f"{prev_start} to {prev_end}")
-        p5.metric("Pay Date", f"{prev_pay}")
+        p3.metric("Cycle", f"{prev_start} to {prev_end}")
+        p4.metric("Pay Date", f"{prev_pay}")
+        st.markdown(
+            f"<div style='font-size:1.15em;margin-top:10px;'><b>Net Payout (from FMO):</b> <span style='color:#178347;'>${net_paid:,.2f}</span></div>",
+            unsafe_allow_html=True
+        )
 
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
@@ -501,6 +506,7 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
+
 
 
 
