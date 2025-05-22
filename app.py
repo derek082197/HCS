@@ -381,46 +381,32 @@ if st.session_state.user_role.lower() == "agent":
     yearly_count  = len(deals_year)
     cycle_count   = len(deals_cycle)
 
-    # --- COMMISSION TIER / BONUS BAR
-    # Tier logic matches your backend
+    # --- COMMISSION TIER / BONUS BAR (Accurate tiering and progress)
+    tier = "Starter ($15/deal)"; rate = 15; tier_color = "#a0a0a0"; next_target = 120
     if cycle_count >= 200:
-        rate = 25
-        tier = "Top Tier ($25/deal)"
-        tier_color = "#13b13b"
+        rate = 25; tier = "Top Tier ($25/deal)"; tier_color = "#13b13b"; next_target = None
     elif cycle_count >= 150:
-        rate = 22.5
-        tier = "Pro Tier ($22.50/deal)"
-        tier_color = "#26a7ff"
+        rate = 22.5; tier = "Pro Tier ($22.50/deal)"; tier_color = "#26a7ff"; next_target = 200
     elif cycle_count >= 120:
-        rate = 17.5
-        tier = "Rising Tier ($17.50/deal)"
-        tier_color = "#fd9800"
-    else:
-        rate = 15
-        tier = "Starter ($15/deal)"
-        tier_color = "#a0a0a0"
+        rate = 17.5; tier = "Rising Tier ($17.50/deal)"; tier_color = "#fd9800"; next_target = 150
+
+    # Bonus always $1200 if 70+
     bonus = 1200 if cycle_count >= 70 else 0
     payout = cycle_count * rate + bonus
 
-    # --- Next tier for progress bar
-    tier_targets = [(200, 25), (150, 22.5), (120, 17.5), (70, "Bonus $1200")]
-    next_target = None
-    for th, v in tier_targets:
-        if cycle_count < th:
-            next_target = th
-            break
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
+    next_text = f"{cycle_count}/{next_target} deals to next tier" if next_target else "MAX tier achieved"
 
-    # --- Previous Cycle Summary (GROSS payout)
+    # --- Previous Cycle Summary (GROSS payout + NET from FMO)
     prev_count = prev_payout = prev_rate = prev_bonus = 0
     net_paid = None
     if prev_start and prev_end:
         deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
         prev_count = len(deals_prev_cycle)
+        prev_rate = 15
         if prev_count >= 200: prev_rate = 25
         elif prev_count >= 150: prev_rate = 22.5
         elif prev_count >= 120: prev_rate = 17.5
-        else: prev_rate = 15
         prev_bonus = 1200 if prev_count >= 70 else 0
         prev_payout = prev_count * prev_rate + prev_bonus
 
@@ -434,7 +420,7 @@ if st.session_state.user_role.lower() == "agent":
             except Exception as e:
                 net_paid = None
 
-    # ---------------- DISPLAY -------------------
+    # ------------- DISPLAY -------------
     st.subheader("Current Commission Cycle")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Deals (Cycle)", cycle_count)
@@ -446,7 +432,7 @@ if st.session_state.user_role.lower() == "agent":
         <div style="background:{tier_color}33; padding:8px 16px; border-radius:10px; margin:8px 0 10px 0;">
             <b style="color:{tier_color}; font-size:1.1em;">{tier}</b>
             <span style='color:#222; font-size:1em; margin-left:16px;'>
-            {f'{cycle_count}/{next_target} deals to next tier' if next_target else "MAX tier achieved"}
+            {next_text}
             </span>
             <div style='background:#e5e5e5;border-radius:8px;height:12px;margin-top:4px;'>
                 <div style='background:{tier_color};width:{pct_to_next:.1f}%;height:12px;border-radius:8px;'></div>
@@ -489,6 +475,7 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
+
 
 
 
