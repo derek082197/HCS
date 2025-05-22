@@ -340,7 +340,7 @@ if st.session_state.user_role.lower() == "agent":
     else:
         prev_start = prev_end = prev_pay = ""
 
-    # --- TQL API Helper using date_sold + date_sold_end ---
+    # --- TQL API Helper using date_sold + date_sold_end for correct windows ---
     def fetch_agent_deals(user_id, dfrom, dto):
         columns = [
             'policy_id', 'date_sold', 'carrier', 'product', 'premium',
@@ -350,8 +350,8 @@ if st.session_state.user_role.lower() == "agent":
         headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
         params = {
             "agent_id": user_id,
-            "date_sold": dfrom,       # Inclusive start
-            "date_sold_end": dto,     # Inclusive end
+            "date_sold": dfrom,         # inclusive start
+            "date_sold_end": dto,       # inclusive end
             "limit": 1000,
             "columns": ",".join(columns)
         }
@@ -363,13 +363,11 @@ if st.session_state.user_role.lower() == "agent":
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
         return df
 
-    # --- Single day: just use the same for both start/end
+    # LIVE counts (all use correct TQL suffix for date range)
     today_str    = today.strftime("%Y-%m-%d")
     week_start   = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")
     month_start  = today.replace(day=1).strftime("%Y-%m-%d")
     year_start   = today.replace(month=1, day=1).strftime("%Y-%m-%d")
-
-    # LIVE counts
     deals_today  = fetch_agent_deals(user_id, today_str, today_str)
     deals_week   = fetch_agent_deals(user_id, week_start, today_str)
     deals_month  = fetch_agent_deals(user_id, month_start, today_str)
@@ -382,34 +380,20 @@ if st.session_state.user_role.lower() == "agent":
     yearly_count  = len(deals_year)
     cycle_count   = len(deals_cycle)
 
-    # --- COMMISSION TIER / BONUS BAR LOGIC ---
+    # COMMISSION TIER & BONUS LOGIC
     if cycle_count >= 200:
-        rate = 25
-        tier = "Top Tier ($25/deal)"
-        tier_color = "#13b13b"
+        rate = 25; tier = "Top Tier ($25/deal)";     tier_color = "#13b13b"
     elif cycle_count >= 150:
-        rate = 22.5
-        tier = "Pro Tier ($22.50/deal)"
-        tier_color = "#26a7ff"
+        rate = 22.5; tier = "Pro Tier ($22.50/deal)"; tier_color = "#26a7ff"
     elif cycle_count >= 120:
-        rate = 17.5
-        tier = "Rising Tier ($17.50/deal)"
-        tier_color = "#fd9800"
+        rate = 17.5; tier = "Rising Tier ($17.50/deal)"; tier_color = "#fd9800"
     else:
-        rate = 15
-        tier = "Starter ($15/deal)"
-        tier_color = "#a0a0a0"
+        rate = 15;   tier = "Starter ($15/deal)";    tier_color = "#a0a0a0"
     bonus = 1200 if cycle_count >= 70 else 0
     payout = cycle_count * rate + bonus
 
-    # Progress to next tier
-    # Next tier logic: (ordered from low to high for correct progress bar)
-    tier_targets = [
-        (70, "Bonus $1200"),
-        (120, 17.5),
-        (150, 22.5),
-        (200, 25),
-    ]
+    # Next tier progress
+    tier_targets = [(70, "Bonus $1200"), (120, 17.5), (150, 22.5), (200, 25)]
     next_target = None
     for th, v in tier_targets:
         if cycle_count < th:
@@ -417,13 +401,14 @@ if st.session_state.user_role.lower() == "agent":
             break
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
 
-    # --- Bonus progress bar
+    # Bonus progress (to 70)
     bonus_target = 70
     pct_to_bonus = min((cycle_count / bonus_target * 100), 100)
 
-    # --- Previous Completed Cycle (GROSS payout)
+    # --- Previous Completed Cycle (GROSS payout) + NET payout via FMO
     prev_count = prev_payout = prev_rate = prev_bonus = 0
     net_paid = None
+    paid_rows = None
     if prev_start and prev_end:
         deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
         prev_count = len(deals_prev_cycle)
@@ -437,12 +422,15 @@ if st.session_state.user_role.lower() == "agent":
         # Net payout: from uploaded FMO (if admin uploaded one)
         if 'uploaded_file' in locals() and uploaded_file is not None:
             try:
-                fmo_df = pd.read_excel(uploaded_file)
+                fmo_df = pd.read_excel(uploaded_file, dtype=str)
                 agent_name = st.session_state.user_name.strip().lower()
                 agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
-                net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
+                agent_rows["Advance"] = pd.to_numeric(agent_rows["Advance"], errors="coerce").fillna(0)
+                net_paid = agent_rows["Advance"][agent_rows["Advance"] == 150].sum() if not agent_rows.empty else 0.0
+                paid_rows = agent_rows[agent_rows["Advance"] == 150]
             except Exception:
                 net_paid = None
+                paid_rows = None
 
     # === DISPLAY DASHBOARD ===
     st.subheader("Current Commission Cycle")
@@ -504,6 +492,10 @@ if st.session_state.user_role.lower() == "agent":
                 f'<span style="font-weight:600;color:#107c10;">Net Payout (from FMO): ${net_paid:,.2f}</span>',
                 unsafe_allow_html=True,
             )
+        # Optional: Paid policies detail table (from FMO)
+        if paid_rows is not None and not paid_rows.empty:
+            st.markdown("**Paid Policies in FMO Statement**")
+            st.dataframe(paid_rows, use_container_width=True)
 
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
@@ -515,39 +507,9 @@ if st.session_state.user_role.lower() == "agent":
         )
     else:
         st.info("No deals found in this commission cycle.")
-        agent_key = st.session_state.user_name.strip().lower()
-
-# Get FMO data/state from admin upload
-net_payouts = st.session_state.get("agent_net_payouts", {})
-fmo_df = st.session_state.get("agent_fmo_df", None)
-agent_net_payout = net_payouts.get(agent_key, None)
-
-agent_paid_df = pd.DataFrame()
-if fmo_df is not None and "Agent_clean" in fmo_df.columns:
-    agent_paid_df = fmo_df[
-        (fmo_df["Agent_clean"] == agent_key) & (fmo_df["Advance"] == 150)
-    ].copy()
-
-# --- UI block
-with st.container():
-    st.subheader("Net Payout (from FMO Statement)")
-    if agent_net_payout is not None:
-        st.success(
-            f"💰 <b>Net Paid (FMO):</b> <span style='font-size:1.3em;'>${float(agent_net_payout):,.2f}</span>",
-            icon="💵", unsafe_allow_html=True,
-        )
-    else:
-        st.info("Net payout not yet available. Please check back after next statement upload.")
-
-    if not agent_paid_df.empty:
-        st.markdown("#### Paid Policies (from FMO)")
-        display_cols = ["Eff Date", "first_name", "last_name", "issuer", "state", "policy_status", "Advance", "Post Date"]
-        display_cols = [c for c in display_cols if c in agent_paid_df.columns]
-        st.dataframe(agent_paid_df[display_cols], use_container_width=True)
-    else:
-        st.info("No paid policies found for this period.")
 
     st.stop()
+
 
 
 
@@ -1115,7 +1077,6 @@ with tabs[6]:
 
 with tabs[7]:
     st.header("🧾 Agent Net Pay (FMO Statement — HCS Tiers/Bonus)")
-
     fmo_file = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="agent_net_pay_fmo2")
 
     if fmo_file is not None:
