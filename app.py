@@ -1025,49 +1025,58 @@ with tabs[6]:
 
 
 with tabs[7]:
-    st.header("🧾 Agent Net Pay (FMO Statement Summary)")
-    fmo_file = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="agent_net_pay_fmo")
+    st.header("🧾 Agent Net Pay (FMO Statement — HCS Tiers/Bonus)")
+
+    fmo_file = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="agent_net_pay_fmo2")
 
     if fmo_file is not None:
         try:
             df_fmo = pd.read_excel(fmo_file, dtype=str)
-            # Try to find best matching columns for agent, advance, and effective date
-            agent_col = next((c for c in df_fmo.columns if "agent" in c.lower()), None)
-            adv_col = next((c for c in df_fmo.columns if "advance" in c.lower()), None)
-            eff_col = next((c for c in df_fmo.columns if "eff" in c.lower()), None)
+            agent_col = "Agent"
+            advance_col = next((c for c in df_fmo.columns if "advance" in c.lower()), None)
+            if not advance_col or agent_col not in df_fmo.columns:
+                st.error("Could not find Agent or Advance columns in this FMO file.")
+                st.stop()
 
-            if not agent_col or not adv_col:
-                st.error("Could not find 'Agent' or 'Advance' columns in your FMO file.")
-            else:
-                # Only keep deals paid (Advance > 0)
-                df_fmo[adv_col] = pd.to_numeric(df_fmo[adv_col], errors="coerce").fillna(0)
-                paid_rows = df_fmo[df_fmo[adv_col] > 0].copy()
+            # Only paid deals (Advance == 150)
+            df_fmo[advance_col] = pd.to_numeric(df_fmo[advance_col], errors="coerce").fillna(0)
+            paid_deals = df_fmo[df_fmo[advance_col] == 150]
 
-                # Restrict to deals in last completed commission cycle (by Effective Date)
-                if eff_col:
-                    # Find previous cycle
-                    now = pd.Timestamp.now(tz='US/Eastern').date()
-                    prev_cycle_row = commission_cycles[commission_cycles["end"] < now].tail(1)
-                    if not prev_cycle_row.empty:
-                        prev_start = prev_cycle_row["start"].iloc[0].date()
-                        prev_end = prev_cycle_row["end"].iloc[0].date()
-                        # Parse effective dates to .date()
-                        paid_rows["_parsed_eff"] = pd.to_datetime(paid_rows[eff_col], errors="coerce").dt.date
-                        mask = (paid_rows["_parsed_eff"] >= prev_start) & (paid_rows["_parsed_eff"] <= prev_end)
-                        paid_rows = paid_rows[mask]
+            # Count paid deals per agent
+            summary = paid_deals.groupby(agent_col).size().reset_index(name="Net Paid Deals")
 
-                # Group by agent name
-                summary = paid_rows.groupby(agent_col)[adv_col].sum().reset_index()
-                summary = summary.rename(columns={agent_col: "Agent", adv_col: "Net Paid"})
-                summary["Net Paid"] = summary["Net Paid"].apply(lambda x: f"${x:,.2f}")
+            # Your commission model (apply tier logic for each agent)
+            def calc_agent_payout(num_deals):
+                if num_deals >= 200:
+                    rate = 25
+                elif num_deals >= 150:
+                    rate = 22.5
+                elif num_deals >= 120:
+                    rate = 17.5
+                else:
+                    rate = 15
+                bonus = 1200 if num_deals >= 70 else 0
+                return num_deals * rate + bonus
 
-                st.dataframe(summary, use_container_width=True)
-                st.success("✅ Agent net payouts are calculated for all agents with Advance > 0 in the previous commission cycle.")
+            summary["Agent Net Payout"] = summary["Net Paid Deals"].apply(calc_agent_payout)
+            summary["Agent Net Payout"] = summary["Agent Net Payout"].apply(lambda x: f"${x:,.2f}")
+
+            st.dataframe(summary, use_container_width=True)
+
+            st.download_button(
+                "⬇️ Download CSV",
+                summary.to_csv(index=False),
+                file_name="agent_net_pay_summary.csv",
+                mime="text/csv"
+            )
+            st.success("Showing all agents with Net Paid Deals (Advance == 150) and HCS payout model.")
 
         except Exception as e:
-            st.error(f"Error processing FMO statement: {e}")
+            st.error(f"Error processing FMO: {e}")
+
     else:
-        st.info("Upload an FMO statement (.xlsx) to view agent net payouts for the previous cycle.")
+        st.info("Upload an FMO statement (.xlsx) to see net paid deals and payout by agent.")
+
 
 
 
