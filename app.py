@@ -304,6 +304,7 @@ threshold = 10
 # Add this block after the previous cycle summary in Agent Dashboard!
 
 # --- Net payout from FMO (if available) ---
+# === AGENT DASHBOARD ===
 if st.session_state.user_role.lower() == "agent":
     st.markdown(
         f"""
@@ -320,7 +321,7 @@ if st.session_state.user_role.lower() == "agent":
         st.error("Agent not found."); st.stop()
     user_id = str(agent['user_id'].iloc[0])
 
-    # --- Commission Cycle Dates ---
+    # Commission cycles
     cycles = commission_cycles.sort_values("start").reset_index(drop=True)
     today = pd.Timestamp.now(tz='US/Eastern').date()
     current_idx = None
@@ -343,7 +344,7 @@ if st.session_state.user_role.lower() == "agent":
     else:
         prev_start = prev_end = prev_pay = ""
 
-    # --- TQL API Helper ---
+    # --- API helper with exact TQL date range
     def fetch_agent_deals(user_id, dfrom, dto):
         columns = [
             'policy_id', 'date_sold', 'carrier', 'product', 'premium',
@@ -383,7 +384,7 @@ if st.session_state.user_role.lower() == "agent":
     yearly_count  = len(deals_year)
     cycle_count   = len(deals_cycle)
 
-    # --- TIER LOGIC ---
+    # --- TIER & BONUS LOGIC ---
     if cycle_count >= 200:
         rate = 25; tier = "Top Tier ($25/deal)";     tier_color = "#13b13b"
     elif cycle_count >= 150:
@@ -395,7 +396,7 @@ if st.session_state.user_role.lower() == "agent":
     bonus = 1200 if cycle_count >= 70 else 0
     payout = cycle_count * rate + bonus
 
-    # Next tier progress
+    # Next tier progress bar
     tier_targets = [(70, "Bonus $1200"), (120, 17.5), (150, 22.5), (200, 25)]
     next_target = None
     for th, v in tier_targets:
@@ -403,12 +404,10 @@ if st.session_state.user_role.lower() == "agent":
             next_target = th
             break
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
-
-    # Bonus progress (to 70)
     bonus_target = 70
     pct_to_bonus = min((cycle_count / bonus_target * 100), 100)
 
-    # --- Previous Cycle: Gross & Net (FMO) ---
+    # --- Previous Cycle: Gross/Net (FMO) ---
     prev_count = prev_payout = prev_rate = prev_bonus = 0
     net_paid = None
     paid_rows = None
@@ -422,7 +421,7 @@ if st.session_state.user_role.lower() == "agent":
         prev_bonus = 1200 if prev_count >= 70 else 0
         prev_payout = prev_count * prev_rate + prev_bonus
 
-        # --- FMO NET PAY
+        # --- FMO NET PAY for this agent
         if 'uploaded_file' in locals() and uploaded_file is not None:
             try:
                 fmo_df = pd.read_excel(uploaded_file, dtype=str)
@@ -432,7 +431,7 @@ if st.session_state.user_role.lower() == "agent":
                 agent_rows[advance_col] = pd.to_numeric(agent_rows[advance_col], errors="coerce").fillna(0)
                 net_paid = agent_rows[advance_col][agent_rows[advance_col] == 150].sum() if not agent_rows.empty else 0.0
                 paid_rows = agent_rows[agent_rows[advance_col] == 150]
-            except Exception as ex:
+            except Exception:
                 net_paid = None
                 paid_rows = None
 
@@ -456,7 +455,6 @@ if st.session_state.user_role.lower() == "agent":
             </div>
         </div>
         """, unsafe_allow_html=True)
-
     # --- Bonus Progress Bar
     st.markdown(f"""
         <div style="background:#eaf6ff; padding:8px 16px; border-radius:10px; margin:8px 0 0 0;">
@@ -496,7 +494,6 @@ if st.session_state.user_role.lower() == "agent":
             )
         if paid_rows is not None and not paid_rows.empty:
             st.markdown("**Paid Policies in FMO Statement**")
-            # Show only the main columns for paid policies, hide 'Agent' column
             show_cols = [col for col in paid_rows.columns if col.lower() not in ['agent']]
             st.dataframe(paid_rows[show_cols], use_container_width=True)
 
@@ -512,6 +509,61 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
+
+# --- ADMIN "Agent Net Pay" TAB (to go in tabs[7]) ---
+# Place this in your admin tabs as: with tabs[7]:
+with tabs[7]:
+    st.header("🧾 Agent Net Pay (FMO Statement — HCS Tiers/Bonus)")
+    fmo_file = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="agent_net_pay_fmo2")
+
+    if fmo_file is not None:
+        try:
+            df_fmo = pd.read_excel(fmo_file, dtype=str)
+            agent_col = "Agent"
+            advance_col = next((c for c in df_fmo.columns if "advance" in c.lower()), None)
+            if not advance_col or agent_col not in df_fmo.columns:
+                st.error("Could not find Agent or Advance columns in this FMO file.")
+                st.stop()
+
+            # Only paid deals (Advance == 150)
+            df_fmo[advance_col] = pd.to_numeric(df_fmo[advance_col], errors="coerce").fillna(0)
+            paid_deals = df_fmo[df_fmo[advance_col] == 150]
+
+            # Count paid deals per agent
+            summary = paid_deals.groupby(agent_col).size().reset_index(name="Net Paid Deals")
+
+            # Commission model (apply tier logic for each agent)
+            def calc_agent_payout(num_deals):
+                if num_deals >= 200:
+                    rate = 25
+                elif num_deals >= 150:
+                    rate = 22.5
+                elif num_deals >= 120:
+                    rate = 17.5
+                else:
+                    rate = 15
+                bonus = 1200 if num_deals >= 70 else 0
+                return num_deals * rate + bonus
+
+            summary["Agent Net Payout"] = summary["Net Paid Deals"].apply(calc_agent_payout)
+            summary["Agent Net Payout"] = summary["Agent Net Payout"].apply(lambda x: f"${x:,.2f}")
+
+            st.dataframe(summary, use_container_width=True)
+
+            st.download_button(
+                "⬇️ Download CSV",
+                summary.to_csv(index=False),
+                file_name="agent_net_pay_summary.csv",
+                mime="text/csv"
+            )
+            st.success("Showing all agents with Net Paid Deals (Advance == 150) and HCS payout model.")
+
+        except Exception as e:
+            st.error(f"Error processing FMO: {e}")
+
+    else:
+        st.info("Upload an FMO statement (.xlsx) to see net paid deals and payout by agent.")
+
 
 
 
