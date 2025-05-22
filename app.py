@@ -431,7 +431,7 @@ if st.session_state.user_role.lower() == "agent":
             except Exception:
                 net_paid = None
                 paid_rows = None
-    # Add this block after the previous cycle summary in Agent Dashboard!
+                # Add this block after the previous cycle summary in Agent Dashboard!
 
 # --- Net payout from FMO (if available) ---
 net_paid = None
@@ -460,6 +460,8 @@ if net_paid is not None:
 if paid_rows is not None and not paid_rows.empty:
     st.markdown("**Paid Policies in FMO Statement**")
     st.dataframe(paid_rows, use_container_width=True)
+
+    
 
 
     # === DISPLAY DASHBOARD ===
