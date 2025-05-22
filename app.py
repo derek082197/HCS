@@ -431,6 +431,36 @@ if st.session_state.user_role.lower() == "agent":
             except Exception:
                 net_paid = None
                 paid_rows = None
+    # Add this block after the previous cycle summary in Agent Dashboard!
+
+# --- Net payout from FMO (if available) ---
+net_paid = None
+paid_rows = None
+if 'uploaded_file' in locals() and uploaded_file is not None:
+    try:
+        fmo_df = pd.read_excel(uploaded_file, dtype=str)
+        agent_name = st.session_state.user_name.strip().lower()
+        # Find this agent's rows and paid deals (Advance == 150)
+        agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
+        advance_col = next((c for c in fmo_df.columns if "advance" in c.lower()), None)
+        if agent_rows is not None and advance_col:
+            agent_rows[advance_col] = pd.to_numeric(agent_rows[advance_col], errors="coerce").fillna(0)
+            net_paid = agent_rows[advance_col][agent_rows[advance_col] == 150].sum()
+            paid_rows = agent_rows[agent_rows[advance_col] == 150]
+    except Exception as e:
+        net_paid = None
+        paid_rows = None
+
+# --- Show Net Pay and Paid Policies Table ---
+if net_paid is not None:
+    st.markdown(
+        f'<span style="font-weight:600;color:#107c10;">Net Payout (from FMO): ${net_paid:,.2f}</span>',
+        unsafe_allow_html=True,
+    )
+if paid_rows is not None and not paid_rows.empty:
+    st.markdown("**Paid Policies in FMO Statement**")
+    st.dataframe(paid_rows, use_container_width=True)
+
 
     # === DISPLAY DASHBOARD ===
     st.subheader("Current Commission Cycle")
