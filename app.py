@@ -335,7 +335,7 @@ if st.session_state.user_role.lower() == "agent":
     if prev_idx is not None:
         prev_row = cycles.loc[prev_idx]
         prev_start = prev_row["start"].strftime("%Y-%m-%d")
-        prev_end   = prev_row["end"].strftime("%Y-%m-%d")  # << Only deals until here!
+        prev_end   = prev_row["end"].strftime("%Y-%m-%d")  # FIX: Only go up to end date, not pay date!
         prev_pay   = prev_row["pay"].strftime("%m/%d/%y")
     else:
         prev_start = prev_end = prev_pay = ""
@@ -416,7 +416,7 @@ if st.session_state.user_role.lower() == "agent":
 
     # --- Previous Cycle Summary (GROSS payout)
     prev_count = prev_payout = prev_rate = prev_bonus = 0
-    net_paid = None
+    net_paid = 0  # Default net paid to zero
     if prev_start and prev_end:
         deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
         prev_count = len(deals_prev_cycle)
@@ -427,15 +427,16 @@ if st.session_state.user_role.lower() == "agent":
         prev_bonus = 1200 if prev_count >= 70 else 0
         prev_payout = prev_count * prev_rate + prev_bonus
 
-        # --- Net payout: try to get from uploaded FMO statement
+        # --- Net payout: try to get from uploaded FMO statement (else keep at $0)
         if 'uploaded_file' in locals() and uploaded_file is not None:
             try:
                 fmo_df = pd.read_excel(uploaded_file)
                 agent_name = st.session_state.user_name.strip().lower()
                 agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
-                net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
-            except Exception as e:
-                net_paid = None
+                if not agent_rows.empty:
+                    net_paid = agent_rows["Advance"].astype(float).sum()
+            except Exception:
+                net_paid = 0
 
     # ----------- DISPLAY -----------
     st.subheader("Current Commission Cycle")
@@ -481,13 +482,12 @@ if st.session_state.user_role.lower() == "agent":
     if prev_count > 0 and prev_start and prev_end:
         st.markdown("---")
         st.subheader("Previous Completed Cycle")
-        p1, p2, p3, p4 = st.columns(4)
+        p1, p2, p3, p4, p5 = st.columns(5)
         p1.metric("Deals", prev_count)
         p2.metric("Gross Payout", f"${prev_payout:,.2f}")
-        p3.metric("Cycle", f"{prev_start} to {prev_end}")
-        p4.metric("Pay Date", f"{prev_pay}")
-        if net_paid is not None:
-            st.info(f"💰 <b>Net Payout (from FMO):</b> ${net_paid:,.2f}", icon="💵")
+        p3.metric("Net Payout", f"${net_paid:,.2f}")
+        p4.metric("Cycle", f"{prev_start} to {prev_end}")
+        p5.metric("Pay Date", f"{prev_pay}")
 
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
@@ -501,6 +501,7 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
+
 
 
 
