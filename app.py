@@ -317,7 +317,7 @@ if st.session_state.user_role.lower() == "agent":
         st.error("Agent not found."); st.stop()
     user_id = str(agent['user_id'].iloc[0])
 
-    # --- Cycle detection
+    # --- Get current and previous cycles based on TODAY
     cycles = commission_cycles.sort_values("start").reset_index(drop=True)
     today = pd.Timestamp.now(tz='US/Eastern').date()
     current_idx = None
@@ -340,6 +340,7 @@ if st.session_state.user_role.lower() == "agent":
     else:
         prev_start = prev_end = prev_pay = ""
 
+    # --- Date ranges for stats
     today_str    = today.strftime("%Y-%m-%d")
     week_start   = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")  # Monday
     month_start  = today.replace(day=1).strftime("%Y-%m-%d")
@@ -367,6 +368,7 @@ if st.session_state.user_role.lower() == "agent":
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
         return df
 
+    # --- LIVE COUNTS (always match ADMIN logic for agent's own deals)
     deals_today  = fetch_agent_deals(user_id, today_str, today_str)
     deals_week   = fetch_agent_deals(user_id, week_start, today_str)
     deals_month  = fetch_agent_deals(user_id, month_start, today_str)
@@ -379,7 +381,8 @@ if st.session_state.user_role.lower() == "agent":
     yearly_count  = len(deals_year)
     cycle_count   = len(deals_cycle)
 
-    # --- COMMISSION TIER LOGIC (current cycle)
+    # --- COMMISSION TIER / BONUS BAR
+    # Tier logic matches your backend
     if cycle_count >= 200:
         rate = 25
         tier = "Top Tier ($25/deal)"
@@ -399,7 +402,7 @@ if st.session_state.user_role.lower() == "agent":
     bonus = 1200 if cycle_count >= 70 else 0
     payout = cycle_count * rate + bonus
 
-    # --- Progress bar to tier
+    # --- Next tier for progress bar
     tier_targets = [(200, 25), (150, 22.5), (120, 17.5), (70, "Bonus $1200")]
     next_target = None
     for th, v in tier_targets:
@@ -408,8 +411,9 @@ if st.session_state.user_role.lower() == "agent":
             break
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
 
-    # --- Previous cycle summary (gross/net)
+    # --- Previous Cycle Summary (GROSS payout)
     prev_count = prev_payout = prev_rate = prev_bonus = 0
+    net_paid = None
     if prev_start and prev_end:
         deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
         prev_count = len(deals_prev_cycle)
@@ -420,7 +424,17 @@ if st.session_state.user_role.lower() == "agent":
         prev_bonus = 1200 if prev_count >= 70 else 0
         prev_payout = prev_count * prev_rate + prev_bonus
 
-    # --- UI Display ---
+        # --- Net payout: try to get from uploaded FMO
+        if 'uploaded_file' in locals() and uploaded_file is not None:
+            try:
+                fmo_df = pd.read_excel(uploaded_file)
+                agent_name = st.session_state.user_name.strip().lower()
+                agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
+                net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
+            except Exception as e:
+                net_paid = None
+
+    # ---------------- DISPLAY -------------------
     st.subheader("Current Commission Cycle")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Deals (Cycle)", cycle_count)
@@ -428,7 +442,6 @@ if st.session_state.user_role.lower() == "agent":
     c3.metric("Cycle", f"{cycle_start} to {cycle_end}")
     c4.metric("Pay Date", f"{pay_date}")
 
-    # -- Colored progress bar to next tier/bonus
     st.markdown(f"""
         <div style="background:{tier_color}33; padding:8px 16px; border-radius:10px; margin:8px 0 10px 0;">
             <b style="color:{tier_color}; font-size:1.1em;">{tier}</b>
@@ -445,7 +458,6 @@ if st.session_state.user_role.lower() == "agent":
     elif cycle_count >= 60:
         st.info(f"🚩 {cycle_count}/70 deals for $1200 bonus", icon="🎁")
 
-    # --- Recent Performance
     st.markdown("---")
     st.subheader("Recent Performance")
     t1, t2, t3, t4 = st.columns(4)
@@ -454,7 +466,6 @@ if st.session_state.user_role.lower() == "agent":
     t3.metric("This Month", monthly_count)
     t4.metric("This Year", yearly_count)
 
-    # --- Previous Completed Cycle (GROSS + NET payout)
     if prev_count > 0 and prev_start and prev_end:
         st.markdown("---")
         st.subheader("Previous Completed Cycle")
@@ -463,20 +474,9 @@ if st.session_state.user_role.lower() == "agent":
         p2.metric("Gross Payout", f"${prev_payout:,.2f}")
         p3.metric("Cycle", f"{prev_start} to {prev_end}")
         p4.metric("Pay Date", f"{prev_pay}")
+        if net_paid is not None:
+            st.info(f"💰 <b>Net Payout (from FMO):</b> ${net_paid:,.2f}", icon="💵")
 
-        # --- NET PAYOUT (from FMO, if uploaded) ---
-        if 'uploaded_file' in locals() and uploaded_file is not None:
-            try:
-                fmo_df = pd.read_excel(uploaded_file)
-                # Lower/strip all agent names for best match
-                agent_name = st.session_state.user_name.strip().lower()
-                agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
-                net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
-                st.info(f"💰 <b>Net Payout (from FMO):</b> ${net_paid:,.2f}", icon="💵")
-            except Exception as e:
-                st.warning("Could not show net payout from FMO statement.")
-
-    # --- All deals in current cycle table
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
     if not deals_cycle.empty:
