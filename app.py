@@ -1282,7 +1282,21 @@ with tabs[7]:
 
 
 with tabs[8]:
-    st.header("📊 Vendor CPL/CPA Report (with Paid Members)")
+    st.header("📊 Vendor CPL/CPA Report (with Paid Members from Health Sherpa)")
+
+    # Vendor definitions (put all your vendors here)
+    VENDOR_CODES = {
+        "acaking": "ACA KING",
+        "joshaca": "JOSH ACA",
+        "francalls": "Fran Calls",
+        # ...add more as needed
+    }
+    VENDOR_CPLS = {
+        "acaking": 35,
+        "joshaca": 30,
+        "francalls": 25,
+        # ...add more as needed
+    }
 
     cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl_tab8")
     fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo_cpl_tab8")
@@ -1290,10 +1304,6 @@ with tabs[8]:
 
     def normalize(x):
         return str(x).strip().lower()
-
-    # Vendors and CPL rates as before
-    VENDOR_CODES = {...}  # your full vendor dictionary here
-    VENDOR_CPLS = {...}   # your full CPL rates dictionary here
 
     if cpl_csv_file and fmo_file and hs_file:
         # Load Health Sherpa
@@ -1366,6 +1376,7 @@ with tabs[8]:
             mime="text/csv"
         )
         st.info("Counts paid deals by name-match with FMO and paid members by Health Sherpa; CPA per member is true cost per covered member.")
+
     else:
         st.warning("Upload CPL (calls/leads), FMO Statement, and Health Sherpa export to see the full vendor CPL/CPA/member report.")
 
