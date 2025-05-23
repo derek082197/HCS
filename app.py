@@ -1084,15 +1084,14 @@ with tabs[7]:
 
 
 with tabs[8]:
-    st.header("📊 Vendor CPL/CPA Report (Vendor Style, Paid % and CPA)")
+    st.header("📊 Vendor CPL/CPA Report (Paid Deals by Name Only, Not Vendor)")
 
     cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl_tab8")
     fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo_cpl_tab8")
 
-    def normalize_key(x):
-        return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
+    def normalize_name(x):
+        return str(x).strip().lower()
 
-    # Vendor setup (just like your payout report)
     VENDOR_CODES = {
         "acaking": "ACA KING",
         "joshaca": "JOSH ACA",
@@ -1105,36 +1104,59 @@ with tabs[8]:
         "francalls": 25,
         # ...add more as needed
     }
+    VENDOR_RETAINED = {
+        "acaking": 40,
+        "joshaca": 21,
+        "francalls": 50,
+        # ...add more as needed
+    }
 
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
         vendor_col = "list_list_description"
-        if vendor_col not in cpl_csv.columns:
-            st.error(f"CSV must have vendor/source column '{vendor_col}'. Check your file.")
+        first_name_col = "lead_first_name"
+        last_name_col = "lead_last_name"
+        if vendor_col not in cpl_csv.columns or first_name_col not in cpl_csv.columns or last_name_col not in cpl_csv.columns:
+            st.error(f"CSV must have columns: '{vendor_col}', '{first_name_col}', and '{last_name_col}'.")
             st.write("CSV columns:", list(cpl_csv.columns))
             st.stop()
-        cpl_csv['vendor_key'] = cpl_csv[vendor_col].astype(str).apply(normalize_key)
+        cpl_csv['vendor_key'] = cpl_csv[vendor_col].astype(str).str.strip().str.lower().str.replace(' ', '')
+        cpl_csv['first_name_norm'] = cpl_csv[first_name_col].astype(str).apply(normalize_name)
+        cpl_csv['last_name_norm'] = cpl_csv[last_name_col].astype(str).apply(normalize_name)
         calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
 
+        # FMO: use columns "first_name", "last_name", "Advance"
         fmo = pd.read_excel(fmo_file, dtype=str)
-        fmo_vendor_col = "issuer"
+        fmo_first_col = "first_name"
+        fmo_last_col = "last_name"
         fmo_advance_col = "Advance"
-        if fmo_vendor_col not in fmo.columns or fmo_advance_col not in fmo.columns:
-            st.error(f"FMO XLSX must have columns '{fmo_vendor_col}' and '{fmo_advance_col}'.")
+        if fmo_first_col not in fmo.columns or fmo_last_col not in fmo.columns or fmo_advance_col not in fmo.columns:
+            st.error("FMO XLSX missing one of the required columns: first_name, last_name, Advance.")
             st.write("FMO columns:", list(fmo.columns))
             st.stop()
-        fmo['vendor_key'] = fmo[fmo_vendor_col].astype(str).apply(normalize_key)
+        fmo['first_name_norm'] = fmo[fmo_first_col].astype(str).apply(normalize_name)
+        fmo['last_name_norm'] = fmo[fmo_last_col].astype(str).apply(normalize_name)
         fmo['Advance'] = pd.to_numeric(fmo[fmo_advance_col], errors='coerce').fillna(0)
+        paid_fmo = fmo[fmo['Advance'] > 0][['first_name_norm', 'last_name_norm']].drop_duplicates()
 
         cpl_stats = []
         for vkey, cpl in VENDOR_CPLS.items():
             pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
-            calls_ct = calls_by_vendor.get(vkey, 0)
-            # "Paid Deals" = count from FMO for that vendor with Advance > 0
-            paid_ct = fmo[(fmo['vendor_key'] == vkey) & (fmo['Advance'] > 0)].shape[0]
-            paid_pct = (paid_ct / calls_ct * 100) if calls_ct > 0 else 0
+            vendor_calls = cpl_csv[cpl_csv['vendor_key'] == vkey]
+            calls_ct = vendor_calls.shape[0]
+            # Merge by first + last name ONLY
+            merged = pd.merge(
+                vendor_calls[['first_name_norm','last_name_norm']],
+                paid_fmo,
+                on=['first_name_norm','last_name_norm'],
+                how='inner'
+            )
+            paid_ct = merged.drop_duplicates().shape[0]
             vendor_cost = calls_ct * cpl
             cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
+            retained_ct = VENDOR_RETAINED.get(vkey, 0)
+            cpa_ret = (vendor_cost / retained_ct) if retained_ct else None
+            paid_pct = (paid_ct / calls_ct * 100) if calls_ct > 0 else 0
             cpl_stats.append({
                 "Vendor": pretty_name,
                 "CPL": f"${cpl:.2f}",
@@ -1143,6 +1165,8 @@ with tabs[8]:
                 "Paid %": f"{paid_pct:.1f}%",
                 "Vendor Cost": f"${vendor_cost:,.2f}",
                 "CPA (Paid)": f"${cpa_paid:,.2f}" if cpa_paid else "N/A",
+                "Retained Deals": retained_ct,
+                "CPA After Retention": f"${cpa_ret:,.2f}" if cpa_ret else "N/A"
             })
 
         df_cpl_stats = pd.DataFrame(cpl_stats)
@@ -1153,10 +1177,11 @@ with tabs[8]:
             file_name="vendor_cpl_cpa_report.csv",
             mime="text/csv"
         )
-        st.info("Counts paid deals by vendor in FMO (Advance > 0). CPA = (Calls × CPL) / Paid Deals. Paid % = Paid / Calls.")
+        st.info("Counts paid deals by matching (First+Last Name, regardless of vendor) between CPL and FMO (Advance > 0); CPA = Cost/paid matches.")
 
     else:
         st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
 
 
 
