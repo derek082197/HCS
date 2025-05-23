@@ -1092,7 +1092,6 @@ with tabs[8]:
     def normalize_key(x):
         return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
 
-    # Define your actual vendors, CPLs, and retention counts here
     VENDOR_CODES = {
         "acaking": "ACA KING",
         "joshaca": "JOSH ACA",
@@ -1114,8 +1113,7 @@ with tabs[8]:
 
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
-
-        # Use your real column name!
+        # Use correct CPL vendor column name
         vendor_col = "list_list_description"
         if vendor_col not in cpl_csv.columns:
             st.error(f"Could not find vendor/source column '{vendor_col}' in your CPL CSV. Please check your file.")
@@ -1124,19 +1122,14 @@ with tabs[8]:
         cpl_csv['vendor_key'] = cpl_csv[vendor_col].astype(str).apply(normalize_key)
         calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
 
-        # --- FMO File ---
+        # FMO: Use 'issuer' as the vendor column
         fmo = pd.read_excel(fmo_file, dtype=str)
-        fmo_vendor_col = None
-        for col in fmo.columns:
-            if col.lower() in ['vendor', 'vendorraw', 'lead_vendor', 'lead_vendor_name', 'source', 'list_list_description']:
-                fmo_vendor_col = col
-                break
-        if fmo_vendor_col:
-            fmo['vendor_key'] = fmo[fmo_vendor_col].astype(str).apply(normalize_key)
-        elif 'vendor_key' not in fmo.columns:
-            st.error("Could not find vendor column in your FMO XLSX. Please check your file.")
+        fmo_vendor_col = "issuer"
+        if fmo_vendor_col not in fmo.columns:
+            st.error(f"Could not find vendor column '{fmo_vendor_col}' in your FMO XLSX. Please check your file.")
             st.write("FMO columns:", list(fmo.columns))
             st.stop()
+        fmo['vendor_key'] = fmo[fmo_vendor_col].astype(str).apply(normalize_key)
         fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
 
         # --- Compile Report ---
@@ -1172,6 +1165,7 @@ with tabs[8]:
 
     else:
         st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
 
 
 
