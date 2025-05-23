@@ -1089,31 +1089,10 @@ with tabs[8]:
     cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl_tab8")
     fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo_cpl_tab8")
 
-    def normalize_key(x):
-        return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
-
-    VENDOR_CODES = {
-        "acaking": "ACA KING",
-        "joshaca": "JOSH ACA",
-        "francalls": "Fran Calls",
-        # ...add more as needed
-    }
-    VENDOR_CPLS = {
-        "acaking": 35,
-        "joshaca": 30,
-        "francalls": 25,
-        # ...add more as needed
-    }
-    VENDOR_RETAINED = {
-        "acaking": 40,
-        "joshaca": 21,
-        "francalls": 50,
-        # ...add more as needed
-    }
+    # ... vendor config as before ...
 
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
-        # Use your actual column names from your screenshot
         vendor_col = "list_list_description"
         first_name_col = "lead_first_name"
         last_name_col = "lead_last_name"
@@ -1121,32 +1100,32 @@ with tabs[8]:
             st.error(f"CSV must have columns: '{vendor_col}', '{first_name_col}', and '{last_name_col}'.")
             st.write("CSV columns:", list(cpl_csv.columns))
             st.stop()
-        cpl_csv['vendor_key'] = cpl_csv[vendor_col].astype(str).apply(normalize_key)
-        cpl_csv['first_name_norm'] = cpl_csv[first_name_col].astype(str).str.strip().str.lower()
-        cpl_csv['last_name_norm'] = cpl_csv[last_name_col].astype(str).str.strip().str.lower()
+        cpl_csv['vendor_key'] = cpl_csv[vendor_col].apply(normalize_key)
+        cpl_csv['first_name_norm'] = cpl_csv[first_name_col].str.strip().str.lower()
+        cpl_csv['last_name_norm'] = cpl_csv[last_name_col].str.strip().str.lower()
+
         calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
 
-        # FMO: use columns "first_name", "last_name", "issuer", "Advance"
         fmo = pd.read_excel(fmo_file, dtype=str)
         fmo_first_col = "first_name"
         fmo_last_col = "last_name"
         fmo_vendor_col = "issuer"
         fmo_advance_col = "Advance"
-        if fmo_first_col not in fmo.columns or fmo_last_col not in fmo.columns or fmo_vendor_col not in fmo.columns or fmo_advance_col not in fmo.columns:
-            st.error("FMO XLSX missing one of the required columns: first_name, last_name, issuer, Advance.")
-            st.write("FMO columns:", list(fmo.columns))
-            st.stop()
-        fmo['vendor_key'] = fmo[fmo_vendor_col].astype(str).apply(normalize_key)
-        fmo['first_name_norm'] = fmo[fmo_first_col].astype(str).str.strip().str.lower()
-        fmo['last_name_norm'] = fmo[fmo_last_col].astype(str).str.strip().str.lower()
+        fmo['vendor_key'] = fmo[fmo_vendor_col].apply(normalize_key)
+        fmo['first_name_norm'] = fmo[fmo_first_col].str.strip().str.lower()
+        fmo['last_name_norm'] = fmo[fmo_last_col].str.strip().str.lower()
         fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
+
+        # Debug info for troubleshooting:
+        st.write("Sample Vendor Keys in CPL:", cpl_csv['vendor_key'].unique())
+        st.write("Sample Vendor Keys in FMO:", fmo['vendor_key'].unique())
+        st.write("Sample First/Last Names in CPL:", cpl_csv[['first_name_norm','last_name_norm']].drop_duplicates().head(10))
+        st.write("Sample First/Last Names in FMO (Paid):", fmo.loc[fmo['Advance'] > 0, ['first_name_norm','last_name_norm']].drop_duplicates().head(10))
 
         cpl_stats = []
         for vkey, cpl in VENDOR_CPLS.items():
             pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
             calls_ct = cpl_csv[cpl_csv['vendor_key'] == vkey].shape[0]
-            
-            # Name and vendor matching, count paid only
             vendor_calls = cpl_csv[cpl_csv['vendor_key'] == vkey][['first_name_norm','last_name_norm']]
             merged = pd.merge(
                 vendor_calls,
@@ -1182,7 +1161,6 @@ with tabs[8]:
 
     else:
         st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
-
 
 
 
