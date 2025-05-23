@@ -301,6 +301,10 @@ threshold = 10
 # === AGENT DASHBOARD ===
 # ========== AGENT DASHBOARD ==========
 
+# Add this block after the previous cycle summary in Agent Dashboard!
+
+# --- Net payout from FMO (if available) ---
+# === AGENT DASHBOARD ===
 if st.session_state.user_role.lower() == "agent":
     st.markdown(
         f"""
@@ -317,7 +321,7 @@ if st.session_state.user_role.lower() == "agent":
         st.error("Agent not found."); st.stop()
     user_id = str(agent['user_id'].iloc[0])
 
-    # Find current and previous commission cycles based on TODAY
+    # Commission cycles
     cycles = commission_cycles.sort_values("start").reset_index(drop=True)
     today = pd.Timestamp.now(tz='US/Eastern').date()
     current_idx = None
@@ -340,7 +344,7 @@ if st.session_state.user_role.lower() == "agent":
     else:
         prev_start = prev_end = prev_pay = ""
 
-    # --- TQL API Helper using date_sold + date_sold_end ---
+    # --- API helper with exact TQL date range
     def fetch_agent_deals(user_id, dfrom, dto):
         columns = [
             'policy_id', 'date_sold', 'carrier', 'product', 'premium',
@@ -350,8 +354,8 @@ if st.session_state.user_role.lower() == "agent":
         headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
         params = {
             "agent_id": user_id,
-            "date_sold": dfrom,       # Inclusive start
-            "date_sold_end": dto,     # Inclusive end
+            "date_sold": dfrom,
+            "date_sold_end": dto,
             "limit": 1000,
             "columns": ",".join(columns)
         }
@@ -363,13 +367,11 @@ if st.session_state.user_role.lower() == "agent":
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
         return df
 
-    # --- Single day: just use the same for both start/end
+    # --- LIVE COUNTS ---
     today_str    = today.strftime("%Y-%m-%d")
     week_start   = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")
     month_start  = today.replace(day=1).strftime("%Y-%m-%d")
     year_start   = today.replace(month=1, day=1).strftime("%Y-%m-%d")
-
-    # LIVE counts
     deals_today  = fetch_agent_deals(user_id, today_str, today_str)
     deals_week   = fetch_agent_deals(user_id, week_start, today_str)
     deals_month  = fetch_agent_deals(user_id, month_start, today_str)
@@ -382,48 +384,33 @@ if st.session_state.user_role.lower() == "agent":
     yearly_count  = len(deals_year)
     cycle_count   = len(deals_cycle)
 
-    # --- COMMISSION TIER / BONUS BAR LOGIC ---
+    # --- TIER & BONUS LOGIC ---
     if cycle_count >= 200:
-        rate = 25
-        tier = "Top Tier ($25/deal)"
-        tier_color = "#13b13b"
+        rate = 25; tier = "Top Tier ($25/deal)";     tier_color = "#13b13b"
     elif cycle_count >= 150:
-        rate = 22.5
-        tier = "Pro Tier ($22.50/deal)"
-        tier_color = "#26a7ff"
+        rate = 22.5; tier = "Pro Tier ($22.50/deal)"; tier_color = "#26a7ff"
     elif cycle_count >= 120:
-        rate = 17.5
-        tier = "Rising Tier ($17.50/deal)"
-        tier_color = "#fd9800"
+        rate = 17.5; tier = "Rising Tier ($17.50/deal)"; tier_color = "#fd9800"
     else:
-        rate = 15
-        tier = "Starter ($15/deal)"
-        tier_color = "#a0a0a0"
+        rate = 15;   tier = "Starter ($15/deal)";    tier_color = "#a0a0a0"
     bonus = 1200 if cycle_count >= 70 else 0
     payout = cycle_count * rate + bonus
 
-    # Progress to next tier
-    # Next tier logic: (ordered from low to high for correct progress bar)
-    tier_targets = [
-        (70, "Bonus $1200"),
-        (120, 17.5),
-        (150, 22.5),
-        (200, 25),
-    ]
+    # Next tier progress bar
+    tier_targets = [(70, "Bonus $1200"), (120, 17.5), (150, 22.5), (200, 25)]
     next_target = None
     for th, v in tier_targets:
         if cycle_count < th:
             next_target = th
             break
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
-
-    # --- Bonus progress bar
     bonus_target = 70
     pct_to_bonus = min((cycle_count / bonus_target * 100), 100)
 
-    # --- Previous Completed Cycle (GROSS payout)
+    # --- Previous Cycle: Gross/Net (FMO) ---
     prev_count = prev_payout = prev_rate = prev_bonus = 0
     net_paid = None
+    paid_rows = None
     if prev_start and prev_end:
         deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
         prev_count = len(deals_prev_cycle)
@@ -434,15 +421,19 @@ if st.session_state.user_role.lower() == "agent":
         prev_bonus = 1200 if prev_count >= 70 else 0
         prev_payout = prev_count * prev_rate + prev_bonus
 
-        # Net payout: from uploaded FMO (if admin uploaded one)
+        # --- FMO NET PAY for this agent
         if 'uploaded_file' in locals() and uploaded_file is not None:
             try:
-                fmo_df = pd.read_excel(uploaded_file)
+                fmo_df = pd.read_excel(uploaded_file, dtype=str)
                 agent_name = st.session_state.user_name.strip().lower()
                 agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
-                net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
+                advance_col = next((c for c in fmo_df.columns if "advance" in c.lower()), "Advance")
+                agent_rows[advance_col] = pd.to_numeric(agent_rows[advance_col], errors="coerce").fillna(0)
+                net_paid = agent_rows[advance_col][agent_rows[advance_col] == 150].sum() if not agent_rows.empty else 0.0
+                paid_rows = agent_rows[agent_rows[advance_col] == 150]
             except Exception:
                 net_paid = None
+                paid_rows = None
 
     # === DISPLAY DASHBOARD ===
     st.subheader("Current Commission Cycle")
@@ -464,7 +455,6 @@ if st.session_state.user_role.lower() == "agent":
             </div>
         </div>
         """, unsafe_allow_html=True)
-
     # --- Bonus Progress Bar
     st.markdown(f"""
         <div style="background:#eaf6ff; padding:8px 16px; border-radius:10px; margin:8px 0 0 0;">
@@ -476,7 +466,6 @@ if st.session_state.user_role.lower() == "agent":
         </div>
         """, unsafe_allow_html=True)
 
-    # --- Bonus Alert
     if bonus > 0:
         st.success(f"🎁 <b>Bonus:</b> ${bonus:,.0f} HIT!", icon="🎉")
     elif cycle_count >= 60:
@@ -498,12 +487,15 @@ if st.session_state.user_role.lower() == "agent":
         p2.metric("Gross Payout", f"${prev_payout:,.2f}")
         p3.metric("Cycle", f"{prev_start} to {prev_end}")
         p4.metric("Pay Date", f"{prev_pay}")
-        # Net payout (optional)
         if net_paid is not None:
             st.markdown(
                 f'<span style="font-weight:600;color:#107c10;">Net Payout (from FMO): ${net_paid:,.2f}</span>',
                 unsafe_allow_html=True,
             )
+        if paid_rows is not None and not paid_rows.empty:
+            st.markdown("**Paid Policies in FMO Statement**")
+            show_cols = [col for col in paid_rows.columns if col.lower() not in ['agent']]
+            st.dataframe(paid_rows[show_cols], use_container_width=True)
 
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
@@ -517,6 +509,13 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
+
+# --- ADMIN "Agent Net Pay" TAB (to go in tabs[7]) ---
+# This section is already included below in the admin dashboard tabs
+
+
+
+
 
 
 
@@ -622,6 +621,7 @@ elif st.session_state.user_role.lower() == "admin":
         )
     else:
         st.info("No payroll history yet.")
+        
 
 
 # SETTINGS TAB
@@ -959,6 +959,57 @@ with tabs[6]:
                 f"<div style='font-size:1.08em; margin-top:2px; color:#2a3647;'><b>Average Paid % Across Vendors:</b> {avg_paid_pct:.1f}%</div>",
                 unsafe_allow_html=True,
             )
+            # === VENDOR CPL/CPA REPORT (Calls vs Paid/Retained Deals) ===
+            st.markdown("---")
+            st.header("💰 Vendor CPL/CPA Report (Calls vs Paid/Retained Deals)")
+
+            # CPL per vendor (edit these!)
+            VENDOR_CPLS = {
+                "acaking": 35,    # ACA KING
+                "joshaca": 30,    # JOSH ACA
+                "francalls": 25,  # FRAN
+                # Add more as needed
+            }
+
+            # (Optional) Manually enter retained deal counts
+            VENDOR_RETAINED = {
+                "acaking": 40,    # Example only; use your true numbers
+                "joshaca": 21,
+                "francalls": 50,
+            }
+
+            cpl_stats = []
+            for vkey, cpl in VENDOR_CPLS.items():
+                pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
+                # Count ALL calls/leads for vendor (from TLD)
+                calls_ct = tld[tld['vendor_key'] == vkey].shape[0]
+                # Count paid deals (Advance > 0, FMO-matched)
+                paid_ct = merged[(merged['vendor_key'] == vkey) & (merged['Advance'] > 0)].shape[0]
+                vendor_cost = calls_ct * cpl
+                cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
+                retained_ct = VENDOR_RETAINED.get(vkey, 0)
+                cpa_ret = (vendor_cost / retained_ct) if retained_ct else None
+                cpl_stats.append({
+                    "Vendor": pretty_name,
+                    "CPL": f"${cpl:.2f}",
+                    "Total Calls (Leads)": calls_ct,
+                    "Paid Deals": paid_ct,
+                    "Vendor Cost": f"${vendor_cost:,.2f}",
+                    "CPA (Paid)": f"${cpa_paid:,.2f}" if cpa_paid else "N/A",
+                    "Retained Deals": retained_ct,
+                    "CPA After Retention": f"${cpa_ret:,.2f}" if cpa_ret else "N/A"
+                })
+
+            df_cpl_stats = pd.DataFrame(cpl_stats)
+            st.dataframe(df_cpl_stats, use_container_width=True)
+
+            st.download_button(
+                "⬇️ Download Vendor CPL/CPA Report (CSV)",
+                df_cpl_stats.to_csv(index=False),
+                file_name="vendor_cpl_cpa_report.csv",
+                mime="text/csv"
+            )
+            st.info("Report: Calls from TLD, paid deals from FMO, uses your CPL, and calculates CPA after retention if provided.")
 
         # --- PDF GENERATOR with summary block at top ---
         def vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt):
@@ -1026,7 +1077,6 @@ with tabs[6]:
 
 with tabs[7]:
     st.header("🧾 Agent Net Pay (FMO Statement — HCS Tiers/Bonus)")
-
     fmo_file = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="agent_net_pay_fmo2")
 
     if fmo_file is not None:
@@ -1045,7 +1095,7 @@ with tabs[7]:
             # Count paid deals per agent
             summary = paid_deals.groupby(agent_col).size().reset_index(name="Net Paid Deals")
 
-            # Your commission model (apply tier logic for each agent)
+            # Commission model (apply tier logic for each agent)
             def calc_agent_payout(num_deals):
                 if num_deals >= 200:
                     rate = 25
