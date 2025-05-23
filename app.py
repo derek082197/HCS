@@ -884,11 +884,11 @@ with tabs[6]:
 
     # Assign rates to each vendor code that gets paid (expand as needed)
     VENDOR_RATES = {
-        "francalls": 55,
-        "hcsmedia": 55,
+        "francalls": 75,
+        "hcsmedia": 75,
         "buffercall": 80,      # Aetna
         "acaking": 75,
-        "raycalls": 69,
+        "raycalls": 75,
         # Add more here if you pay other vendors!
     }
 
