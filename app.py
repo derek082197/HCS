@@ -1084,7 +1084,7 @@ with tabs[7]:
 
 
 with tabs[8]:
-    st.header("📊 Vendor CPL/CPA Report (Paid Deals by Name Only, Not Vendor)")
+    st.header("📊 Vendor CPL/CPA Report (Vendor Style — Calls, Paid, CPA)")
 
     cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl_tab8")
     fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo_cpl_tab8")
@@ -1102,12 +1102,6 @@ with tabs[8]:
         "acaking": 35,
         "joshaca": 30,
         "francalls": 25,
-        # ...add more as needed
-    }
-    VENDOR_RETAINED = {
-        "acaking": 40,
-        "joshaca": 21,
-        "francalls": 50,
         # ...add more as needed
     }
 
@@ -1153,10 +1147,8 @@ with tabs[8]:
             )
             paid_ct = merged.drop_duplicates().shape[0]
             vendor_cost = calls_ct * cpl
-            cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
-            retained_ct = VENDOR_RETAINED.get(vkey, 0)
-            cpa_ret = (vendor_cost / retained_ct) if retained_ct else None
             paid_pct = (paid_ct / calls_ct * 100) if calls_ct > 0 else 0
+            cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
             cpl_stats.append({
                 "Vendor": pretty_name,
                 "CPL": f"${cpl:.2f}",
@@ -1165,8 +1157,6 @@ with tabs[8]:
                 "Paid %": f"{paid_pct:.1f}%",
                 "Vendor Cost": f"${vendor_cost:,.2f}",
                 "CPA (Paid)": f"${cpa_paid:,.2f}" if cpa_paid else "N/A",
-                "Retained Deals": retained_ct,
-                "CPA After Retention": f"${cpa_ret:,.2f}" if cpa_ret else "N/A"
             })
 
         df_cpl_stats = pd.DataFrame(cpl_stats)
@@ -1177,10 +1167,11 @@ with tabs[8]:
             file_name="vendor_cpl_cpa_report.csv",
             mime="text/csv"
         )
-        st.info("Counts paid deals by matching (First+Last Name, regardless of vendor) between CPL and FMO (Advance > 0); CPA = Cost/paid matches.")
+        st.info("Counts paid deals by matching (First+Last Name) between CPL and FMO (Advance > 0); CPA = Cost/paid matches. No retention.")
 
     else:
         st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
 
 
 
