@@ -647,15 +647,15 @@ with tabs[4]:
         hs['last_name_norm'] = hs['last_name'].astype(str).str.strip().str.lower()
         hs['phone_norm'] = hs['phone'].astype(str).str.replace(r'\D','',regex=True).str[-10:]
         hs['member_count'] = pd.to_numeric(hs['applicant_count'], errors='coerce').fillna(1).astype(int)
-        member_lookup = hs.set_index(['first_name_norm','last_name_norm','phone_norm'])['member_count'].to_dict()
+        # For member matching, we'll use (first_name, last_name) only since FMO has no phone
+        member_lookup = hs.set_index(['first_name_norm','last_name_norm'])['member_count'].to_dict()
 
         # --- FMO Paid Deals ---
         df = pd.read_excel(uploaded_file, dtype=str)
-        df = df.dropna(subset=["Agent","first_name","last_name","phone","Advance"])
+        df = df.dropna(subset=["Agent","first_name","last_name","Advance"])
         df["Paid Status"] = df["Advance"].astype(float).apply(lambda x: "Paid" if x > 0 else "Not Paid")
         df['first_name_norm'] = df['first_name'].astype(str).str.strip().str.lower()
         df['last_name_norm'] = df['last_name'].astype(str).str.strip().str.lower()
-        df['phone_norm'] = df['phone'].astype(str).str.replace(r'\D','',regex=True).str[-10:]
 
         PER_MEMBER_RATE = st.number_input("Per-Member Payout Rate", min_value=1, max_value=100, value=10)
 
@@ -668,10 +668,10 @@ with tabs[4]:
                 client_rows = []
                 total_members = 0
                 for _, row in sub.iterrows():
-                    key = (row['first_name_norm'], row['last_name_norm'], row['phone_norm'])
+                    key = (row['first_name_norm'], row['last_name_norm'])
                     members = member_lookup.get(key, 1)
                     total_members += members
-                    client_rows.append((row['first_name'], row['last_name'], row['phone'], members))
+                    client_rows.append((row['first_name'], row['last_name'], members))
                 payout = total_members * PER_MEMBER_RATE
                 summary.append({
                     "Agent": agent,
@@ -697,8 +697,8 @@ with tabs[4]:
                 pdf.set_font("Arial","B",12)
                 pdf.cell(0,8,"Paid Clients:", ln=True)
                 pdf.set_font("Arial","",10)
-                for fname, lname, phone, members in client_rows:
-                    pdf.cell(0,8,f"- {fname} {lname} | {phone} | Members: {members}", ln=True)
+                for fname, lname, members in client_rows:
+                    pdf.cell(0,8,f"- {fname} {lname} | Members: {members}", ln=True)
                 zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf.output(dest="S").encode("latin1"))
             # Also write admin summary CSV
             csv_buf = io.StringIO()
@@ -713,6 +713,59 @@ with tabs[4]:
             file_name=f"agent_per_member_paystubs_{datetime.now():%Y%m%d}.zip",
             mime="application/zip"
         )
+
+    elif uploaded_file:
+        st.success("✅ FMO file uploaded, but no Health Sherpa file. Defaulting all paid deals to 1 member.")
+
+        # (Legacy logic: treat all apps as 1 member if Health Sherpa not uploaded)
+        df = pd.read_excel(uploaded_file, dtype=str)
+        df.dropna(subset=["Agent","first_name","last_name","Advance"], inplace=True)
+        df["Client"]         = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
+        df["Paid Status"]    = df["Advance"].fillna(0).astype(float).apply(lambda x: "Paid" if x>0 else "Not Paid")
+        df["Reason"]         = df.get("Advance Excluded Reason","").fillna("").astype(str)
+        df["Effective Date"] = pd.to_datetime(df.get("Eff Date"), errors="coerce")
+        totals = {"deals":0, "agent":0.0, "owner_rev":0.0, "owner_prof":0.0}
+        summary.clear()
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for agent in df["Agent"].unique():
+                sub     = df[df["Agent"]==agent]
+                paid_ct = (sub["Paid Status"]=="Paid").sum()
+                rate    = 25 if paid_ct>=200 else 22.5 if paid_ct>=150 else 17.5 if paid_ct>=120 else 15
+                bonus   = 1200 if paid_ct>=70 else 0
+                payout  = paid_ct * rate + bonus
+                owner_rev  = paid_ct * 150
+                owner_prof = paid_ct * 43
+                totals["deals"]     += paid_ct
+                totals["agent"]     += payout
+                totals["owner_rev"] += owner_rev
+                totals["owner_prof"]+= owner_prof
+                summary.append({
+                    "Agent": agent,
+                    "Paid Deals": paid_ct,
+                    "Agent Payout": payout,
+                    "Owner Profit": owner_prof,
+                    "Net Paid": sub["Advance"].astype(float).sum()
+                })
+                pdf_bytes = generate_agent_pdf(sub, agent)
+                zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf_bytes)
+            # Write admin summary CSV
+            csv_buf = io.StringIO()
+            w = csv.writer(csv_buf)
+            w.writerow(["Agent","Paid Deals","Agent Payout","Owner Profit", "Net Paid"])
+            for r in summary:
+                w.writerow([r["Agent"], r["Paid Deals"], r["Agent Payout"], r["Owner Profit"], r["Net Paid"]])
+            zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
+        default_dt = (df["Effective Date"].max().date()
+                      if "Effective Date" in df else date.today())
+        insert_report(default_dt.strftime("%Y-%m-%d"), totals)
+        st.download_button(
+            "📦 Download ZIP of Pay Stubs",
+            buf.getvalue(),
+            file_name=f"paystubs_{datetime.now():%Y%m%d}.zip",
+            mime="application/zip"
+        )
+
 
     elif uploaded_file:
         st.success("✅ FMO file uploaded, but no Health Sherpa file. Defaulting all paid deals to 1 member.")
