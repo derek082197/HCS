@@ -1121,17 +1121,13 @@ with tabs[8]:
     "hcsmediacpl": "HCS MEDIA CPL"
     # ...add more as needed
 }
-
-        
-        # ...add more as needed
-    }
-    VENDOR_CPLS = {
-        "acaking": 35,
-        "joshaca": 30,
-        "francalls": 25,
-        "hcsmediacpl": 25,
-        # ...add more as needed
-    }
+VENDOR_CPLS = {
+    "acaking": 35,
+    "joshaca": 30,
+    "francalls": 25,
+    "hcsmediacpl": 25,
+    # ...add more as needed
+}
 
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
