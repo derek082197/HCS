@@ -301,9 +301,6 @@ threshold = 10
 # === AGENT DASHBOARD ===
 # ========== AGENT DASHBOARD ==========
 
-# Add this block after the previous cycle summary in Agent Dashboard!
-
-# --- Net payout from FMO (if available) ---
 if st.session_state.user_role.lower() == "agent":
     st.markdown(
         f"""
@@ -320,7 +317,7 @@ if st.session_state.user_role.lower() == "agent":
         st.error("Agent not found."); st.stop()
     user_id = str(agent['user_id'].iloc[0])
 
-    # --- Commission Cycle Dates ---
+    # Find current and previous commission cycles based on TODAY
     cycles = commission_cycles.sort_values("start").reset_index(drop=True)
     today = pd.Timestamp.now(tz='US/Eastern').date()
     current_idx = None
@@ -343,7 +340,7 @@ if st.session_state.user_role.lower() == "agent":
     else:
         prev_start = prev_end = prev_pay = ""
 
-    # --- TQL API Helper ---
+    # --- TQL API Helper using date_sold + date_sold_end ---
     def fetch_agent_deals(user_id, dfrom, dto):
         columns = [
             'policy_id', 'date_sold', 'carrier', 'product', 'premium',
@@ -353,8 +350,8 @@ if st.session_state.user_role.lower() == "agent":
         headers = {"tld-api-id": CRM_API_ID, "tld-api-key": CRM_API_KEY}
         params = {
             "agent_id": user_id,
-            "date_sold": dfrom,
-            "date_sold_end": dto,
+            "date_sold": dfrom,       # Inclusive start
+            "date_sold_end": dto,     # Inclusive end
             "limit": 1000,
             "columns": ",".join(columns)
         }
@@ -366,11 +363,13 @@ if st.session_state.user_role.lower() == "agent":
             df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
         return df
 
-    # --- LIVE COUNTS ---
+    # --- Single day: just use the same for both start/end
     today_str    = today.strftime("%Y-%m-%d")
     week_start   = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")
     month_start  = today.replace(day=1).strftime("%Y-%m-%d")
     year_start   = today.replace(month=1, day=1).strftime("%Y-%m-%d")
+
+    # LIVE counts
     deals_today  = fetch_agent_deals(user_id, today_str, today_str)
     deals_week   = fetch_agent_deals(user_id, week_start, today_str)
     deals_month  = fetch_agent_deals(user_id, month_start, today_str)
@@ -383,20 +382,34 @@ if st.session_state.user_role.lower() == "agent":
     yearly_count  = len(deals_year)
     cycle_count   = len(deals_cycle)
 
-    # --- TIER LOGIC ---
+    # --- COMMISSION TIER / BONUS BAR LOGIC ---
     if cycle_count >= 200:
-        rate = 25; tier = "Top Tier ($25/deal)";     tier_color = "#13b13b"
+        rate = 25
+        tier = "Top Tier ($25/deal)"
+        tier_color = "#13b13b"
     elif cycle_count >= 150:
-        rate = 22.5; tier = "Pro Tier ($22.50/deal)"; tier_color = "#26a7ff"
+        rate = 22.5
+        tier = "Pro Tier ($22.50/deal)"
+        tier_color = "#26a7ff"
     elif cycle_count >= 120:
-        rate = 17.5; tier = "Rising Tier ($17.50/deal)"; tier_color = "#fd9800"
+        rate = 17.5
+        tier = "Rising Tier ($17.50/deal)"
+        tier_color = "#fd9800"
     else:
-        rate = 15;   tier = "Starter ($15/deal)";    tier_color = "#a0a0a0"
+        rate = 15
+        tier = "Starter ($15/deal)"
+        tier_color = "#a0a0a0"
     bonus = 1200 if cycle_count >= 70 else 0
     payout = cycle_count * rate + bonus
 
-    # Next tier progress
-    tier_targets = [(70, "Bonus $1200"), (120, 17.5), (150, 22.5), (200, 25)]
+    # Progress to next tier
+    # Next tier logic: (ordered from low to high for correct progress bar)
+    tier_targets = [
+        (70, "Bonus $1200"),
+        (120, 17.5),
+        (150, 22.5),
+        (200, 25),
+    ]
     next_target = None
     for th, v in tier_targets:
         if cycle_count < th:
@@ -404,14 +417,13 @@ if st.session_state.user_role.lower() == "agent":
             break
     pct_to_next = (cycle_count / next_target * 100) if next_target else 100
 
-    # Bonus progress (to 70)
+    # --- Bonus progress bar
     bonus_target = 70
     pct_to_bonus = min((cycle_count / bonus_target * 100), 100)
 
-    # --- Previous Cycle: Gross & Net (FMO) ---
+    # --- Previous Completed Cycle (GROSS payout)
     prev_count = prev_payout = prev_rate = prev_bonus = 0
     net_paid = None
-    paid_rows = None
     if prev_start and prev_end:
         deals_prev_cycle = fetch_agent_deals(user_id, prev_start, prev_end)
         prev_count = len(deals_prev_cycle)
@@ -422,19 +434,15 @@ if st.session_state.user_role.lower() == "agent":
         prev_bonus = 1200 if prev_count >= 70 else 0
         prev_payout = prev_count * prev_rate + prev_bonus
 
-        # --- FMO NET PAY
+        # Net payout: from uploaded FMO (if admin uploaded one)
         if 'uploaded_file' in locals() and uploaded_file is not None:
             try:
-                fmo_df = pd.read_excel(uploaded_file, dtype=str)
+                fmo_df = pd.read_excel(uploaded_file)
                 agent_name = st.session_state.user_name.strip().lower()
                 agent_rows = fmo_df[fmo_df["Agent"].str.strip().str.lower() == agent_name]
-                advance_col = next((c for c in fmo_df.columns if "advance" in c.lower()), "Advance")
-                agent_rows[advance_col] = pd.to_numeric(agent_rows[advance_col], errors="coerce").fillna(0)
-                net_paid = agent_rows[advance_col][agent_rows[advance_col] == 150].sum() if not agent_rows.empty else 0.0
-                paid_rows = agent_rows[agent_rows[advance_col] == 150]
-            except Exception as ex:
+                net_paid = agent_rows["Advance"].astype(float).sum() if not agent_rows.empty else 0.0
+            except Exception:
                 net_paid = None
-                paid_rows = None
 
     # === DISPLAY DASHBOARD ===
     st.subheader("Current Commission Cycle")
@@ -468,6 +476,7 @@ if st.session_state.user_role.lower() == "agent":
         </div>
         """, unsafe_allow_html=True)
 
+    # --- Bonus Alert
     if bonus > 0:
         st.success(f"🎁 <b>Bonus:</b> ${bonus:,.0f} HIT!", icon="🎉")
     elif cycle_count >= 60:
@@ -489,16 +498,12 @@ if st.session_state.user_role.lower() == "agent":
         p2.metric("Gross Payout", f"${prev_payout:,.2f}")
         p3.metric("Cycle", f"{prev_start} to {prev_end}")
         p4.metric("Pay Date", f"{prev_pay}")
+        # Net payout (optional)
         if net_paid is not None:
             st.markdown(
                 f'<span style="font-weight:600;color:#107c10;">Net Payout (from FMO): ${net_paid:,.2f}</span>',
                 unsafe_allow_html=True,
             )
-        if paid_rows is not None and not paid_rows.empty:
-            st.markdown("**Paid Policies in FMO Statement**")
-            # Show only the main columns for paid policies, hide 'Agent' column
-            show_cols = [col for col in paid_rows.columns if col.lower() not in ['agent']]
-            st.dataframe(paid_rows[show_cols], use_container_width=True)
 
     st.markdown("---")
     st.markdown("#### All Deals in Current Cycle")
@@ -512,9 +517,6 @@ if st.session_state.user_role.lower() == "agent":
         st.info("No deals found in this commission cycle.")
 
     st.stop()
-
-
-
 
 
 
@@ -620,7 +622,6 @@ elif st.session_state.user_role.lower() == "admin":
         )
     else:
         st.info("No payroll history yet.")
-        
 
 
 # SETTINGS TAB
@@ -1025,6 +1026,7 @@ with tabs[6]:
 
 with tabs[7]:
     st.header("🧾 Agent Net Pay (FMO Statement — HCS Tiers/Bonus)")
+
     fmo_file = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="agent_net_pay_fmo2")
 
     if fmo_file is not None:
@@ -1074,6 +1076,514 @@ with tabs[7]:
 
     else:
         st.info("Upload an FMO statement (.xlsx) to see net paid deals and payout by agent.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
 
 
 
