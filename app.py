@@ -539,9 +539,16 @@ elif st.session_state.user_role.lower() == "admin":
     )
 
     tabs = st.tabs([
-        "🏆 Overview", "📋 Leaderboard", "📈 History",
-        "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay", "🧾 Agent Net Pay"
-    ])
+    "🏆 Overview",
+    "📋 Leaderboard",
+    "📈 History",
+    "📊 Live Counts",
+    "⚙️ Settings",
+    "📂 Clients",
+    "💼 Vendor Pay",
+    "🧾 Agent Net Pay",
+    "📊 Vendor CPL/CPA"  # <-- This is tabs[8]
+])
 
     # --- Smartly determine totals (if just uploaded, else pull last) ---
     if uploaded_file is not None and 'totals' in locals():
