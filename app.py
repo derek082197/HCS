@@ -847,55 +847,92 @@ with tabs[5]:
 with tabs[6]:
     st.header("💼 Vendor Pay Summary")
 
-    # All vendor keys/code names and pretty display names
-    VENDOR_CODES = {
-        "general": "GENERAL",
-        "inbound": "INBOUND",
-        "sms": "SMS",
-        "advancegro": "Advance gro",
-        "axad": "AXAD",
-        "googlecalls": "GOOGLE CALLS",
-        "buffercall": "Aetna",
-        "ancletadvising": "Anclet advising",
-        "blmcalls": "BLM CALLS",
-        "loopcalls": "LOOP CALLS",
-        "nobufferaca": "NO BUFFER ACA",
-        "raycalls": "RAY CALLS",
-        "nomiaca": "Nomi ACA",
-        "hcsmedia": "HCS MEDIA",
-        "francalls": "Fran Calls",
-        "acaking": "ACA KING",
-        "ptacacalls": "PT ACA CALLS",
-        "hcscaa": "HCS CAA",
-        "slavaaca": "Slava ACA",
-        "slavaaca2": "Slava ACA 2",
-        "francallssupp": "Fran Calls SUPP",
-        "derekinhousefb": "DEREK INHOUSE FB",
-        "allicalladdoncall": "ALI CALL ADDON CALL",
-        "joshaca": "JOSH ACA",
-        "hcs1p": "HCS1p"
-    }
-
-    # Assign rates to each vendor code that gets paid (expand as needed)
-    VENDOR_RATES = {
-        "francalls": 55,
-        "hcsmedia": 55,
-        "buffercall": 80,      # Aetna
-        "acaking": 75,
-        "raycalls": 69,
-        # Add more here if you pay other vendors!
-    }
+    # Uploaders at the top of your tab (edit 'Vendor' column as needed for your files)
+    tld_file = st.file_uploader("Upload Vendor TLD CSV (converted leads)", type=["csv"], key="vendor_tld")
+    cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl")
+    fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo")
 
     def normalize_key(x):
         return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
 
-    tld_file = st.file_uploader("Upload TLD CSV (new/PHI export)", type=["csv"], key="vendor_tld")
-    fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo")
+    # Vendor settings (edit as needed)
+    VENDOR_CODES = {
+        "acaking": "ACA KING",
+        "joshaca": "JOSH ACA",
+        "francalls": "Fran Calls",
+        # ... add more vendors as needed
+    }
+    VENDOR_CPLS = {
+        "acaking": 35,
+        "joshaca": 30,
+        "francalls": 25,
+        # ... add more vendors as needed
+    }
+    VENDOR_RATES = {
+        "francalls": 55,
+        "acaking": 75,
+        "joshaca": 69,
+        # ... add more payout rates as needed
+    }
+    VENDOR_RETAINED = {
+        "acaking": 40,
+        "joshaca": 21,
+        "francalls": 50,
+        # ...add your actual numbers here!
+    }
+
+    # ===== VENDOR CPL/CPA REPORT =====
+    st.markdown("---")
+    st.header("💰 Vendor CPL/CPA Report (Calls vs Paid/Retained Deals)")
+
+    if cpl_csv_file and fmo_file:
+        cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
+        if "vendor_key" not in cpl_csv.columns:
+            cpl_csv['vendor_key'] = cpl_csv['Vendor'].apply(normalize_key)
+        calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
+
+        fmo = pd.read_excel(fmo_file, dtype=str)
+        fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
+        if "vendor_key" not in fmo.columns:
+            fmo['vendor_key'] = fmo['Vendor'].apply(normalize_key) if 'Vendor' in fmo.columns else fmo['vendor_key']
+
+        cpl_stats = []
+        for vkey, cpl in VENDOR_CPLS.items():
+            pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
+            calls_ct = calls_by_vendor.get(vkey, 0)
+            paid_ct = fmo[(fmo['vendor_key'] == vkey) & (fmo['Advance'] > 0)].shape[0]
+            vendor_cost = calls_ct * cpl
+            cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
+            retained_ct = VENDOR_RETAINED.get(vkey, 0)
+            cpa_ret = (vendor_cost / retained_ct) if retained_ct else None
+            cpl_stats.append({
+                "Vendor": pretty_name,
+                "CPL": f"${cpl:.2f}",
+                "Total Calls (Leads)": calls_ct,
+                "Paid Deals": paid_ct,
+                "Vendor Cost": f"${vendor_cost:,.2f}",
+                "CPA (Paid)": f"${cpa_paid:,.2f}" if cpa_paid else "N/A",
+                "Retained Deals": retained_ct,
+                "CPA After Retention": f"${cpa_ret:,.2f}" if cpa_ret else "N/A"
+            })
+
+        df_cpl_stats = pd.DataFrame(cpl_stats)
+        st.dataframe(df_cpl_stats, use_container_width=True)
+        st.download_button(
+            "⬇️ Download Vendor CPL/CPA Report (CSV)",
+            df_cpl_stats.to_csv(index=False),
+            file_name="vendor_cpl_cpa_report.csv",
+            mime="text/csv"
+        )
+        st.info("CPL version: Calls from CPL CSV, paid deals from FMO, uses your CPL, calculates CPA after retention if provided.")
+    else:
+        st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
+    # ===== VENDOR PAY PDF REPORT =====
+    st.markdown("---")
+    st.header("📄 Vendor Pay PDF Report (Paid/Unpaid Details)")
 
     if tld_file and fmo_file:
-        st.success("Both files uploaded. Generating vendor ZIP...")
-
-        # Load and normalize vendor names from TLD
         tld = pd.read_csv(tld_file, dtype=str)
         tld['VendorRaw'] = tld.iloc[:, 8].astype(str)
         tld['First Name'] = tld.iloc[:, 3].astype(str)
@@ -916,127 +953,7 @@ with tabs[6]:
             on='full_name', how='left'
         )
 
-        # --- Display Vendor Summary Table ---
-        vendor_summaries = []
-        for vkey, pretty in VENDOR_CODES.items():
-            if vkey not in VENDOR_RATES:
-                continue
-            rate = VENDOR_RATES[vkey]
-            sub = merged[merged['vendor_key'] == vkey]
-            paid_ct = (sub['Advance'] > 0).sum()
-            unpaid_ct = (sub['Advance'] == 0).sum()
-            pct_paid = (paid_ct / (paid_ct + unpaid_ct) * 100) if (paid_ct + unpaid_ct) > 0 else 0
-            paid_amt = paid_ct * rate
-            vendor_summaries.append({
-                "Vendor": pretty,
-                "Paid Deals": paid_ct,
-                "Unpaid Deals": unpaid_ct,
-                "Paid %": f"{pct_paid:.1f}%",
-                "PaidPctNum": pct_paid,
-                "Total Paid Amount": f"${paid_amt:,.2f}"
-            })
-
-        if vendor_summaries:
-            df_sum = pd.DataFrame(vendor_summaries)
-            st.subheader("Vendor Pay Summary Table")
-            st.dataframe(df_sum.drop("PaidPctNum", axis=1), use_container_width=True)
-
-            # ---- Grand Total Paid (bottom) ----
-            total_paid = sum(
-                float(str(row["Total Paid Amount"]).replace("$", "").replace(",", ""))
-                for row in vendor_summaries
-            )
-            avg_paid_pct = (
-                sum(row["PaidPctNum"] for row in vendor_summaries) / len(vendor_summaries)
-                if vendor_summaries else 0
-            )
-
-            st.markdown(
-                f"<div style='font-size:1.15em; margin-top:12px; color:#1a4301;'><b>Total Paid to All Vendors:</b> ${total_paid:,.2f}</div>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f"<div style='font-size:1.08em; margin-top:2px; color:#2a3647;'><b>Average Paid % Across Vendors:</b> {avg_paid_pct:.1f}%</div>",
-                unsafe_allow_html=True,
-            )
-            # === VENDOR CPL/CPA REPORT (Calls vs Paid/Retained Deals) ===
-            # === VENDOR CPL/CPA REPORT (Calls vs Paid/Retained Deals, using CPL CSV and FMO) ===
-st.markdown("---")
-st.header("💰 Vendor CPL/CPA Report (Calls vs Paid/Retained Deals)")
-
-# Uploaders at the top of your tab:
-cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl")
-fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo_cpa")
-
-if cpl_csv_file and fmo_file:
-    cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
-    # Normalize vendor_key if needed
-    def normalize_key(x):
-        return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
-    if "vendor_key" not in cpl_csv.columns:
-        cpl_csv['vendor_key'] = cpl_csv['Vendor'].apply(normalize_key)  # Adjust 'Vendor' column name if needed
-    calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
-
-    fmo = pd.read_excel(fmo_file, dtype=str)
-    fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
-    fmo['vendor_key'] = fmo['Vendor'].apply(normalize_key) if 'Vendor' in fmo.columns else fmo['vendor_key']
-
-    # Set your CPL per vendor (edit as needed)
-    VENDOR_CODES = {
-        "acaking": "ACA KING",
-        "joshaca": "JOSH ACA",
-        "francalls": "Fran Calls",
-        # ... add more vendors as needed
-    }
-    VENDOR_CPLS = {
-        "acaking": 35,
-        "joshaca": 30,
-        "francalls": 25,
-        # ... add more vendors as needed
-    }
-    # Optional: manually enter retained deals count per vendor (or automate below)
-    VENDOR_RETAINED = {
-        "acaking": 40,
-        "joshaca": 21,
-        "francalls": 50,
-    }
-
-    cpl_stats = []
-    for vkey, cpl in VENDOR_CPLS.items():
-        pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
-        calls_ct = calls_by_vendor.get(vkey, 0)   # Total leads/calls from CPL CSV
-        paid_ct = fmo[(fmo['vendor_key'] == vkey) & (fmo['Advance'] > 0)].shape[0]
-        vendor_cost = calls_ct * cpl
-        cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
-        retained_ct = VENDOR_RETAINED.get(vkey, 0)
-        cpa_ret = (vendor_cost / retained_ct) if retained_ct else None
-        cpl_stats.append({
-            "Vendor": pretty_name,
-            "CPL": f"${cpl:.2f}",
-            "Total Calls (Leads)": calls_ct,
-            "Paid Deals": paid_ct,
-            "Vendor Cost": f"${vendor_cost:,.2f}",
-            "CPA (Paid)": f"${cpa_paid:,.2f}" if cpa_paid else "N/A",
-            "Retained Deals": retained_ct,
-            "CPA After Retention": f"${cpa_ret:,.2f}" if cpa_ret else "N/A"
-        })
-
-    df_cpl_stats = pd.DataFrame(cpl_stats)
-    st.dataframe(df_cpl_stats, use_container_width=True)
-    st.download_button(
-        "⬇️ Download Vendor CPL/CPA Report (CSV)",
-        df_cpl_stats.to_csv(index=False),
-        file_name="vendor_cpl_cpa_report.csv",
-        mime="text/csv"
-    )
-    st.info("CPL version: Calls from separate CPL CSV, paid deals from FMO, uses your CPL, calculates CPA after retention if provided.")
-
-else:
-    st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
-
-
-        # --- PDF GENERATOR with summary block at top ---
-    def vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt):
+        def vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt):
             def fix(s): return str(s).encode('latin1', errors='replace').decode('latin1')
             pdf = FPDF()
             pdf.add_page()
@@ -1070,7 +987,6 @@ else:
             pdf.ln(5)
             return pdf.output(dest="S").encode("latin1")
 
-        # --- Zip all PDFs ---
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zipf:
             for vkey, pretty in VENDOR_CODES.items():
@@ -1094,9 +1010,8 @@ else:
             mime="application/zip"
         )
         st.info("Each PDF lists only converted deals (matched to FMO). Unpaid reasons included. Vendor rate auto-applied.")
-
     else:
-        st.warning("Please upload both files to generate vendor pay summaries.")
+        st.warning("Please upload both TLD and FMO files to generate vendor pay summaries.")
 
 
 with tabs[7]:
