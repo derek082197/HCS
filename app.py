@@ -1113,12 +1113,10 @@ with tabs[8]:
 
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
-        fmo = pd.read_excel(fmo_file, dtype=str)
-        
-        # Use the real vendor/source column in your CPL CSV
+        # Use your actual column names from your screenshot
         vendor_col = "list_list_description"
-        first_name_col = "first_name"
-        last_name_col = "last_name"
+        first_name_col = "lead_first_name"
+        last_name_col = "lead_last_name"
         if vendor_col not in cpl_csv.columns or first_name_col not in cpl_csv.columns or last_name_col not in cpl_csv.columns:
             st.error(f"CSV must have columns: '{vendor_col}', '{first_name_col}', and '{last_name_col}'.")
             st.write("CSV columns:", list(cpl_csv.columns))
@@ -1128,7 +1126,8 @@ with tabs[8]:
         cpl_csv['last_name_norm'] = cpl_csv[last_name_col].astype(str).str.strip().str.lower()
         calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
 
-        # FMO: use columns H (first_name), I (last_name), K (Advance)
+        # FMO: use columns "first_name", "last_name", "issuer", "Advance"
+        fmo = pd.read_excel(fmo_file, dtype=str)
         fmo_first_col = "first_name"
         fmo_last_col = "last_name"
         fmo_vendor_col = "issuer"
@@ -1147,7 +1146,7 @@ with tabs[8]:
             pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
             calls_ct = cpl_csv[cpl_csv['vendor_key'] == vkey].shape[0]
             
-            # Match on name and vendor, and count paid only!
+            # Name and vendor matching, count paid only
             vendor_calls = cpl_csv[cpl_csv['vendor_key'] == vkey][['first_name_norm','last_name_norm']]
             merged = pd.merge(
                 vendor_calls,
@@ -1183,6 +1182,7 @@ with tabs[8]:
 
     else:
         st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
 
 
 
