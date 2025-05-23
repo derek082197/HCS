@@ -511,58 +511,7 @@ if st.session_state.user_role.lower() == "agent":
     st.stop()
 
 # --- ADMIN "Agent Net Pay" TAB (to go in tabs[7]) ---
-# Place this in your admin tabs as: with tabs[7]:
-with tabs[7]:
-    st.header("🧾 Agent Net Pay (FMO Statement — HCS Tiers/Bonus)")
-    fmo_file = st.file_uploader("Upload FMO Statement (.xlsx)", type=["xlsx"], key="agent_net_pay_fmo2")
-
-    if fmo_file is not None:
-        try:
-            df_fmo = pd.read_excel(fmo_file, dtype=str)
-            agent_col = "Agent"
-            advance_col = next((c for c in df_fmo.columns if "advance" in c.lower()), None)
-            if not advance_col or agent_col not in df_fmo.columns:
-                st.error("Could not find Agent or Advance columns in this FMO file.")
-                st.stop()
-
-            # Only paid deals (Advance == 150)
-            df_fmo[advance_col] = pd.to_numeric(df_fmo[advance_col], errors="coerce").fillna(0)
-            paid_deals = df_fmo[df_fmo[advance_col] == 150]
-
-            # Count paid deals per agent
-            summary = paid_deals.groupby(agent_col).size().reset_index(name="Net Paid Deals")
-
-            # Commission model (apply tier logic for each agent)
-            def calc_agent_payout(num_deals):
-                if num_deals >= 200:
-                    rate = 25
-                elif num_deals >= 150:
-                    rate = 22.5
-                elif num_deals >= 120:
-                    rate = 17.5
-                else:
-                    rate = 15
-                bonus = 1200 if num_deals >= 70 else 0
-                return num_deals * rate + bonus
-
-            summary["Agent Net Payout"] = summary["Net Paid Deals"].apply(calc_agent_payout)
-            summary["Agent Net Payout"] = summary["Agent Net Payout"].apply(lambda x: f"${x:,.2f}")
-
-            st.dataframe(summary, use_container_width=True)
-
-            st.download_button(
-                "⬇️ Download CSV",
-                summary.to_csv(index=False),
-                file_name="agent_net_pay_summary.csv",
-                mime="text/csv"
-            )
-            st.success("Showing all agents with Net Paid Deals (Advance == 150) and HCS payout model.")
-
-        except Exception as e:
-            st.error(f"Error processing FMO: {e}")
-
-    else:
-        st.info("Upload an FMO statement (.xlsx) to see net paid deals and payout by agent.")
+# This section is already included below in the admin dashboard tabs
 
 
 
@@ -1010,6 +959,57 @@ with tabs[6]:
                 f"<div style='font-size:1.08em; margin-top:2px; color:#2a3647;'><b>Average Paid % Across Vendors:</b> {avg_paid_pct:.1f}%</div>",
                 unsafe_allow_html=True,
             )
+            # === VENDOR CPL/CPA REPORT (Calls vs Paid/Retained Deals) ===
+            st.markdown("---")
+            st.header("💰 Vendor CPL/CPA Report (Calls vs Paid/Retained Deals)")
+
+            # CPL per vendor (edit these!)
+            VENDOR_CPLS = {
+                "acaking": 35,    # ACA KING
+                "joshaca": 30,    # JOSH ACA
+                "francalls": 25,  # FRAN
+                # Add more as needed
+            }
+
+            # (Optional) Manually enter retained deal counts
+            VENDOR_RETAINED = {
+                "acaking": 40,    # Example only; use your true numbers
+                "joshaca": 21,
+                "francalls": 50,
+            }
+
+            cpl_stats = []
+            for vkey, cpl in VENDOR_CPLS.items():
+                pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
+                # Count ALL calls/leads for vendor (from TLD)
+                calls_ct = tld[tld['vendor_key'] == vkey].shape[0]
+                # Count paid deals (Advance > 0, FMO-matched)
+                paid_ct = merged[(merged['vendor_key'] == vkey) & (merged['Advance'] > 0)].shape[0]
+                vendor_cost = calls_ct * cpl
+                cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
+                retained_ct = VENDOR_RETAINED.get(vkey, 0)
+                cpa_ret = (vendor_cost / retained_ct) if retained_ct else None
+                cpl_stats.append({
+                    "Vendor": pretty_name,
+                    "CPL": f"${cpl:.2f}",
+                    "Total Calls (Leads)": calls_ct,
+                    "Paid Deals": paid_ct,
+                    "Vendor Cost": f"${vendor_cost:,.2f}",
+                    "CPA (Paid)": f"${cpa_paid:,.2f}" if cpa_paid else "N/A",
+                    "Retained Deals": retained_ct,
+                    "CPA After Retention": f"${cpa_ret:,.2f}" if cpa_ret else "N/A"
+                })
+
+            df_cpl_stats = pd.DataFrame(cpl_stats)
+            st.dataframe(df_cpl_stats, use_container_width=True)
+
+            st.download_button(
+                "⬇️ Download Vendor CPL/CPA Report (CSV)",
+                df_cpl_stats.to_csv(index=False),
+                file_name="vendor_cpl_cpa_report.csv",
+                mime="text/csv"
+            )
+            st.info("Report: Calls from TLD, paid deals from FMO, uses your CPL, and calculates CPA after retention if provided.")
 
         # --- PDF GENERATOR with summary block at top ---
         def vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt):
@@ -1126,6 +1126,7 @@ with tabs[7]:
 
     else:
         st.info("Upload an FMO statement (.xlsx) to see net paid deals and payout by agent.")
+
 
 
 
