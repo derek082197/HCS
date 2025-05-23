@@ -1093,15 +1093,40 @@ with tabs[8]:
         return str(x).strip().lower()
 
     VENDOR_CODES = {
-        "acaking": "ACA KING",
-        "joshaca": "JOSH ACA",
+       "general": "GENERAL",
+        "inbound": "INBOUND",
+        "sms": "SMS",
+        "advancegro": "Advance gro",
+        "axad": "AXAD",
+        "googlecalls": "GOOGLE CALLS",
+        "buffercall": "Aetna",
+        "ancletadvising": "Anclet advising",
+        "blmcalls": "BLM CALLS",
+        "loopcalls": "LOOP CALLS",
+        "nobufferaca": "NO BUFFER ACA",
+        "raycalls": "RAY CALLS",
+        "nomiaca": "Nomi ACA",
+        "hcsmedia": "HCS MEDIA",
         "francalls": "Fran Calls",
+        "acaking": "ACA KING",
+        "ptacacalls": "PT ACA CALLS",
+        "hcscaa": "HCS CAA",
+        "slavaaca": "Slava ACA",
+        "slavaaca2": "Slava ACA 2",
+        "francallssupp": "Fran Calls SUPP",
+        "derekinhousefb": "DEREK INHOUSE FB",
+        "allicalladdoncall": "ALI CALL ADDON CALL",
+        "joshaca": "JOSH ACA",
+        "hcs1p": "HCS1p"
+        "hcsmediacpl": "HCSMEDIACPL"
+        
         # ...add more as needed
     }
     VENDOR_CPLS = {
         "acaking": 35,
         "joshaca": 30,
         "francalls": 25,
+        "hcsmediacpl": 25,
         # ...add more as needed
     }
 
