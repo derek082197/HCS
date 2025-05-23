@@ -1093,41 +1093,40 @@ with tabs[8]:
         return str(x).strip().lower()
 
     VENDOR_CODES = {
-    "general": "GENERAL",
-    "inbound": "INBOUND",
-    "sms": "SMS",
-    "advancegro": "Advance gro",
-    "axad": "AXAD",
-    "googlecalls": "GOOGLE CALLS",
-    "buffercall": "Aetna",
-    "ancletadvising": "Anclet advising",
-    "blmcalls": "BLM CALLS",
-    "loopcalls": "LOOP CALLS",
-    "nobufferaca": "NO BUFFER ACA",
-    "raycalls": "RAY CALLS",
-    "nomiaca": "Nomi ACA",
-    "hcsmedia": "HCS MEDIA",
-    "francalls": "Fran Calls",
-    "acaking": "ACA KING",
-    "ptacacalls": "PT ACA CALLS",
-    "hcscaa": "HCS CAA",
-    "slavaaca": "Slava ACA",
-    "slavaaca2": "Slava ACA 2",
-    "francallssupp": "Fran Calls SUPP",
-    "derekinhousefb": "DEREK INHOUSE FB",
-    "allicalladdoncall": "ALI CALL ADDON CALL",
-    "joshaca": "JOSH ACA",
-    "hcs1p": "HCS1p",
-    "hcsmediacpl": "HCS MEDIA CPL"
-    # ...add more as needed
-}
-VENDOR_CPLS = {
-    "acaking": 35,
-    "joshaca": 30,
-    "francalls": 25,
-    "hcsmediacpl": 25,
-    # ...add more as needed
-}
+        "general": "GENERAL",
+        "inbound": "INBOUND",
+        "sms": "SMS",
+        "advancegro": "Advance gro",
+        "axad": "AXAD",
+        "googlecalls": "GOOGLE CALLS",
+        "buffercall": "Aetna",
+        "ancletadvising": "Anclet advising",
+        "blmcalls": "BLM CALLS",
+        "loopcalls": "LOOP CALLS",
+        "nobufferaca": "NO BUFFER ACA",
+        "raycalls": "RAY CALLS",
+        "nomiaca": "Nomi ACA",
+        "hcsmedia": "HCS MEDIA",
+        "francalls": "Fran Calls",
+        "acaking": "ACA KING",
+        "ptacacalls": "PT ACA CALLS",
+        "hcscaa": "HCS CAA",
+        "slavaaca": "Slava ACA",
+        "slavaaca2": "Slava ACA 2",
+        "francallssupp": "Fran Calls SUPP",
+        "derekinhousefb": "DEREK INHOUSE FB",
+        "allicalladdoncall": "ALI CALL ADDON CALL",
+        "joshaca": "JOSH ACA",
+        "hcs1p": "HCS1p",
+        "hcsmediacpl": "HCS MEDIA CPL"
+    }
+    VENDOR_CPLS = {
+        "acaking": 35,
+        "joshaca": 30,
+        "francalls": 25,
+        "hcsmediacpl": 25,
+        # ...add more as needed
+    }
 
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
@@ -1143,7 +1142,6 @@ VENDOR_CPLS = {
         cpl_csv['last_name_norm'] = cpl_csv[last_name_col].astype(str).apply(normalize_name)
         calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
 
-        # FMO: use columns "first_name", "last_name", "Advance"
         fmo = pd.read_excel(fmo_file, dtype=str)
         fmo_first_col = "first_name"
         fmo_last_col = "last_name"
@@ -1162,7 +1160,6 @@ VENDOR_CPLS = {
             pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
             vendor_calls = cpl_csv[cpl_csv['vendor_key'] == vkey]
             calls_ct = vendor_calls.shape[0]
-            # Merge by first + last name ONLY
             merged = pd.merge(
                 vendor_calls[['first_name_norm','last_name_norm']],
                 paid_fmo,
@@ -1195,6 +1192,7 @@ VENDOR_CPLS = {
 
     else:
         st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
 
 
 
