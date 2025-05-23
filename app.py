@@ -638,6 +638,10 @@ with tabs[4]:
     hs_file = st.file_uploader("📥 Upload Health Sherpa Export (csv)", type="csv")
     threshold = st.slider("Coaching threshold (Paid Deals)", 0, 100, threshold)
 
+    def safe_str(x):
+        # Remove any non-latin1 character for FPDF compatibility
+        return str(x).encode('latin1', errors='replace').decode('latin1')
+
     if uploaded_file and hs_file:
         st.success("✅ Both files uploaded, processing agent per-member pay...")
 
@@ -681,23 +685,23 @@ with tabs[4]:
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial","B",16)
-                pdf.cell(0,10,"Health Connect Solutions", ln=True, align="C")
+                pdf.cell(0,10,safe_str("Health Connect Solutions"), ln=True, align="C")
                 pdf.ln(5)
                 pdf.set_font("Arial","B",12)
-                pdf.cell(0,10,f"Agent Pay Statement – {agent}", ln=True)
+                pdf.cell(0,10,safe_str(f"Agent Pay Statement – {agent}"), ln=True)
                 pdf.ln(5)
                 pdf.set_font("Arial","",12)
-                pdf.cell(0,8,f"Paid Applications: {paid_count}", ln=True)
-                pdf.cell(0,8,f"Total Members: {total_members}", ln=True)
-                pdf.cell(0,8,f"Per-Member Rate: ${PER_MEMBER_RATE:.2f}", ln=True)
-                pdf.cell(0,8,f"Total Payout: ${payout:,.2f}", ln=True)
+                pdf.cell(0,8,safe_str(f"Paid Applications: {paid_count}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Total Members: {total_members}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Per-Member Rate: ${PER_MEMBER_RATE:.2f}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Total Payout: ${payout:,.2f}"), ln=True)
                 pdf.ln(5)
                 pdf.set_font("Arial","B",12)
-                pdf.cell(0,8,"Paid Clients:", ln=True)
+                pdf.cell(0,8,safe_str("Paid Clients:"), ln=True)
                 pdf.set_font("Arial","",10)
                 for fname, lname, members in client_rows:
-                    pdf.cell(0,8,f"- {fname} {lname} | Members: {members}", ln=True)
-                zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf.output(dest="S").encode("latin1", errors="replace"))
+                    pdf.cell(0,8,safe_str(f"- {fname} {lname} | Members: {members}"), ln=True)
+                zf.writestr(f"{safe_str(agent).replace(' ','_')}_Paystub.pdf", pdf.output(dest="S").encode("latin1", errors="replace"))
             # Also write admin summary CSV
             csv_buf = io.StringIO()
             w = csv.writer(csv_buf)
@@ -746,7 +750,7 @@ with tabs[4]:
                     "Net Paid": sub["Advance"].astype(float).sum()
                 })
                 pdf_bytes = generate_agent_pdf(sub, agent)
-                zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf_bytes)
+                zf.writestr(f"{safe_str(agent).replace(' ','_')}_Paystub.pdf", pdf_bytes)
             # Write admin summary CSV
             csv_buf = io.StringIO()
             w = csv.writer(csv_buf)
@@ -763,6 +767,7 @@ with tabs[4]:
             file_name=f"paystubs_{datetime.now():%Y%m%d}.zip",
             mime="application/zip"
         )
+
 
 
 
