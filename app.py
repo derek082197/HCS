@@ -540,9 +540,10 @@ elif st.session_state.user_role.lower() == "admin":
     )
 
     tabs = st.tabs([
-        "🏆 Overview", "📋 Leaderboard", "📈 History",
-        "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay", "🧾 Agent Net Pay"
-    ])
+    "🏆 Overview", "📋 Leaderboard", "📈 History",
+    "📊 Live Counts", "⚙️ Settings", "📂 Clients", "💼 Vendor Pay PDF", "📊 Vendor CPL/CPA"
+])
+
 
     # --- Smartly determine totals (if just uploaded, else pull last) ---
     if uploaded_file is not None and 'totals' in locals():
@@ -1126,6 +1127,72 @@ with tabs[7]:
 
     else:
         st.info("Upload an FMO statement (.xlsx) to see net paid deals and payout by agent.")
+
+        
+        with tabs[8]:  # "📊 Vendor CPL/CPA"
+    st.header("💰 Vendor CPL/CPA Report (Calls vs Paid/Retained Deals)")
+
+    cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl")
+    fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo_cpl")
+
+    def normalize_key(x):
+        return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
+
+    # (Your VENDOR_CODES, VENDOR_CPLS, VENDOR_RETAINED definitions go here)
+
+    if cpl_csv_file and fmo_file:
+        cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
+        vendor_col = None
+        for col in cpl_csv.columns:
+            if col.lower() in ['vendor', 'vendor_key', 'lead_vendor', 'lead_vendor_name']:
+                vendor_col = col
+                break
+        if not vendor_col:
+            st.error("Your CPL CSV is missing a 'Vendor' column. Please check your file.")
+            st.stop()
+        cpl_csv['vendor_key'] = cpl_csv[vendor_col].apply(normalize_key)
+        calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
+
+        fmo = pd.read_excel(fmo_file, dtype=str)
+        if 'Vendor' in fmo.columns:
+            fmo['vendor_key'] = fmo['Vendor'].apply(normalize_key)
+        elif 'vendor_key' not in fmo.columns:
+            st.error("Your FMO XLSX is missing a 'Vendor' column. Please check your file.")
+            st.stop()
+        fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
+
+        cpl_stats = []
+        for vkey, cpl in VENDOR_CPLS.items():
+            pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
+            calls_ct = calls_by_vendor.get(vkey, 0)
+            paid_ct = fmo[(fmo['vendor_key'] == vkey) & (fmo['Advance'] > 0)].shape[0]
+            vendor_cost = calls_ct * cpl
+            cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
+            retained_ct = VENDOR_RETAINED.get(vkey, 0)
+            cpa_ret = (vendor_cost / retained_ct) if retained_ct else None
+            cpl_stats.append({
+                "Vendor": pretty_name,
+                "CPL": f"${cpl:.2f}",
+                "Total Calls (Leads)": calls_ct,
+                "Paid Deals": paid_ct,
+                "Vendor Cost": f"${vendor_cost:,.2f}",
+                "CPA (Paid)": f"${cpa_paid:,.2f}" if cpa_paid else "N/A",
+                "Retained Deals": retained_ct,
+                "CPA After Retention": f"${cpa_ret:,.2f}" if cpa_ret else "N/A"
+            })
+
+        df_cpl_stats = pd.DataFrame(cpl_stats)
+        st.dataframe(df_cpl_stats, use_container_width=True)
+        st.download_button(
+            "⬇️ Download Vendor CPL/CPA Report (CSV)",
+            df_cpl_stats.to_csv(index=False),
+            file_name="vendor_cpl_cpa_report.csv",
+            mime="text/csv"
+        )
+        st.info("CPL version: Calls from CPL CSV, paid deals from FMO, uses your CPL, calculates CPA after retention if provided.")
+    else:
+        st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
 
 
 
