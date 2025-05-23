@@ -1115,8 +1115,8 @@ with tabs[8]:
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
 
-        # --- Use exact column name for vendor, e.g., 'lead_vendor_name'
-        vendor_col = "lead_vendor_name"  # <-- change if your CSV has a different vendor column name
+        # Use your real column name!
+        vendor_col = "list_list_description"
         if vendor_col not in cpl_csv.columns:
             st.error(f"Could not find vendor/source column '{vendor_col}' in your CPL CSV. Please check your file.")
             st.write("CSV columns:", list(cpl_csv.columns))
@@ -1128,7 +1128,7 @@ with tabs[8]:
         fmo = pd.read_excel(fmo_file, dtype=str)
         fmo_vendor_col = None
         for col in fmo.columns:
-            if col.lower() in ['vendor', 'vendorraw', 'lead_vendor', 'lead_vendor_name', 'source']:
+            if col.lower() in ['vendor', 'vendorraw', 'lead_vendor', 'lead_vendor_name', 'source', 'list_list_description']:
                 fmo_vendor_col = col
                 break
         if fmo_vendor_col:
@@ -1172,6 +1172,7 @@ with tabs[8]:
 
     else:
         st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
 
 
 
