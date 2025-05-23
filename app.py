@@ -827,13 +827,27 @@ with tabs[0]:
 with tabs[1]:
     st.header("Agent Leaderboard & Drill-Down")
     if summary:
-        df_led = pd.DataFrame(summary).sort_values("Paid Deals", ascending=False)
-        st.dataframe(df_led.style.format({
-            "Agent Payout":"${:,.2f}",
-            "Owner Profit":"${:,.2f}"
-        }), use_container_width=True)
-        low     = st.slider("Highlight agents below deals:", 0, int(df_led["Paid Deals"].max()), threshold)
-        flagged = df_led[df_led["Paid Deals"]<low]
+        # Determine sort column (Paid Applications for per-member logic, Paid Deals for legacy)
+        if "Paid Deals" in summary[0]:
+            sort_col = "Paid Deals"
+        elif "Paid Applications" in summary[0]:
+            sort_col = "Paid Applications"
+        else:
+            sort_col = None
+
+        if sort_col:
+            df_led = pd.DataFrame(summary).sort_values(sort_col, ascending=False)
+        else:
+            df_led = pd.DataFrame(summary)
+
+        # Display the leaderboard table, formatting payout columns if present
+        payout_cols = [col for col in df_led.columns if "Payout" in col or "Profit" in col]
+        style_dict = {col: "${:,.2f}" for col in payout_cols}
+        st.dataframe(df_led.style.format(style_dict), use_container_width=True)
+
+        # Optional: highlight low-volume agents
+        low = st.slider("Highlight agents below deals:", 0, int(df_led[sort_col].max()), threshold)
+        flagged = df_led[df_led[sort_col] < low]
         st.write(f"Agents below {low}: {len(flagged)}")
         if not flagged.empty:
             st.dataframe(flagged, use_container_width=True)
