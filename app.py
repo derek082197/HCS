@@ -1115,14 +1115,11 @@ with tabs[8]:
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
 
-        # --- Vendor column auto-detect ---
-        vendor_col = None
-        for col in cpl_csv.columns:
-            if col.lower() in ['vendor', 'vendorraw', 'lead_vendor', 'lead_vendor_name', 'source']:
-                vendor_col = col
-                break
-        if not vendor_col:
-            st.error("Could not find vendor/source column in your CPL CSV. Please check your file.")
+        # --- Use exact column name for vendor, e.g., 'lead_vendor_name'
+        vendor_col = "lead_vendor_name"  # <-- change if your CSV has a different vendor column name
+        if vendor_col not in cpl_csv.columns:
+            st.error(f"Could not find vendor/source column '{vendor_col}' in your CPL CSV. Please check your file.")
+            st.write("CSV columns:", list(cpl_csv.columns))
             st.stop()
         cpl_csv['vendor_key'] = cpl_csv[vendor_col].astype(str).apply(normalize_key)
         calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
@@ -1138,6 +1135,7 @@ with tabs[8]:
             fmo['vendor_key'] = fmo[fmo_vendor_col].astype(str).apply(normalize_key)
         elif 'vendor_key' not in fmo.columns:
             st.error("Could not find vendor column in your FMO XLSX. Please check your file.")
+            st.write("FMO columns:", list(fmo.columns))
             st.stop()
         fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
 
