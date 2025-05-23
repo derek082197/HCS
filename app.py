@@ -1036,7 +1036,7 @@ else:
 
 
         # --- PDF GENERATOR with summary block at top ---
-        def vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt):
+    def vendor_pdf(paid, unpaid, pretty, rate, pct_paid, paid_amt):
             def fix(s): return str(s).encode('latin1', errors='replace').decode('latin1')
             pdf = FPDF()
             pdf.add_page()
