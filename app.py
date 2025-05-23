@@ -1118,7 +1118,7 @@ with tabs[8]:
         "allicalladdoncall": "ALI CALL ADDON CALL",
         "joshaca": "JOSH ACA",
         "hcs1p": "HCS1p"
-        "hcsmediacpl": "HCSMEDIACPL",
+        "hcsmediacpl": "HCS MEDIA CPL",
         
         # ...add more as needed
     }
