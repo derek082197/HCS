@@ -641,37 +641,57 @@ with tabs[4]:
     def safe_str(x):
         return str(x).encode('latin1', errors='replace').decode('latin1')
 
-    # Always initialize totals to avoid NameError
     totals = {"deals": 0, "agent": 0.0, "owner_rev": 0.0, "owner_prof": 0.0}
+    summary = []
 
     if uploaded_file and hs_file:
         st.success("✅ Both files uploaded, processing agent per-member pay...")
 
+        # --- Health Sherpa Members ---
         hs = pd.read_csv(hs_file, dtype=str)
         hs['first_name_norm'] = hs['first_name'].astype(str).str.strip().str.lower()
         hs['last_name_norm'] = hs['last_name'].astype(str).str.strip().str.lower()
         hs['member_count'] = pd.to_numeric(hs['applicant_count'], errors='coerce').fillna(1).astype(int)
         member_lookup = hs.set_index(['first_name_norm','last_name_norm'])['member_count'].to_dict()
 
+        # --- FMO Paid Deals ---
         df = pd.read_excel(uploaded_file, dtype=str)
         df = df.dropna(subset=["Agent","first_name","last_name","Advance"])
         df["Paid Status"] = df["Advance"].astype(float).apply(lambda x: "Paid" if x > 0 else "Not Paid")
         df['first_name_norm'] = df['first_name'].astype(str).str.strip().str.lower()
         df['last_name_norm'] = df['last_name'].astype(str).str.strip().str.lower()
+        if "Advance Excluded Reason" in df.columns:
+            df["Reason"] = df["Advance Excluded Reason"]
+        else:
+            df["Reason"] = ""
 
         buf = io.BytesIO()
-        summary = []
         with zipfile.ZipFile(buf, "w") as zf:
             for agent in df["Agent"].unique():
-                sub = df[(df["Agent"]==agent) & (df["Paid Status"]=="Paid")]
-                paid_count = len(sub)
+                sub = df[df["Agent"]==agent]
+                paid_sub = sub[sub["Paid Status"]=="Paid"]
+                unpaid_sub = sub[sub["Paid Status"]!="Paid"]
+
+                paid_count = len(paid_sub)
+                unpaid_count = len(unpaid_sub)
+                all_count = paid_count + unpaid_count
+                paid_pct = (paid_count / all_count * 100) if all_count > 0 else 0
+
+                # For per-member pay
                 client_rows = []
                 total_members = 0
-                for _, row in sub.iterrows():
+                for _, row in paid_sub.iterrows():
                     key = (row['first_name_norm'], row['last_name_norm'])
                     members = member_lookup.get(key, 1)
                     total_members += members
                     client_rows.append((row['first_name'], row['last_name'], members))
+
+                # Unpaid details
+                unpaid_rows = []
+                for _, row in unpaid_sub.iterrows():
+                    reason = row['Reason'] if "Reason" in row and pd.notnull(row['Reason']) else ""
+                    unpaid_rows.append((row['first_name'], row['last_name'], reason))
+
                 # Tier logic
                 if total_members >= 200:
                     rate = 25
@@ -681,15 +701,24 @@ with tabs[4]:
                     rate = 17.5
                 else:
                     rate = 15
-                payout = total_members * rate
+
+                # Bonus for >= 70 members
+                bonus = 1200 if total_members >= 70 else 0
+                payout = total_members * rate + bonus
+
                 summary.append({
                     "Agent": agent,
                     "Paid Applications": paid_count,
+                    "Unpaid Applications": unpaid_count,
+                    "Paid %": f"{paid_pct:.1f}%",
                     "Total Members": total_members,
                     "Per-Member Rate": rate,
-                    "Agent Payout": payout
+                    "Bonus": bonus,
+                    "Agent Payout": payout,
+                    "Unpaid Reasons": "; ".join(f"{fname} {lname}: {reason or 'N/A'}" for fname, lname, reason in unpaid_rows)
                 })
-                # PDF Generation
+
+                # PDF Generation (show paid/unpaid details)
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial","B",16)
@@ -700,8 +729,11 @@ with tabs[4]:
                 pdf.ln(5)
                 pdf.set_font("Arial","",12)
                 pdf.cell(0,8,safe_str(f"Paid Applications: {paid_count}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Unpaid Applications: {unpaid_count}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Paid %: {paid_pct:.1f}%"), ln=True)
                 pdf.cell(0,8,safe_str(f"Total Members: {total_members}"), ln=True)
                 pdf.cell(0,8,safe_str(f"Per-Member Rate: ${rate:.2f}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Bonus: ${bonus:,.2f}"), ln=True)
                 pdf.cell(0,8,safe_str(f"Total Payout: ${payout:,.2f}"), ln=True)
                 pdf.ln(5)
                 pdf.set_font("Arial","B",12)
@@ -709,13 +741,20 @@ with tabs[4]:
                 pdf.set_font("Arial","",10)
                 for fname, lname, members in client_rows:
                     pdf.cell(0,8,safe_str(f"- {fname} {lname} | Members: {members}"), ln=True)
+                if unpaid_rows:
+                    pdf.ln(3)
+                    pdf.set_font("Arial","B",12)
+                    pdf.cell(0,8,safe_str("Unpaid Clients & Reasons:"), ln=True)
+                    pdf.set_font("Arial","",10)
+                    for fname, lname, reason in unpaid_rows:
+                        pdf.cell(0,8,safe_str(f"- {fname} {lname} | Reason: {reason or 'N/A'}"), ln=True)
                 zf.writestr(f"{safe_str(agent).replace(' ','_')}_Paystub.pdf", pdf.output(dest="S").encode("latin1", errors="replace"))
             # Also write admin summary CSV
             csv_buf = io.StringIO()
             w = csv.writer(csv_buf)
-            w.writerow(["Agent","Paid Applications","Total Members","Per-Member Rate","Agent Payout"])
+            w.writerow(["Agent","Paid Applications","Unpaid Applications","Paid %","Total Members","Per-Member Rate","Bonus","Agent Payout","Unpaid Reasons"])
             for r in summary:
-                w.writerow([r["Agent"], r["Paid Applications"], r["Total Members"], r["Per-Member Rate"], r["Agent Payout"]])
+                w.writerow([r["Agent"], r["Paid Applications"], r["Unpaid Applications"], r["Paid %"], r["Total Members"], r["Per-Member Rate"], r["Bonus"], r["Agent Payout"], r["Unpaid Reasons"]])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
         # Calculate totals for dashboard
         totals = {
@@ -740,13 +779,17 @@ with tabs[4]:
         df["Paid Status"]    = df["Advance"].fillna(0).astype(float).apply(lambda x: "Paid" if x>0 else "Not Paid")
         df["Reason"]         = df.get("Advance Excluded Reason","").fillna("").astype(str)
         df["Effective Date"] = pd.to_datetime(df.get("Eff Date"), errors="coerce")
-        totals = {"deals":0, "agent":0.0, "owner_rev":0.0, "owner_prof":0.0}
         summary.clear()
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:
             for agent in df["Agent"].unique():
                 sub     = df[df["Agent"]==agent]
-                paid_ct = (sub["Paid Status"]=="Paid").sum()
+                paid_sub = sub[sub["Paid Status"]=="Paid"]
+                unpaid_sub = sub[sub["Paid Status"]!="Paid"]
+                paid_ct = len(paid_sub)
+                unpaid_ct = len(unpaid_sub)
+                all_ct = paid_ct + unpaid_ct
+                paid_pct = (paid_ct / all_ct * 100) if all_ct > 0 else 0
                 # Use tier logic for per-member, treat each paid app as 1 member
                 if paid_ct >= 200:
                     rate = 25
@@ -756,33 +799,65 @@ with tabs[4]:
                     rate = 17.5
                 else:
                     rate = 15
-                payout = paid_ct * rate
-                owner_rev  = paid_ct * 150
-                owner_prof = paid_ct * 43
-                totals["deals"]     += paid_ct
-                totals["agent"]     += payout
-                totals["owner_rev"] += owner_rev
-                totals["owner_prof"]+= owner_prof
+                bonus = 1200 if paid_ct >= 70 else 0
+                payout = paid_ct * rate + bonus
                 summary.append({
                     "Agent": agent,
-                    "Paid Deals": paid_ct,
+                    "Paid Applications": paid_ct,
+                    "Unpaid Applications": unpaid_ct,
+                    "Paid %": f"{paid_pct:.1f}%",
+                    "Total Members": paid_ct,
                     "Per-Member Rate": rate,
+                    "Bonus": bonus,
                     "Agent Payout": payout,
-                    "Owner Profit": owner_prof,
-                    "Net Paid": sub["Advance"].astype(float).sum()
+                    "Unpaid Reasons": "; ".join(f"{row['first_name']} {row['last_name']}: {row['Reason'] or 'N/A'}" for _, row in unpaid_sub.iterrows())
                 })
-                pdf_bytes = generate_agent_pdf(sub, agent)
-                zf.writestr(f"{safe_str(agent).replace(' ','_')}_Paystub.pdf", pdf_bytes)
+                # PDF
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial","B",16)
+                pdf.cell(0,10,safe_str("Health Connect Solutions"), ln=True, align="C")
+                pdf.ln(5)
+                pdf.set_font("Arial","B",12)
+                pdf.cell(0,10,safe_str(f"Agent Pay Statement – {agent}"), ln=True)
+                pdf.ln(5)
+                pdf.set_font("Arial","",12)
+                pdf.cell(0,8,safe_str(f"Paid Applications: {paid_ct}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Unpaid Applications: {unpaid_ct}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Paid %: {paid_pct:.1f}%"), ln=True)
+                pdf.cell(0,8,safe_str(f"Total Members: {paid_ct}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Per-Member Rate: ${rate:.2f}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Bonus: ${bonus:,.2f}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Total Payout: ${payout:,.2f}"), ln=True)
+                pdf.ln(5)
+                pdf.set_font("Arial","B",12)
+                pdf.cell(0,8,safe_str("Paid Clients:"), ln=True)
+                pdf.set_font("Arial","",10)
+                for _, row in paid_sub.iterrows():
+                    pdf.cell(0,8,safe_str(f"- {row['first_name']} {row['last_name']} | Members: 1"), ln=True)
+                if unpaid_ct:
+                    pdf.ln(3)
+                    pdf.set_font("Arial","B",12)
+                    pdf.cell(0,8,safe_str("Unpaid Clients & Reasons:"), ln=True)
+                    pdf.set_font("Arial","",10)
+                    for _, row in unpaid_sub.iterrows():
+                        pdf.cell(0,8,safe_str(f"- {row['first_name']} {row['last_name']} | Reason: {row['Reason'] or 'N/A'}"), ln=True)
+                zf.writestr(f"{safe_str(agent).replace(' ','_')}_Paystub.pdf", pdf.output(dest="S").encode("latin1", errors="replace"))
             # Write admin summary CSV
             csv_buf = io.StringIO()
             w = csv.writer(csv_buf)
-            w.writerow(["Agent","Paid Deals","Per-Member Rate","Agent Payout","Owner Profit", "Net Paid"])
+            w.writerow(["Agent","Paid Applications","Unpaid Applications","Paid %","Total Members","Per-Member Rate","Bonus","Agent Payout","Unpaid Reasons"])
             for r in summary:
-                w.writerow([r["Agent"], r["Paid Deals"], r["Per-Member Rate"], r["Agent Payout"], r["Owner Profit"], r["Net Paid"]])
+                w.writerow([r["Agent"], r["Paid Applications"], r["Unpaid Applications"], r["Paid %"], r["Total Members"], r["Per-Member Rate"], r["Bonus"], r["Agent Payout"], r["Unpaid Reasons"]])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
         default_dt = (df["Effective Date"].max().date()
                       if "Effective Date" in df else date.today())
-        insert_report(default_dt.strftime("%Y-%m-%d"), totals)
+        totals = {
+            "deals": sum(r["Paid Applications"] for r in summary),
+            "agent": sum(r["Agent Payout"] for r in summary),
+            "owner_rev": 0,
+            "owner_prof": 0
+        }
         st.download_button(
             "📦 Download ZIP of Pay Stubs",
             buf.getvalue(),
