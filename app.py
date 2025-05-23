@@ -633,11 +633,92 @@ elif st.session_state.user_role.lower() == "admin":
 # SETTINGS TAB
 with tabs[4]:
     st.header("⚙️ Settings & Upload")
-    uploaded_file = st.file_uploader("📥 Upload Excel Statement", type="xlsx")
-    threshold     = st.slider("Coaching threshold (Paid Deals)", 0, 100, threshold)
-    if uploaded_file:
-        st.success("✅ Statement uploaded, processing…")
-        df = pd.read_excel(uploaded_file)
+
+    uploaded_file = st.file_uploader("📥 Upload FMO Statement (xlsx)", type="xlsx")
+    hs_file = st.file_uploader("📥 Upload Health Sherpa Export (csv)", type="csv")
+    threshold = st.slider("Coaching threshold (Paid Deals)", 0, 100, threshold)
+
+    if uploaded_file and hs_file:
+        st.success("✅ Both files uploaded, processing agent per-member pay...")
+
+        # --- Health Sherpa Members ---
+        hs = pd.read_csv(hs_file, dtype=str)
+        hs['first_name_norm'] = hs['first_name'].astype(str).str.strip().str.lower()
+        hs['last_name_norm'] = hs['last_name'].astype(str).str.strip().str.lower()
+        hs['phone_norm'] = hs['phone_number'].astype(str).str.replace(r'\D','',regex=True).str[-10:]
+        hs['member_count'] = pd.to_numeric(hs['applicant_count'], errors='coerce').fillna(1).astype(int)
+        member_lookup = hs.set_index(['first_name_norm','last_name_norm','phone_norm'])['member_count'].to_dict()
+
+        # --- FMO Paid Deals ---
+        df = pd.read_excel(uploaded_file, dtype=str)
+        df = df.dropna(subset=["Agent","first_name","last_name","phone_number","Advance"])
+        df["Paid Status"] = df["Advance"].astype(float).apply(lambda x: "Paid" if x > 0 else "Not Paid")
+        df['first_name_norm'] = df['first_name'].astype(str).str.strip().str.lower()
+        df['last_name_norm'] = df['last_name'].astype(str).str.strip().str.lower()
+        df['phone_norm'] = df['phone_number'].astype(str).str.replace(r'\D','',regex=True).str[-10:]
+
+        PER_MEMBER_RATE = st.number_input("Per-Member Payout Rate", min_value=1, max_value=100, value=10)
+
+        buf = io.BytesIO()
+        summary = []
+        with zipfile.ZipFile(buf, "w") as zf:
+            for agent in df["Agent"].unique():
+                sub = df[(df["Agent"]==agent) & (df["Paid Status"]=="Paid")]
+                paid_count = len(sub)
+                client_rows = []
+                total_members = 0
+                for _, row in sub.iterrows():
+                    key = (row['first_name_norm'], row['last_name_norm'], row['phone_norm'])
+                    members = member_lookup.get(key, 1)
+                    total_members += members
+                    client_rows.append((row['first_name'], row['last_name'], row['phone_number'], members))
+                payout = total_members * PER_MEMBER_RATE
+                summary.append({
+                    "Agent": agent,
+                    "Paid Applications": paid_count,
+                    "Total Members": total_members,
+                    "Agent Payout": payout
+                })
+                # PDF Generation
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial","B",16)
+                pdf.cell(0,10,"Health Connect Solutions", ln=True, align="C")
+                pdf.ln(5)
+                pdf.set_font("Arial","B",12)
+                pdf.cell(0,10,f"Agent Pay Statement – {agent}", ln=True)
+                pdf.ln(5)
+                pdf.set_font("Arial","",12)
+                pdf.cell(0,8,f"Paid Applications: {paid_count}", ln=True)
+                pdf.cell(0,8,f"Total Members: {total_members}", ln=True)
+                pdf.cell(0,8,f"Per-Member Rate: ${PER_MEMBER_RATE:.2f}", ln=True)
+                pdf.cell(0,8,f"Total Payout: ${payout:,.2f}", ln=True)
+                pdf.ln(5)
+                pdf.set_font("Arial","B",12)
+                pdf.cell(0,8,"Paid Clients:", ln=True)
+                pdf.set_font("Arial","",10)
+                for fname, lname, phone, members in client_rows:
+                    pdf.cell(0,8,f"- {fname} {lname} | {phone} | Members: {members}", ln=True)
+                zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf.output(dest="S").encode("latin1"))
+            # Also write admin summary CSV
+            csv_buf = io.StringIO()
+            w = csv.writer(csv_buf)
+            w.writerow(["Agent","Paid Applications","Total Members","Agent Payout"])
+            for r in summary:
+                w.writerow([r["Agent"], r["Paid Applications"], r["Total Members"], r["Agent Payout"]])
+            zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
+        st.download_button(
+            "📦 Download ZIP of Agent Per-Member Paystubs",
+            buf.getvalue(),
+            file_name=f"agent_per_member_paystubs_{datetime.now():%Y%m%d}.zip",
+            mime="application/zip"
+        )
+
+    elif uploaded_file:
+        st.success("✅ FMO file uploaded, but no Health Sherpa file. Defaulting all paid deals to 1 member.")
+
+        # (Legacy logic: treat all apps as 1 member if Health Sherpa not uploaded)
+        df = pd.read_excel(uploaded_file, dtype=str)
         df.dropna(subset=["Agent","first_name","last_name","Advance"], inplace=True)
         df["Client"]         = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
         df["Paid Status"]    = df["Advance"].fillna(0).astype(float).apply(lambda x: "Paid" if x>0 else "Not Paid")
@@ -664,7 +745,7 @@ with tabs[4]:
                     "Paid Deals": paid_ct,
                     "Agent Payout": payout,
                     "Owner Profit": owner_prof,
-                    "Net Paid": sub["Advance"].astype(float).sum()  # Add Net Paid from FMO
+                    "Net Paid": sub["Advance"].astype(float).sum()
                 })
                 pdf_bytes = generate_agent_pdf(sub, agent)
                 zf.writestr(f"{agent.replace(' ','_')}_Paystub.pdf", pdf_bytes)
@@ -684,6 +765,7 @@ with tabs[4]:
             file_name=f"paystubs_{datetime.now():%Y%m%d}.zip",
             mime="application/zip"
         )
+
 
 # OVERVIEW TAB
 with tabs[0]:
