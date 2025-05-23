@@ -1129,7 +1129,7 @@ with tabs[7]:
         st.info("Upload an FMO statement (.xlsx) to see net paid deals and payout by agent.")
 
         
-        with tabs[8]:  # "📊 Vendor CPL/CPA"
+    with tabs[8]:  # "📊 Vendor CPL/CPA"
     st.header("💰 Vendor CPL/CPA Report (Calls vs Paid/Retained Deals)")
 
     cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl")
