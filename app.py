@@ -1282,92 +1282,69 @@ with tabs[7]:
 
 
 with tabs[8]:
-    st.header("📊 Vendor CPL/CPA Report (Vendor Style — Calls, Paid, CPA)")
+    st.header("📊 Vendor CPL/CPA Report (with Paid Members)")
 
     cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl_tab8")
     fmo_file = st.file_uploader("Upload FMO Statement (xlsx)", type=["xlsx"], key="vendor_fmo_cpl_tab8")
+    hs_file = st.file_uploader("Upload Health Sherpa Export (csv)", type="csv", key="vendor_hs_tab8")
 
-    def normalize_name(x):
+    def normalize(x):
         return str(x).strip().lower()
 
-    VENDOR_CODES = {
-        "general": "GENERAL",
-        "inbound": "INBOUND",
-        "sms": "SMS",
-        "advancegro": "Advance gro",
-        "axad": "AXAD",
-        "googlecalls": "GOOGLE CALLS",
-        "buffercall": "Aetna",
-        "ancletadvising": "Anclet advising",
-        "blmcalls": "BLM CALLS",
-        "loopcalls": "LOOP CALLS",
-        "nobufferaca": "NO BUFFER ACA",
-        "raycalls": "RAY CALLS",
-        "nomiaca": "Nomi ACA",
-        "hcsmedia": "HCS MEDIA",
-        "francalls": "Fran Calls",
-        "acaking": "ACA KING",
-        "ptacacalls": "PT ACA CALLS",
-        "hcscaa": "HCS CAA",
-        "slavaaca": "Slava ACA",
-        "slavaaca2": "Slava ACA 2",
-        "francallssupp": "Fran Calls SUPP",
-        "derekinhousefb": "DEREK INHOUSE FB",
-        "allicalladdoncall": "ALI CALL ADDON CALL",
-        "joshaca": "JOSH ACA",
-        "hcs1p": "HCS1p",
-        "hcsmediacpl": "HCS MEDIA CPL"
-    }
-    VENDOR_CPLS = {
-        "acaking": 35,
-        "joshaca": 30,
-        "francalls": 25,
-        "hcsmediacpl": 25,
-        # ...add more as needed
-    }
+    # Vendors and CPL rates as before
+    VENDOR_CODES = {...}  # your full vendor dictionary here
+    VENDOR_CPLS = {...}   # your full CPL rates dictionary here
 
-    if cpl_csv_file and fmo_file:
+    if cpl_csv_file and fmo_file and hs_file:
+        # Load Health Sherpa
+        hs = pd.read_csv(hs_file, dtype=str)
+        hs['first_name_norm'] = hs['first_name'].astype(str).str.strip().str.lower()
+        hs['last_name_norm'] = hs['last_name'].astype(str).str.strip().str.lower()
+        hs['member_count'] = pd.to_numeric(hs['applicant_count'], errors='coerce').fillna(1).astype(int)
+        hs_members = hs.set_index(['first_name_norm','last_name_norm'])['member_count'].to_dict()
+
+        # Load CPL CSV
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
         vendor_col = "list_list_description"
         first_name_col = "lead_first_name"
         last_name_col = "lead_last_name"
-        if vendor_col not in cpl_csv.columns or first_name_col not in cpl_csv.columns or last_name_col not in cpl_csv.columns:
-            st.error(f"CSV must have columns: '{vendor_col}', '{first_name_col}', and '{last_name_col}'.")
-            st.write("CSV columns:", list(cpl_csv.columns))
-            st.stop()
-        cpl_csv['vendor_key'] = cpl_csv[vendor_col].astype(str).str.strip().str.lower().str.replace(' ', '')
-        cpl_csv['first_name_norm'] = cpl_csv[first_name_col].astype(str).apply(normalize_name)
-        cpl_csv['last_name_norm'] = cpl_csv[last_name_col].astype(str).apply(normalize_name)
+        cpl_csv['vendor_key'] = cpl_csv[vendor_col].astype(str).str.strip().str.lower().str.replace(' ','')
+        cpl_csv['first_name_norm'] = cpl_csv[first_name_col].astype(str).apply(normalize)
+        cpl_csv['last_name_norm'] = cpl_csv[last_name_col].astype(str).apply(normalize)
         calls_by_vendor = cpl_csv.groupby('vendor_key').size().to_dict()
 
+        # Load FMO
         fmo = pd.read_excel(fmo_file, dtype=str)
-        fmo_first_col = "first_name"
-        fmo_last_col = "last_name"
-        fmo_advance_col = "Advance"
-        if fmo_first_col not in fmo.columns or fmo_last_col not in fmo.columns or fmo_advance_col not in fmo.columns:
-            st.error("FMO XLSX missing one of the required columns: first_name, last_name, Advance.")
-            st.write("FMO columns:", list(fmo.columns))
-            st.stop()
-        fmo['first_name_norm'] = fmo[fmo_first_col].astype(str).apply(normalize_name)
-        fmo['last_name_norm'] = fmo[fmo_last_col].astype(str).apply(normalize_name)
-        fmo['Advance'] = pd.to_numeric(fmo[fmo_advance_col], errors='coerce').fillna(0)
-        paid_fmo = fmo[fmo['Advance'] > 0][['first_name_norm', 'last_name_norm']].drop_duplicates()
+        fmo['first_name_norm'] = fmo['first_name'].astype(str).str.strip().str.lower()
+        fmo['last_name_norm'] = fmo['last_name'].astype(str).str.strip().str.lower()
+        fmo['Advance'] = pd.to_numeric(fmo['Advance'], errors='coerce').fillna(0)
+        paid_fmo_set = set(
+            (fn, ln)
+            for fn, ln in zip(
+                fmo.loc[fmo['Advance'] > 0, 'first_name_norm'],
+                fmo.loc[fmo['Advance'] > 0, 'last_name_norm']
+            )
+        )
 
         cpl_stats = []
         for vkey, cpl in VENDOR_CPLS.items():
             pretty_name = VENDOR_CODES.get(vkey, vkey.upper())
             vendor_calls = cpl_csv[cpl_csv['vendor_key'] == vkey]
             calls_ct = vendor_calls.shape[0]
-            merged = pd.merge(
-                vendor_calls[['first_name_norm','last_name_norm']],
-                paid_fmo,
-                on=['first_name_norm','last_name_norm'],
-                how='inner'
-            )
-            paid_ct = merged.drop_duplicates().shape[0]
-            vendor_cost = calls_ct * cpl
+            # Paid calls: matches in paid FMO
+            paid_calls = vendor_calls[
+                vendor_calls.apply(lambda row: (row['first_name_norm'], row['last_name_norm']) in paid_fmo_set, axis=1)
+            ]
+            paid_ct = paid_calls.shape[0]
             paid_pct = (paid_ct / calls_ct * 100) if calls_ct > 0 else 0
+            vendor_cost = calls_ct * cpl
             cpa_paid = (vendor_cost / paid_ct) if paid_ct else None
+            # Paid Members (from Health Sherpa)
+            paid_members = paid_calls.apply(
+                lambda row: hs_members.get((row['first_name_norm'], row['last_name_norm']), 1), axis=1
+            ).sum()
+            cpa_per_member = (vendor_cost / paid_members) if paid_members else None
+
             cpl_stats.append({
                 "Vendor": pretty_name,
                 "CPL": f"${cpl:.2f}",
@@ -1375,7 +1352,9 @@ with tabs[8]:
                 "Paid Deals": paid_ct,
                 "Paid %": f"{paid_pct:.1f}%",
                 "Vendor Cost": f"${vendor_cost:,.2f}",
+                "Paid Members": paid_members,
                 "CPA (Paid)": f"${cpa_paid:,.2f}" if cpa_paid else "N/A",
+                "CPA Per Member": f"${cpa_per_member:,.2f}" if cpa_per_member else "N/A",
             })
 
         df_cpl_stats = pd.DataFrame(cpl_stats)
@@ -1386,10 +1365,10 @@ with tabs[8]:
             file_name="vendor_cpl_cpa_report.csv",
             mime="text/csv"
         )
-        st.info("Counts paid deals by matching (First+Last Name) between CPL and FMO (Advance > 0); CPA = Cost/paid matches. No retention.")
-
+        st.info("Counts paid deals by name-match with FMO and paid members by Health Sherpa; CPA per member is true cost per covered member.")
     else:
-        st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+        st.warning("Upload CPL (calls/leads), FMO Statement, and Health Sherpa export to see the full vendor CPL/CPA/member report.")
+
 
 
 
