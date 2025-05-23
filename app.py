@@ -1128,8 +1128,8 @@ with tabs[7]:
     else:
         st.info("Upload an FMO statement (.xlsx) to see net paid deals and payout by agent.")
 
-        
-    with tabs[8]:  # "📊 Vendor CPL/CPA"
+
+with tabs[8]:
     st.header("💰 Vendor CPL/CPA Report (Calls vs Paid/Retained Deals)")
 
     cpl_csv_file = st.file_uploader("Upload Vendor CPL (Calls/Leads) CSV", type=["csv"], key="vendor_cpl")
@@ -1138,7 +1138,25 @@ with tabs[7]:
     def normalize_key(x):
         return str(x).strip().lower().replace(' ', '').replace('/', '').replace('_', '')
 
-    # (Your VENDOR_CODES, VENDOR_CPLS, VENDOR_RETAINED definitions go here)
+    # Set your actual vendor keys and settings
+    VENDOR_CODES = {
+        "acaking": "ACA KING",
+        "joshaca": "JOSH ACA",
+        "francalls": "Fran Calls",
+        # ... add more vendors as needed
+    }
+    VENDOR_CPLS = {
+        "acaking": 35,
+        "joshaca": 30,
+        "francalls": 25,
+        # ... add more vendors as needed
+    }
+    VENDOR_RETAINED = {
+        "acaking": 40,
+        "joshaca": 21,
+        "francalls": 50,
+        # ... add more with real values
+    }
 
     if cpl_csv_file and fmo_file:
         cpl_csv = pd.read_csv(cpl_csv_file, dtype=str)
@@ -1192,6 +1210,7 @@ with tabs[7]:
         st.info("CPL version: Calls from CPL CSV, paid deals from FMO, uses your CPL, calculates CPA after retention if provided.")
     else:
         st.warning("Upload both CPL (calls/leads) CSV and FMO Statement to see the CPL/CPA report.")
+
 
 
 
