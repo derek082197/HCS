@@ -829,7 +829,6 @@ st.download_button(
 with tabs[0]:
     st.title("HCS Commission Dashboard")
 
-    # Always read the most recent payroll totals from session state
     totals = st.session_state.get("payroll_totals", {
         "deals": 0, "agent": 0.0, "owner_rev": 0.0, "owner_prof": 0.0
     })
@@ -847,11 +846,10 @@ with tabs[0]:
 
     st.markdown("---")
 
-    rev = owner_rev
     s1, s2, s3 = st.columns(3, gap="large")
-    s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
-    s2.metric("Matt (2%)", f"${rev*0.02:,.2f}")
-    s3.metric("Jarad (1%)", f"${rev*0.01:,.2f}")
+    s1.metric("Eddy (0.5%)", f"${owner_rev*0.005:,.2f}")
+    s2.metric("Matt (2%)", f"${owner_rev*0.02:,.2f}")
+    s3.metric("Jarad (1%)", f"${owner_rev*0.01:,.2f}")
 
     st.markdown("---")
 
@@ -860,6 +858,7 @@ with tabs[0]:
     st.write(f"Agent Payout: ${agent_payout:,.2f}")
     st.write(f"Owner Revenue: ${owner_rev:,.2f}")
     st.write(f"Owner Profit: ${owner_prof:,.2f}")
+
 
 
 # LEADERBOARD TAB
