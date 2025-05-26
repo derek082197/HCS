@@ -825,31 +825,40 @@ with tabs[4]:
 # OVERVIEW TAB
 with tabs[0]:
     st.title("HCS Commission Dashboard")
-    if uploaded_file:
-        deals = int(totals["deals"])
-        c1, c2, c3, c4 = st.columns(4, gap="large")
-        c1.metric("Total Paid Deals", f"{deals:,}")
-        c2.metric("Agent Payout",    f"${totals['agent']:,.2f}")
-        c3.metric("Owner Revenue",   f"${totals['owner_rev']:,.2f}")
-        c4.metric("Owner Profit",    f"${totals['owner_prof']:,.2f}")
-    else:
-        if history_df.empty:
-            st.info("Upload a statement to see metrics.")
-        else:
-            latest = history_df.iloc[-1]
-            deals = int(latest.total_deals)
-            c1, c2, c3, c4 = st.columns(4, gap="large")
-            c1.metric("Total Paid Deals", f"{deals:,}")
-            c2.metric("Agent Payout",    f"${latest.agent_payout:,.2f}")
-            c3.metric("Owner Revenue",   f"${latest.owner_revenue:,.2f}")
-            c4.metric("Owner Profit",    f"${latest.owner_profit:,.2f}")
+
+    # Get latest payroll totals from session_state if available
+    totals = st.session_state.get("payroll_totals", {
+        "deals": 0, "agent": 0.0, "owner_rev": 0.0, "owner_prof": 0.0
+    })
+
+    deals = int(totals.get("deals", 0))
+    agent_payout = float(totals.get("agent", 0.0))
+    owner_rev = float(totals.get("owner_rev", 0.0))
+    owner_prof = float(totals.get("owner_prof", 0.0))
+
+    c1, c2, c3, c4 = st.columns(4, gap="large")
+    c1.metric("Total Paid Deals", f"{deals:,}")
+    c2.metric("Agent Payout", f"${agent_payout:,.2f}")
+    c3.metric("Owner Revenue", f"${owner_rev:,.2f}")
+    c4.metric("Owner Profit", f"${owner_prof:,.2f}")
+
     st.markdown("---")
-    rev = (totals["owner_rev"] if uploaded_file else
-           (latest.owner_revenue if not history_df.empty else 0))
+
+    # Eddy, Matt, Jarad profit shares (if relevant)
+    rev = owner_rev  # Owner revenue, not agent payout!
     s1, s2, s3 = st.columns(3, gap="large")
     s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
-    s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
-    s3.metric("Jarad (1%)",  f"${rev*0.01:,.2f}")
+    s2.metric("Matt (2%)", f"${rev*0.02:,.2f}")
+    s3.metric("Jarad (1%)", f"${rev*0.01:,.2f}")
+
+    st.markdown("---")
+
+    # Quick summary for the most recent payroll cycle (optional, only if you want)
+    st.subheader("Recent Payroll Period")
+    st.write(f"Total Paid Deals: {deals:,}")
+    st.write(f"Agent Payout: ${agent_payout:,.2f}")
+    st.write(f"Owner Revenue: ${owner_rev:,.2f}")
+    st.write(f"Owner Profit: ${owner_prof:,.2f}")
 
 # LEADERBOARD TAB
 with tabs[1]:
