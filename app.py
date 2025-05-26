@@ -805,20 +805,28 @@ with tabs[4]:
                     r["Per-Member Rate"], r["Production Bonus"], r["Retention Bonus"], r["Top Agent Bonus"], r["Agent Payout"], r["Unpaid Reasons"]
                 ])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
-        totals = {
-    "deals": sum(r["Paid Applications"] for r in summary),
-    "agent": sum(r["Agent Payout"] for r in summary),
-    "owner_rev": 0,      # (Or your custom owner revenue calc if needed)
-    "owner_prof": 0      # (Or your custom owner profit calc if needed)
-}
-st.session_state["payroll_totals"] = totals
 
-st.download_button(
-    "📦 Download ZIP of Agent Per-Member Paystubs",
-    buf.getvalue(),
-    file_name=f"agent_per_member_paystubs_{datetime.now():%Y%m%d}.zip",
-    mime="application/zip"
-)
+        # ---- Calculate owner revenue and profit totals and set them globally! ----
+        total_members = sum(r["Total Members"] for r in summary)
+        agent_payout = sum(r["Agent Payout"] for r in summary)
+        owner_rev = total_members * 150    # Set your true per-member FMO revenue if not $150!
+        owner_prof = owner_rev - agent_payout
+
+        totals = {
+            "deals": sum(r["Paid Applications"] for r in summary),
+            "agent": agent_payout,
+            "owner_rev": owner_rev,
+            "owner_prof": owner_prof
+        }
+        st.session_state["payroll_totals"] = totals
+
+        st.download_button(
+            "📦 Download ZIP of Agent Per-Member Paystubs",
+            buf.getvalue(),
+            file_name=f"agent_per_member_paystubs_{datetime.now():%Y%m%d}.zip",
+            mime="application/zip"
+        )
+
 
 
 
