@@ -806,17 +806,20 @@ with tabs[4]:
                 ])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
         totals = {
-            "deals": sum(r["Paid Applications"] for r in summary),
-            "agent": sum(r["Agent Payout"] for r in summary),
-            "owner_rev": 0,
-            "owner_prof": 0
-        }
-        st.download_button(
-            "📦 Download ZIP of Agent Per-Member Paystubs",
-            buf.getvalue(),
-            file_name=f"agent_per_member_paystubs_{datetime.now():%Y%m%d}.zip",
-            mime="application/zip"
-        )
+    "deals": sum(r["Paid Applications"] for r in summary),
+    "agent": sum(r["Agent Payout"] for r in summary),
+    "owner_rev": 0,      # (Or your custom owner revenue calc if needed)
+    "owner_prof": 0      # (Or your custom owner profit calc if needed)
+}
+st.session_state["payroll_totals"] = totals
+
+st.download_button(
+    "📦 Download ZIP of Agent Per-Member Paystubs",
+    buf.getvalue(),
+    file_name=f"agent_per_member_paystubs_{datetime.now():%Y%m%d}.zip",
+    mime="application/zip"
+)
+
 
 
 
@@ -826,7 +829,7 @@ with tabs[4]:
 with tabs[0]:
     st.title("HCS Commission Dashboard")
 
-    # Get latest payroll totals from session_state if available
+    # Always read the most recent payroll totals from session state
     totals = st.session_state.get("payroll_totals", {
         "deals": 0, "agent": 0.0, "owner_rev": 0.0, "owner_prof": 0.0
     })
@@ -844,8 +847,7 @@ with tabs[0]:
 
     st.markdown("---")
 
-    # Eddy, Matt, Jarad profit shares (if relevant)
-    rev = owner_rev  # Owner revenue, not agent payout!
+    rev = owner_rev
     s1, s2, s3 = st.columns(3, gap="large")
     s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
     s2.metric("Matt (2%)", f"${rev*0.02:,.2f}")
@@ -853,12 +855,12 @@ with tabs[0]:
 
     st.markdown("---")
 
-    # Quick summary for the most recent payroll cycle (optional, only if you want)
     st.subheader("Recent Payroll Period")
     st.write(f"Total Paid Deals: {deals:,}")
     st.write(f"Agent Payout: ${agent_payout:,.2f}")
     st.write(f"Owner Revenue: ${owner_rev:,.2f}")
     st.write(f"Owner Profit: ${owner_prof:,.2f}")
+
 
 # LEADERBOARD TAB
 with tabs[1]:
