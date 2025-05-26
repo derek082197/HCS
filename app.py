@@ -806,10 +806,9 @@ with tabs[4]:
                 ])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
 
-        # ---- Calculate owner revenue and profit totals and set them globally! ----
-        total_members = sum(r["Total Members"] for r in summary)
+        # ---- Owner revenue/profit based on sum of all Advance==150 ----
+        owner_rev = df[df["Advance"].astype(float) == 150]["Advance"].astype(float).sum()
         agent_payout = sum(r["Agent Payout"] for r in summary)
-        owner_rev = total_members * 150    # Set your true per-member FMO revenue if not $150!
         owner_prof = owner_rev - agent_payout
 
         totals = {
@@ -826,6 +825,7 @@ with tabs[4]:
             file_name=f"agent_per_member_paystubs_{datetime.now():%Y%m%d}.zip",
             mime="application/zip"
         )
+
 
 
 
