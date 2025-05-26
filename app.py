@@ -1,12 +1,17 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import io
 import zipfile
+import io
 import csv
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
+import os
+
+# Import the database module
+from database import *
+
 try:
     from streamlit_extras.st_autorefresh import st_autorefresh
 except ImportError:
@@ -14,6 +19,7 @@ except ImportError:
 
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
+# Initialize commission cycles if they don't exist in the database
 commission_cycles = pd.DataFrame([
     # ("Cycle Start", "Cycle End", "Pay Date")
     ("12/14/24", "12/27/24", "1/3/25"),   ("12/28/24", "1/10/25", "1/17/25"),
@@ -35,17 +41,31 @@ commission_cycles["start"] = pd.to_datetime(commission_cycles["start"])
 commission_cycles["end"] = pd.to_datetime(commission_cycles["end"])
 commission_cycles["pay"] = pd.to_datetime(commission_cycles["pay"])
 
+# Import commission cycles into the database
+import_commission_cycles(commission_cycles)
+
+# Constants
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
 CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
-DB              = "crm_history.db"
 
-df_users = pd.read_csv("users.csv", dtype=str).dropna()
-USERS = dict(zip(df_users.username.str.strip(), df_users.password))
-ADMIN_NAMES = dict(zip(df_users.username, [f"{r['first_name']} {r['last_name']}" for _, r in df_users.iterrows()]))
-ADMIN_ROLES = dict(zip(df_users.username, df_users.role))
+# Import users from CSV if exists
+if os.path.exists("users.csv"):
+    import_users_from_csv("users.csv")
 
+# Get admin users data for login
+admin_df = get_all_users()
+if not admin_df.empty:
+    USERS = dict(zip(admin_df.username.str.strip(), admin_df.password))
+    ADMIN_NAMES = dict(zip(admin_df.username, [f"{r['first_name']} {r['last_name']}" for _, r in admin_df.iterrows()]))
+    ADMIN_ROLES = dict(zip(admin_df.username, admin_df.role))
+else:
+    USERS = {}
+    ADMIN_NAMES = {}
+    ADMIN_ROLES = {}
+
+# Fetch agents from CRM API and store in database
 @st.cache_data(ttl=600)
 def fetch_agents():
     url = "https://hcs.tldcrm.com/api/egress/users"
@@ -57,36 +77,48 @@ def fetch_agents():
     r = requests.get(url, headers=headers, params=params, timeout=10)
     js = r.json().get('response', {})
     users = js.get('results', [])
-    return pd.DataFrame(users)
+    df = pd.DataFrame(users)
+    if not df.empty:
+        import_agents_from_api(df)
+    return df
 
 df_agents = fetch_agents()
-AGENT_USERNAMES = df_agents['username'].tolist()
-AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
-AGENT_NAMES = dict(zip(df_agents['username'], [f"{row['first_name']} {row['last_name']}" for _, row in df_agents.iterrows()]))
-AGENT_ROLES = dict(zip(df_agents['username'], df_agents['role_descriptions']))
-AGENT_USERIDS = dict(zip(df_agents['username'], df_agents['user_id']))
+agents_df = get_all_agents()
+if not agents_df.empty:
+    AGENT_USERNAMES = agents_df['username'].tolist()
+    AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
+    AGENT_NAMES = dict(zip(agents_df['username'], [f"{row['first_name']} {row['last_name']}" for _, row in agents_df.iterrows()]))
+    AGENT_ROLES = dict(zip(agents_df['username'], agents_df['role_descriptions']))
+    AGENT_USERIDS = dict(zip(agents_df['username'], agents_df['user_id']))
+else:
+    AGENT_USERNAMES = []
+    AGENT_CREDENTIALS = {}
+    AGENT_NAMES = {}
+    AGENT_ROLES = {}
+    AGENT_USERIDS = {}
 
+# Session state for login
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_role = ""
     st.session_state.user_email = ""
     st.session_state.user_name = ""
+    st.session_state.user_id = ""
 
 def do_login():
     u = st.session_state.user.strip()
     p = st.session_state.pwd
-    if u in AGENT_CREDENTIALS and p == AGENT_CREDENTIALS[u]:
+    
+    # Use the authenticate_user function from database module
+    is_auth, user_type, user_data = authenticate_user(u, p)
+    
+    if is_auth:
         st.session_state.logged_in = True
         st.session_state.user_email = u
-        st.session_state.user_name = AGENT_NAMES[u]
-        st.session_state.user_role = AGENT_ROLES[u] if AGENT_ROLES.get(u) else "Agent"
-        st.success(f"✅ Welcome, {AGENT_NAMES[u]}!")
-    elif u in USERS and p == USERS[u]:
-        st.session_state.logged_in = True
-        st.session_state.user_email = u
-        st.session_state.user_name = ADMIN_NAMES.get(u, u)
-        st.session_state.user_role = ADMIN_ROLES.get(u, "Admin")
-        st.success(f"✅ Welcome, {st.session_state.user_name}! (Admin)")
+        st.session_state.user_name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}"
+        st.session_state.user_role = user_data.get('role', user_type)
+        st.session_state.user_id = user_data.get('user_id', '')
+        st.success(f"✅ Welcome, {st.session_state.user_name}!")
     else:
         st.error("❌ Incorrect credentials")
 
@@ -95,6 +127,7 @@ def do_logout():
     st.session_state.user_role = ""
     st.session_state.user_email = ""
     st.session_state.user_name = ""
+    st.session_state.user_id = ""
     st.experimental_rerun()
 
 if not st.session_state.logged_in:
@@ -106,41 +139,18 @@ if not st.session_state.logged_in:
 st.sidebar.button("Log out", on_click=do_logout)
 
 
-# DATABASE HELPERS
-def init_db():
-    conn = sqlite3.connect(DB)
-    conn.execute("""
-      CREATE TABLE IF NOT EXISTS reports (
-        upload_date TEXT PRIMARY KEY,
-        total_deals INTEGER,
-        agent_payout REAL,
-        owner_revenue REAL,
-        owner_profit REAL
-      )
-    """)
-    conn.commit()
-    conn.close()
-
-def insert_report(dt, totals):
-    conn = sqlite3.connect(DB)
-    conn.execute("""
-      INSERT OR REPLACE INTO reports
-      (upload_date, total_deals, agent_payout, owner_revenue, owner_profit)
-      VALUES (?, ?, ?, ?, ?)
-    """, (dt, totals["deals"], totals["agent"], totals["owner_rev"], totals["owner_prof"]))
-    conn.commit()
-    conn.close()
-
+# Load history data
 @st.cache_data
 def load_history():
-    conn = sqlite3.connect(DB)
-    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn, parse_dates=["upload_date"])
-    conn.close()
-    for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    df = get_all_reports()
+    if not df.empty:
+        for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+        if "upload_date" in df.columns:
+            df["upload_date"] = pd.to_datetime(df["upload_date"], errors="coerce")
     return df
 
-init_db()
 history_df = load_history()
 summary = []
 uploaded_file = None
@@ -181,7 +191,12 @@ def fetch_all_today(limit=5000):
         except Exception as e:
             st.error(f"API Error: {str(e)}")
             break
-    return pd.DataFrame(all_results)
+    
+    df = pd.DataFrame(all_results)
+    if not df.empty:
+        # Save fetched deals to database
+        save_deals_from_api(df)
+    return df
 
 def fetch_agent_deals(user_id, date_from, date_to):
     columns = [
@@ -204,8 +219,16 @@ def fetch_agent_deals(user_id, date_from, date_to):
     print("API CALL PARAMS:", params)
     print("API CALL DEALS:", deals[:2])
     df = pd.DataFrame(deals)
-    if "date_sold" in df.columns:
-        df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+    if not df.empty:
+        if "date_sold" in df.columns:
+            df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
+        # Save fetched deals to database
+        save_deals_from_api(df)
+    
+    # Try to get from database first (which may have more info like paid status)
+    db_deals = get_deals_by_agent(user_id, date_from, date_to)
+    if not db_deals.empty:
+        return db_deals
     return df
 
 
@@ -286,9 +309,7 @@ def vendor_pdf(paid, unpaid, vendor, rate):
     pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
     return pdf.output(dest="S").encode("latin1")
 
-# Initialize the database and load history
-init_db()
-history_df = load_history()
+# Initialize summary variables
 summary = []
 uploaded_file = None
 threshold = 10
@@ -432,6 +453,9 @@ if st.session_state.user_role.lower() == "agent":
                 agent_rows[advance_col] = pd.to_numeric(agent_rows[advance_col], errors="coerce").fillna(0)
                 net_paid = agent_rows[advance_col][agent_rows[advance_col] == 150].sum() if not agent_rows.empty else 0.0
                 paid_rows = agent_rows[agent_rows[advance_col] == 150]
+                
+                # Update deals in database with payment status
+                update_deals_from_fmo(fmo_df)
             except Exception as ex:
                 net_paid = None
                 paid_rows = None
@@ -817,7 +841,17 @@ with tabs[4]:
             "owner_rev": owner_rev,
             "owner_prof": owner_prof
         }
+        
+        # Save the report to the database
+        upload_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        save_report(upload_date, totals)
+        
         st.session_state["payroll_totals"] = totals
+        
+        # Also update deals in database with Health Sherpa member counts
+        if hs_file is not None:
+            hs_df = pd.read_csv(hs_file, dtype=str)
+            update_deals_from_fmo(df, hs_df)
 
         st.download_button(
             "📦 Download ZIP of Agent Per-Member Paystubs",
