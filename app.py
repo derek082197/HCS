@@ -690,7 +690,7 @@ with tabs[4]:
                 reason = row['Reason'] if "Reason" in row and pd.notnull(row['Reason']) else ""
                 unpaid_rows.append((row['first_name'], row['last_name'], reason))
 
-            # ---- HCS Tier Structure ----
+            # ---- HCS Tier Structure: BASED ON total_members ----
             if total_members >= 140:
                 rate = 25
                 bonus = 1200
@@ -704,15 +704,8 @@ with tabs[4]:
                 rate = 15
                 bonus = 0
 
-            # CPA logic (optional, adjust vendor cost per agent if needed)
-            vendor_cost = 0
-            cpa = vendor_cost / total_members if total_members > 0 else 0
-
-            # Bonuses
             production_bonus = bonus
-            retention_bonus = 500 if paid_pct >= 80 else 0  # Based on summary retention only
-            # Top agent to be calculated after loop
-
+            retention_bonus = 500 if paid_pct >= 80 else 0  # Based on retention %
             agent_stats.append({
                 "Agent": agent,
                 "Paid Applications": paid_count,
@@ -724,7 +717,6 @@ with tabs[4]:
                 "Retention Bonus": retention_bonus,
                 "Client Rows": client_rows,
                 "Unpaid Rows": unpaid_rows,
-                "CPA": cpa,
             })
 
         # ---- Top Agent Bonus ----
@@ -760,7 +752,6 @@ with tabs[4]:
                     "Production Bonus": production_bonus,
                     "Retention Bonus": retention_bonus,
                     "Top Agent Bonus": top_agent_bonus,
-                    "CPA": stats["CPA"],
                     "Agent Payout": total_payout,
                     "Unpaid Reasons": "; ".join(f"{fname} {lname}: {reason or 'N/A'}" for fname, lname, reason in unpaid_rows)
                 })
@@ -806,12 +797,12 @@ with tabs[4]:
             w = csv.writer(csv_buf)
             w.writerow([
                 "Agent","Paid Applications","Unpaid Applications","Paid %","Total Members",
-                "Per-Member Rate","Production Bonus","Retention Bonus","Top Agent Bonus","CPA","Agent Payout","Unpaid Reasons"
+                "Per-Member Rate","Production Bonus","Retention Bonus","Top Agent Bonus","Agent Payout","Unpaid Reasons"
             ])
             for r in summary:
                 w.writerow([
                     r["Agent"], r["Paid Applications"], r["Unpaid Applications"], r["Paid %"], r["Total Members"],
-                    r["Per-Member Rate"], r["Production Bonus"], r["Retention Bonus"], r["Top Agent Bonus"], r["CPA"], r["Agent Payout"], r["Unpaid Reasons"]
+                    r["Per-Member Rate"], r["Production Bonus"], r["Retention Bonus"], r["Top Agent Bonus"], r["Agent Payout"], r["Unpaid Reasons"]
                 ])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
         totals = {
@@ -826,57 +817,6 @@ with tabs[4]:
             file_name=f"agent_per_member_paystubs_{datetime.now():%Y%m%d}.zip",
             mime="application/zip"
         )
-
-    elif uploaded_file:
-        st.success("✅ FMO file uploaded, but no Health Sherpa file. Defaulting all paid deals to 1 member.")
-
-        df = pd.read_excel(uploaded_file, dtype=str)
-        df.dropna(subset=["Agent","first_name","last_name","Advance"], inplace=True)
-        df["Client"]         = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
-        df["Paid Status"]    = df["Advance"].fillna(0).astype(float).apply(lambda x: "Paid" if x>0 else "Not Paid")
-        df["Reason"]         = df.get("Advance Excluded Reason","").fillna("").astype(str)
-        df["Effective Date"] = pd.to_datetime(df.get("Eff Date"), errors="coerce")
-        summary.clear()
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w") as zf:
-            for agent in df["Agent"].unique():
-                sub     = df[df["Agent"]==agent]
-                paid_sub = sub[sub["Paid Status"]=="Paid"]
-                unpaid_sub = sub[sub["Paid Status"]!="Paid"]
-                paid_ct = len(paid_sub)
-                unpaid_ct = len(unpaid_sub)
-                all_ct = paid_ct + unpaid_ct
-                paid_pct = (paid_ct / all_ct * 100) if all_ct > 0 else 0
-                if paid_ct >= 140:
-                    rate = 25
-                    bonus = 1200
-                elif paid_ct >= 100:
-                    rate = 22.5
-                    bonus = 1200
-                elif paid_ct >= 70:
-                    rate = 17.5
-                    bonus = 1200
-                else:
-                    rate = 15
-                    bonus = 0
-                retention_bonus = 500 if paid_pct >= 80 else 0
-                top_agent_bonus = 0  # Not calculated here (only in per-member block)
-                total_bonus = bonus + retention_bonus + top_agent_bonus
-                total_payout = paid_ct * rate + total_bonus
-                summary.append({
-                    "Agent": agent,
-                    "Paid Applications": paid_ct,
-                    "Unpaid Applications": unpaid_ct,
-                    "Paid %": f"{paid_pct:.1f}%",
-                    "Total Members": paid_ct,
-                    "Per-Member Rate": rate,
-                    "Production Bonus": bonus,
-                    "Retention Bonus": retention_bonus,
-                    "Top Agent Bonus": top_agent_bonus,
-                    "CPA": 0,
-                    "Agent Payout": total_payout,
-                    "Unpaid Reasons": "; ".join(f"{row['first_name']} {row['last_name']}: {row['Reason'] or 'N/A'}" for _, row in unpaid_sub.iterrows())
-                })
 
 
 
