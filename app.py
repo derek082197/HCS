@@ -1,13 +1,12 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import zipfile
 import io
+import zipfile
 import csv
 from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
-import os
 try:
     from streamlit_extras.st_autorefresh import st_autorefresh
 except ImportError:
@@ -15,7 +14,6 @@ except ImportError:
 
 st.set_page_config(page_title="HCS Commission CRM", layout="wide")
 
-# Initialize commission cycles if they don't exist in the database
 commission_cycles = pd.DataFrame([
     # ("Cycle Start", "Cycle End", "Pay Date")
     ("12/14/24", "12/27/24", "1/3/25"),   ("12/28/24", "1/10/25", "1/17/25"),
@@ -37,31 +35,17 @@ commission_cycles["start"] = pd.to_datetime(commission_cycles["start"])
 commission_cycles["end"] = pd.to_datetime(commission_cycles["end"])
 commission_cycles["pay"] = pd.to_datetime(commission_cycles["pay"])
 
-# Import commission cycles into the database
-import_commission_cycles(commission_cycles)
-
-# Constants
 PROFIT_PER_SALE = 43.3
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
 CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
+DB              = "crm_history.db"
 
-# Import users from CSV if exists
-if os.path.exists("users.csv"):
-    import_users_from_csv("users.csv")
+df_users = pd.read_csv("users.csv", dtype=str).dropna()
+USERS = dict(zip(df_users.username.str.strip(), df_users.password))
+ADMIN_NAMES = dict(zip(df_users.username, [f"{r['first_name']} {r['last_name']}" for _, r in df_users.iterrows()]))
+ADMIN_ROLES = dict(zip(df_users.username, df_users.role))
 
-# Get admin users data for login
-admin_df = get_all_users()
-if not admin_df.empty:
-    USERS = dict(zip(admin_df.username.str.strip(), admin_df.password))
-    ADMIN_NAMES = dict(zip(admin_df.username, [f"{r['first_name']} {r['last_name']}" for _, r in admin_df.iterrows()]))
-    ADMIN_ROLES = dict(zip(admin_df.username, admin_df.role))
-else:
-    USERS = {}
-    ADMIN_NAMES = {}
-    ADMIN_ROLES = {}
-
-# Fetch agents from CRM API and store in database
 @st.cache_data(ttl=600)
 def fetch_agents():
     url = "https://hcs.tldcrm.com/api/egress/users"
@@ -73,48 +57,36 @@ def fetch_agents():
     r = requests.get(url, headers=headers, params=params, timeout=10)
     js = r.json().get('response', {})
     users = js.get('results', [])
-    df = pd.DataFrame(users)
-    if not df.empty:
-        import_agents_from_api(df)
-    return df
+    return pd.DataFrame(users)
 
 df_agents = fetch_agents()
-agents_df = get_all_agents()
-if not agents_df.empty:
-    AGENT_USERNAMES = agents_df['username'].tolist()
-    AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
-    AGENT_NAMES = dict(zip(agents_df['username'], [f"{row['first_name']} {row['last_name']}" for _, row in agents_df.iterrows()]))
-    AGENT_ROLES = dict(zip(agents_df['username'], agents_df['role_descriptions']))
-    AGENT_USERIDS = dict(zip(agents_df['username'], agents_df['user_id']))
-else:
-    AGENT_USERNAMES = []
-    AGENT_CREDENTIALS = {}
-    AGENT_NAMES = {}
-    AGENT_ROLES = {}
-    AGENT_USERIDS = {}
+AGENT_USERNAMES = df_agents['username'].tolist()
+AGENT_CREDENTIALS = {u: 'password' for u in AGENT_USERNAMES}
+AGENT_NAMES = dict(zip(df_agents['username'], [f"{row['first_name']} {row['last_name']}" for _, row in df_agents.iterrows()]))
+AGENT_ROLES = dict(zip(df_agents['username'], df_agents['role_descriptions']))
+AGENT_USERIDS = dict(zip(df_agents['username'], df_agents['user_id']))
 
-# Session state for login
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_role = ""
     st.session_state.user_email = ""
     st.session_state.user_name = ""
-    st.session_state.user_id = ""
 
 def do_login():
     u = st.session_state.user.strip()
     p = st.session_state.pwd
-    
-    # Use the authenticate_user function from database module
-    is_auth, user_type, user_data = authenticate_user(u, p)
-    
-    if is_auth:
+    if u in AGENT_CREDENTIALS and p == AGENT_CREDENTIALS[u]:
         st.session_state.logged_in = True
         st.session_state.user_email = u
-        st.session_state.user_name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}"
-        st.session_state.user_role = user_data.get('role', user_type)
-        st.session_state.user_id = user_data.get('user_id', '')
-        st.success(f"✅ Welcome, {st.session_state.user_name}!")
+        st.session_state.user_name = AGENT_NAMES[u]
+        st.session_state.user_role = AGENT_ROLES[u] if AGENT_ROLES.get(u) else "Agent"
+        st.success(f"✅ Welcome, {AGENT_NAMES[u]}!")
+    elif u in USERS and p == USERS[u]:
+        st.session_state.logged_in = True
+        st.session_state.user_email = u
+        st.session_state.user_name = ADMIN_NAMES.get(u, u)
+        st.session_state.user_role = ADMIN_ROLES.get(u, "Admin")
+        st.success(f"✅ Welcome, {st.session_state.user_name}! (Admin)")
     else:
         st.error("❌ Incorrect credentials")
 
@@ -123,7 +95,6 @@ def do_logout():
     st.session_state.user_role = ""
     st.session_state.user_email = ""
     st.session_state.user_name = ""
-    st.session_state.user_id = ""
     st.experimental_rerun()
 
 if not st.session_state.logged_in:
@@ -135,18 +106,41 @@ if not st.session_state.logged_in:
 st.sidebar.button("Log out", on_click=do_logout)
 
 
-# Load history data
+# DATABASE HELPERS
+def init_db():
+    conn = sqlite3.connect(DB)
+    conn.execute("""
+      CREATE TABLE IF NOT EXISTS reports (
+        upload_date TEXT PRIMARY KEY,
+        total_deals INTEGER,
+        agent_payout REAL,
+        owner_revenue REAL,
+        owner_profit REAL
+      )
+    """)
+    conn.commit()
+    conn.close()
+
+def insert_report(dt, totals):
+    conn = sqlite3.connect(DB)
+    conn.execute("""
+      INSERT OR REPLACE INTO reports
+      (upload_date, total_deals, agent_payout, owner_revenue, owner_profit)
+      VALUES (?, ?, ?, ?, ?)
+    """, (dt, totals["deals"], totals["agent"], totals["owner_rev"], totals["owner_prof"]))
+    conn.commit()
+    conn.close()
+
 @st.cache_data
 def load_history():
-    df = get_all_reports()
-    if not df.empty:
-        for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-        if "upload_date" in df.columns:
-            df["upload_date"] = pd.to_datetime(df["upload_date"], errors="coerce")
+    conn = sqlite3.connect(DB)
+    df = pd.read_sql("SELECT * FROM reports ORDER BY upload_date", conn, parse_dates=["upload_date"])
+    conn.close()
+    for col in ["total_deals","agent_payout","owner_revenue","owner_profit"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
+init_db()
 history_df = load_history()
 summary = []
 uploaded_file = None
@@ -187,12 +181,7 @@ def fetch_all_today(limit=5000):
         except Exception as e:
             st.error(f"API Error: {str(e)}")
             break
-    
-    df = pd.DataFrame(all_results)
-    if not df.empty:
-        # Save fetched deals to database
-        save_deals_from_api(df)
-    return df
+    return pd.DataFrame(all_results)
 
 def fetch_agent_deals(user_id, date_from, date_to):
     columns = [
@@ -215,16 +204,8 @@ def fetch_agent_deals(user_id, date_from, date_to):
     print("API CALL PARAMS:", params)
     print("API CALL DEALS:", deals[:2])
     df = pd.DataFrame(deals)
-    if not df.empty:
-        if "date_sold" in df.columns:
-            df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
-        # Save fetched deals to database
-        save_deals_from_api(df)
-    
-    # Try to get from database first (which may have more info like paid status)
-    db_deals = get_deals_by_agent(user_id, date_from, date_to)
-    if not db_deals.empty:
-        return db_deals
+    if "date_sold" in df.columns:
+        df["date_sold"] = pd.to_datetime(df["date_sold"], errors="coerce")
     return df
 
 
@@ -305,7 +286,9 @@ def vendor_pdf(paid, unpaid, vendor, rate):
     pdf.cell(0, 10, fix(f"Totals: {len(paid)} paid (${len(paid)*rate}), {len(unpaid)} unpaid"), ln=True)
     return pdf.output(dest="S").encode("latin1")
 
-# Initialize summary variables
+# Initialize the database and load history
+init_db()
+history_df = load_history()
 summary = []
 uploaded_file = None
 threshold = 10
@@ -449,9 +432,6 @@ if st.session_state.user_role.lower() == "agent":
                 agent_rows[advance_col] = pd.to_numeric(agent_rows[advance_col], errors="coerce").fillna(0)
                 net_paid = agent_rows[advance_col][agent_rows[advance_col] == 150].sum() if not agent_rows.empty else 0.0
                 paid_rows = agent_rows[agent_rows[advance_col] == 150]
-                
-                # Update deals in database with payment status
-                update_deals_from_fmo(fmo_df)
             except Exception as ex:
                 net_paid = None
                 paid_rows = None
@@ -667,14 +647,14 @@ with tabs[4]:
     if uploaded_file and hs_file:
         st.success("✅ Both files uploaded, processing agent per-member pay...")
 
-        # Health Sherpa: Member lookup
+        # --- Health Sherpa Members ---
         hs = pd.read_csv(hs_file, dtype=str)
         hs['first_name_norm'] = hs['first_name'].astype(str).str.strip().str.lower()
         hs['last_name_norm'] = hs['last_name'].astype(str).str.strip().str.lower()
         hs['member_count'] = pd.to_numeric(hs['applicant_count'], errors='coerce').fillna(1).astype(int)
         member_lookup = hs.set_index(['first_name_norm','last_name_norm'])['member_count'].to_dict()
 
-        # FMO Paid Deals
+        # --- FMO Paid Deals ---
         df = pd.read_excel(uploaded_file, dtype=str)
         df = df.dropna(subset=["Agent","first_name","last_name","Advance"])
         df["Paid Status"] = df["Advance"].astype(float).apply(lambda x: "Paid" if x > 0 else "Not Paid")
@@ -685,82 +665,46 @@ with tabs[4]:
         else:
             df["Reason"] = ""
 
-        # ---- Agent Calculations ----
-        agent_stats = []
-        for agent in df["Agent"].unique():
-            sub = df[df["Agent"]==agent]
-            paid_sub = sub[sub["Paid Status"]=="Paid"]
-            unpaid_sub = sub[sub["Paid Status"]!="Paid"]
-
-            paid_count = len(paid_sub)
-            unpaid_count = len(unpaid_sub)
-            all_count = paid_count + unpaid_count
-            paid_pct = (paid_count / all_count * 100) if all_count > 0 else 0
-
-            client_rows = []
-            total_members = 0
-            for _, row in paid_sub.iterrows():
-                key = (row['first_name_norm'], row['last_name_norm'])
-                members = member_lookup.get(key, 1)
-                total_members += members
-                client_rows.append((row['first_name'], row['last_name'], members))
-
-            unpaid_rows = []
-            for _, row in unpaid_sub.iterrows():
-                reason = row['Reason'] if "Reason" in row and pd.notnull(row['Reason']) else ""
-                unpaid_rows.append((row['first_name'], row['last_name'], reason))
-
-            # ---- HCS Tier Structure: BASED ON total_members ----
-            if total_members >= 140:
-                rate = 25
-                bonus = 1200
-            elif total_members >= 100:
-                rate = 22.5
-                bonus = 1200
-            elif total_members >= 70:
-                rate = 17.5
-                bonus = 1200
-            else:
-                rate = 15
-                bonus = 0
-
-            production_bonus = bonus
-            retention_bonus = 500 if paid_pct >= 80 else 0  # Based on retention %
-            agent_stats.append({
-                "Agent": agent,
-                "Paid Applications": paid_count,
-                "Unpaid Applications": unpaid_count,
-                "Paid %": paid_pct,
-                "Total Members": total_members,
-                "Per-Member Rate": rate,
-                "Production Bonus": production_bonus,
-                "Retention Bonus": retention_bonus,
-                "Client Rows": client_rows,
-                "Unpaid Rows": unpaid_rows,
-            })
-
-        # ---- Top Agent Bonus ----
-        top_member_count = max(r["Total Members"] for r in agent_stats) if agent_stats else 0
-        top_agents = [r["Agent"] for r in agent_stats if r["Total Members"] == top_member_count and top_member_count > 0]
-
-        # ---- Generate PDFs, CSV, Add Top Agent Bonus ----
         buf = io.BytesIO()
-        summary.clear()
         with zipfile.ZipFile(buf, "w") as zf:
-            for stats in agent_stats:
-                agent = stats["Agent"]
-                paid_count = stats["Paid Applications"]
-                unpaid_count = stats["Unpaid Applications"]
-                paid_pct = stats["Paid %"]
-                total_members = stats["Total Members"]
-                rate = stats["Per-Member Rate"]
-                production_bonus = stats["Production Bonus"]
-                retention_bonus = stats["Retention Bonus"]
-                top_agent_bonus = 250 if agent in top_agents else 0
-                total_bonus = production_bonus + retention_bonus + top_agent_bonus
-                total_payout = total_members * rate + total_bonus
-                client_rows = stats["Client Rows"]
-                unpaid_rows = stats["Unpaid Rows"]
+            for agent in df["Agent"].unique():
+                sub = df[df["Agent"]==agent]
+                paid_sub = sub[sub["Paid Status"]=="Paid"]
+                unpaid_sub = sub[sub["Paid Status"]!="Paid"]
+
+                paid_count = len(paid_sub)
+                unpaid_count = len(unpaid_sub)
+                all_count = paid_count + unpaid_count
+                paid_pct = (paid_count / all_count * 100) if all_count > 0 else 0
+
+                # For per-member pay
+                client_rows = []
+                total_members = 0
+                for _, row in paid_sub.iterrows():
+                    key = (row['first_name_norm'], row['last_name_norm'])
+                    members = member_lookup.get(key, 1)
+                    total_members += members
+                    client_rows.append((row['first_name'], row['last_name'], members))
+
+                # Unpaid details
+                unpaid_rows = []
+                for _, row in unpaid_sub.iterrows():
+                    reason = row['Reason'] if "Reason" in row and pd.notnull(row['Reason']) else ""
+                    unpaid_rows.append((row['first_name'], row['last_name'], reason))
+
+                # Tier logic
+                if total_members >= 200:
+                    rate = 25
+                elif total_members >= 150:
+                    rate = 22.5
+                elif total_members >= 120:
+                    rate = 17.5
+                else:
+                    rate = 15
+
+                # Bonus for >= 70 members
+                bonus = 1200 if total_members >= 70 else 0
+                payout = total_members * rate + bonus
 
                 summary.append({
                     "Agent": agent,
@@ -769,14 +713,12 @@ with tabs[4]:
                     "Paid %": f"{paid_pct:.1f}%",
                     "Total Members": total_members,
                     "Per-Member Rate": rate,
-                    "Production Bonus": production_bonus,
-                    "Retention Bonus": retention_bonus,
-                    "Top Agent Bonus": top_agent_bonus,
-                    "Agent Payout": total_payout,
+                    "Bonus": bonus,
+                    "Agent Payout": payout,
                     "Unpaid Reasons": "; ".join(f"{fname} {lname}: {reason or 'N/A'}" for fname, lname, reason in unpaid_rows)
                 })
 
-                # --- PDF ---
+                # PDF Generation (show paid/unpaid details)
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial","B",16)
@@ -791,13 +733,8 @@ with tabs[4]:
                 pdf.cell(0,8,safe_str(f"Paid %: {paid_pct:.1f}%"), ln=True)
                 pdf.cell(0,8,safe_str(f"Total Members: {total_members}"), ln=True)
                 pdf.cell(0,8,safe_str(f"Per-Member Rate: ${rate:.2f}"), ln=True)
-                if production_bonus:
-                    pdf.cell(0,8,safe_str(f"Production Bonus: ${production_bonus:,.2f}"), ln=True)
-                if retention_bonus:
-                    pdf.cell(0,8,safe_str("Retention Bonus: $500 (80%+ retention)"), ln=True)
-                if top_agent_bonus:
-                    pdf.cell(0,8,safe_str("Top Agent Bonus: $250 (most members this period)"), ln=True)
-                pdf.cell(0,8,safe_str(f"Total Payout: ${total_payout:,.2f}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Bonus: ${bonus:,.2f}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Total Payout: ${payout:,.2f}"), ln=True)
                 pdf.ln(5)
                 pdf.set_font("Arial","B",12)
                 pdf.cell(0,8,safe_str("Paid Clients:"), ln=True)
@@ -812,43 +749,20 @@ with tabs[4]:
                     for fname, lname, reason in unpaid_rows:
                         pdf.cell(0,8,safe_str(f"- {fname} {lname} | Reason: {reason or 'N/A'}"), ln=True)
                 zf.writestr(f"{safe_str(agent).replace(' ','_')}_Paystub.pdf", pdf.output(dest="S").encode("latin1", errors="replace"))
-            # Write admin summary CSV
+            # Also write admin summary CSV
             csv_buf = io.StringIO()
             w = csv.writer(csv_buf)
-            w.writerow([
-                "Agent","Paid Applications","Unpaid Applications","Paid %","Total Members",
-                "Per-Member Rate","Production Bonus","Retention Bonus","Top Agent Bonus","Agent Payout","Unpaid Reasons"
-            ])
+            w.writerow(["Agent","Paid Applications","Unpaid Applications","Paid %","Total Members","Per-Member Rate","Bonus","Agent Payout","Unpaid Reasons"])
             for r in summary:
-                w.writerow([
-                    r["Agent"], r["Paid Applications"], r["Unpaid Applications"], r["Paid %"], r["Total Members"],
-                    r["Per-Member Rate"], r["Production Bonus"], r["Retention Bonus"], r["Top Agent Bonus"], r["Agent Payout"], r["Unpaid Reasons"]
-                ])
+                w.writerow([r["Agent"], r["Paid Applications"], r["Unpaid Applications"], r["Paid %"], r["Total Members"], r["Per-Member Rate"], r["Bonus"], r["Agent Payout"], r["Unpaid Reasons"]])
             zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
-
-        # ---- Owner revenue/profit based on sum of all Advance==150 ----
-        owner_rev = df[df["Advance"].astype(float) == 150]["Advance"].astype(float).sum()
-        agent_payout = sum(r["Agent Payout"] for r in summary)
-        owner_prof = owner_rev - agent_payout
-
+        # Calculate totals for dashboard
         totals = {
             "deals": sum(r["Paid Applications"] for r in summary),
-            "agent": agent_payout,
-            "owner_rev": owner_rev,
-            "owner_prof": owner_prof
+            "agent": sum(r["Agent Payout"] for r in summary),
+            "owner_rev": 0,
+            "owner_prof": 0
         }
-        
-        # Save the report to the database
-        upload_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        save_report(upload_date, totals)
-        
-        st.session_state["payroll_totals"] = totals
-        
-        # Also update deals in database with Health Sherpa member counts
-        if hs_file is not None:
-            hs_df = pd.read_csv(hs_file, dtype=str)
-            update_deals_from_fmo(df, hs_df)
-
         st.download_button(
             "📦 Download ZIP of Agent Per-Member Paystubs",
             buf.getvalue(),
@@ -856,8 +770,100 @@ with tabs[4]:
             mime="application/zip"
         )
 
+    elif uploaded_file:
+        st.success("✅ FMO file uploaded, but no Health Sherpa file. Defaulting all paid deals to 1 member.")
 
-
+        df = pd.read_excel(uploaded_file, dtype=str)
+        df.dropna(subset=["Agent","first_name","last_name","Advance"], inplace=True)
+        df["Client"]         = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
+        df["Paid Status"]    = df["Advance"].fillna(0).astype(float).apply(lambda x: "Paid" if x>0 else "Not Paid")
+        df["Reason"]         = df.get("Advance Excluded Reason","").fillna("").astype(str)
+        df["Effective Date"] = pd.to_datetime(df.get("Eff Date"), errors="coerce")
+        summary.clear()
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for agent in df["Agent"].unique():
+                sub     = df[df["Agent"]==agent]
+                paid_sub = sub[sub["Paid Status"]=="Paid"]
+                unpaid_sub = sub[sub["Paid Status"]!="Paid"]
+                paid_ct = len(paid_sub)
+                unpaid_ct = len(unpaid_sub)
+                all_ct = paid_ct + unpaid_ct
+                paid_pct = (paid_ct / all_ct * 100) if all_ct > 0 else 0
+                # Use tier logic for per-member, treat each paid app as 1 member
+                if paid_ct >= 200:
+                    rate = 25
+                elif paid_ct >= 150:
+                    rate = 22.5
+                elif paid_ct >= 120:
+                    rate = 17.5
+                else:
+                    rate = 15
+                bonus = 1200 if paid_ct >= 70 else 0
+                payout = paid_ct * rate + bonus
+                summary.append({
+                    "Agent": agent,
+                    "Paid Applications": paid_ct,
+                    "Unpaid Applications": unpaid_ct,
+                    "Paid %": f"{paid_pct:.1f}%",
+                    "Total Members": paid_ct,
+                    "Per-Member Rate": rate,
+                    "Bonus": bonus,
+                    "Agent Payout": payout,
+                    "Unpaid Reasons": "; ".join(f"{row['first_name']} {row['last_name']}: {row['Reason'] or 'N/A'}" for _, row in unpaid_sub.iterrows())
+                })
+                # PDF
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial","B",16)
+                pdf.cell(0,10,safe_str("Health Connect Solutions"), ln=True, align="C")
+                pdf.ln(5)
+                pdf.set_font("Arial","B",12)
+                pdf.cell(0,10,safe_str(f"Agent Pay Statement – {agent}"), ln=True)
+                pdf.ln(5)
+                pdf.set_font("Arial","",12)
+                pdf.cell(0,8,safe_str(f"Paid Applications: {paid_ct}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Unpaid Applications: {unpaid_ct}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Paid %: {paid_pct:.1f}%"), ln=True)
+                pdf.cell(0,8,safe_str(f"Total Members: {paid_ct}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Per-Member Rate: ${rate:.2f}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Bonus: ${bonus:,.2f}"), ln=True)
+                pdf.cell(0,8,safe_str(f"Total Payout: ${payout:,.2f}"), ln=True)
+                pdf.ln(5)
+                pdf.set_font("Arial","B",12)
+                pdf.cell(0,8,safe_str("Paid Clients:"), ln=True)
+                pdf.set_font("Arial","",10)
+                for _, row in paid_sub.iterrows():
+                    pdf.cell(0,8,safe_str(f"- {row['first_name']} {row['last_name']} | Members: 1"), ln=True)
+                if unpaid_ct:
+                    pdf.ln(3)
+                    pdf.set_font("Arial","B",12)
+                    pdf.cell(0,8,safe_str("Unpaid Clients & Reasons:"), ln=True)
+                    pdf.set_font("Arial","",10)
+                    for _, row in unpaid_sub.iterrows():
+                        pdf.cell(0,8,safe_str(f"- {row['first_name']} {row['last_name']} | Reason: {row['Reason'] or 'N/A'}"), ln=True)
+                zf.writestr(f"{safe_str(agent).replace(' ','_')}_Paystub.pdf", pdf.output(dest="S").encode("latin1", errors="replace"))
+            # Write admin summary CSV
+            csv_buf = io.StringIO()
+            w = csv.writer(csv_buf)
+            w.writerow(["Agent","Paid Applications","Unpaid Applications","Paid %","Total Members","Per-Member Rate","Bonus","Agent Payout","Unpaid Reasons"])
+            for r in summary:
+                w.writerow([r["Agent"], r["Paid Applications"], r["Unpaid Applications"], r["Paid %"], r["Total Members"], r["Per-Member Rate"], r["Bonus"], r["Agent Payout"], r["Unpaid Reasons"]])
+            zf.writestr("HCS_Admin_Summary.csv", csv_buf.getvalue())
+        default_dt = (df["Effective Date"].max().date()
+                      if "Effective Date" in df else date.today())
+        totals = {
+            "deals": sum(r["Paid Applications"] for r in summary),
+            "agent": sum(r["Agent Payout"] for r in summary),
+            "owner_rev": 0,
+            "owner_prof": 0
+        }
+        st.download_button(
+            "📦 Download ZIP of Pay Stubs",
+            buf.getvalue(),
+            file_name=f"paystubs_{datetime.now():%Y%m%d}.zip",
+            mime="application/zip"
+        )
 
 
 
@@ -866,38 +872,31 @@ with tabs[4]:
 # OVERVIEW TAB
 with tabs[0]:
     st.title("HCS Commission Dashboard")
-
-    totals = st.session_state.get("payroll_totals", {
-        "deals": 0, "agent": 0.0, "owner_rev": 0.0, "owner_prof": 0.0
-    })
-
-    deals = int(totals.get("deals", 0))
-    agent_payout = float(totals.get("agent", 0.0))
-    owner_rev = float(totals.get("owner_rev", 0.0))
-    owner_prof = float(totals.get("owner_prof", 0.0))
-
-    c1, c2, c3, c4 = st.columns(4, gap="large")
-    c1.metric("Total Paid Deals", f"{deals:,}")
-    c2.metric("Agent Payout", f"${agent_payout:,.2f}")
-    c3.metric("Owner Revenue", f"${owner_rev:,.2f}")
-    c4.metric("Owner Profit", f"${owner_prof:,.2f}")
-
+    if uploaded_file:
+        deals = int(totals["deals"])
+        c1, c2, c3, c4 = st.columns(4, gap="large")
+        c1.metric("Total Paid Deals", f"{deals:,}")
+        c2.metric("Agent Payout",    f"${totals['agent']:,.2f}")
+        c3.metric("Owner Revenue",   f"${totals['owner_rev']:,.2f}")
+        c4.metric("Owner Profit",    f"${totals['owner_prof']:,.2f}")
+    else:
+        if history_df.empty:
+            st.info("Upload a statement to see metrics.")
+        else:
+            latest = history_df.iloc[-1]
+            deals = int(latest.total_deals)
+            c1, c2, c3, c4 = st.columns(4, gap="large")
+            c1.metric("Total Paid Deals", f"{deals:,}")
+            c2.metric("Agent Payout",    f"${latest.agent_payout:,.2f}")
+            c3.metric("Owner Revenue",   f"${latest.owner_revenue:,.2f}")
+            c4.metric("Owner Profit",    f"${latest.owner_profit:,.2f}")
     st.markdown("---")
-
+    rev = (totals["owner_rev"] if uploaded_file else
+           (latest.owner_revenue if not history_df.empty else 0))
     s1, s2, s3 = st.columns(3, gap="large")
-    s1.metric("Eddy (0.5%)", f"${owner_rev*0.005:,.2f}")
-    s2.metric("Matt (2%)", f"${owner_rev*0.02:,.2f}")
-    s3.metric("Jarad (1%)", f"${owner_rev*0.01:,.2f}")
-
-    st.markdown("---")
-
-    st.subheader("Recent Payroll Period")
-    st.write(f"Total Paid Deals: {deals:,}")
-    st.write(f"Agent Payout: ${agent_payout:,.2f}")
-    st.write(f"Owner Revenue: ${owner_rev:,.2f}")
-    st.write(f"Owner Profit: ${owner_prof:,.2f}")
-
-
+    s1.metric("Eddy (0.5%)", f"${rev*0.005:,.2f}")
+    s2.metric("Matt (2%)",   f"${rev*0.02:,.2f}")
+    s3.metric("Jarad (1%)",  f"${rev*0.01:,.2f}")
 
 # LEADERBOARD TAB
 with tabs[1]:
