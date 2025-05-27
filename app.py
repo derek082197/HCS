@@ -8,10 +8,6 @@ from datetime import date, datetime, timedelta
 from fpdf import FPDF
 import requests
 import os
-
-# Import the database module
-from database import *
-
 try:
     from streamlit_extras.st_autorefresh import st_autorefresh
 except ImportError:
