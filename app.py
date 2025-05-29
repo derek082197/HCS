@@ -35,7 +35,7 @@ commission_cycles["start"] = pd.to_datetime(commission_cycles["start"])
 commission_cycles["end"] = pd.to_datetime(commission_cycles["end"])
 commission_cycles["pay"] = pd.to_datetime(commission_cycles["pay"])
 
-PROFIT_PER_SALE = 43.3
+PROFIT_PER_SALE = 36.47
 CRM_API_URL     = "https://hcs.tldcrm.com/api/egress/policies"
 CRM_API_ID      = "310"
 CRM_API_KEY     = "87c08b4b-8d1b-4356-b341-c96e5f67a74a"
