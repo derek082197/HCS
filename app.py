@@ -944,13 +944,13 @@ with tabs[3]:
         y_tot = len(df_api[yearly_mask])
         c1, c2, c3, c4 = st.columns(4, gap="large")
         c1.metric("Today's Deals", f"{d_tot:,}")
-        c1.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${d_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
+        c1.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${d_tot * 36.47:,.2f}</b></span>", unsafe_allow_html=True)
         c2.metric("This Week's Deals", f"{w_tot:,}")
-        c2.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${w_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
+        c2.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${w_tot * 36.47:,.2f}</b></span>", unsafe_allow_html=True)
         c3.metric("This Month's Deals", f"{m_tot:,}")
-        c3.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${m_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
+        c3.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${m_tot * 36.47:,.2f}</b></span>", unsafe_allow_html=True)
         c4.metric("This Year's Deals", f"{y_tot:,}")
-        c4.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${y_tot * 43:,.2f}</b></span>", unsafe_allow_html=True)
+        c4.markdown(f"<span style='color:#208b26; font-size:1.1em;'>Net Profit:<br><b>${y_tot * 36.47:,.2f}</b></span>", unsafe_allow_html=True)
         st.markdown("---")
         def by_agent(mask):
             col = "lead_vendor_name" if "lead_vendor_name" in df_api.columns else df_api.columns[0]
